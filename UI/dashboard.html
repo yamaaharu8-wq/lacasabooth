@@ -835,13 +835,26 @@
                     <a href="https://wa.me/628131080710" target="_blank" class="btn-primary" style="width: auto; background: #25d366; border-color: #128c7e; color: white;">💬 WA: 0813-1080-710</a>
                 </div>
             </div>
-
-            <div class="card" style="background: var(--pink);">
+<div class="card" style="background: var(--pink);">
                 <div class="card-header" style="border-bottom-color: var(--ink);">🐞 Laporkan Masalah (Bug Report)</div>
                 <p style="font-size: 0.9rem; margin-bottom: 15px;">Menemukan error pada sistem? Sertakan foto/screenshot layar kendala dan kirim ke WhatsApp kami.</p>
                 <a href="https://wa.me/628131080710?text=Halo%20Lacasaphoto,%20saya%20ingin%20melaporkan%20kendala%20pada%20sistem%20Lacasabooth..." target="_blank" class="btn-primary" style="background: var(--ink); color: white;">Laporkan via WhatsApp</a>
             </div>
-        </div>
+            
+            <!-- MULAI: KOTAK CEK PEMBARUAN SISTEM -->
+            <div class="card" style="background: var(--yellow); margin-top: 25px;">
+                <div class="card-header" style="border-bottom-color: var(--ink);">🔄 Pembaruan Sistem (OTA Update)</div>
+                <p style="font-size: 0.9rem; margin-bottom: 15px;">Cek apakah ada sinkronisasi template terbaru atau perbaikan sistem dari server cloud.</p>
+                
+                <button id="btn-cek-update" onclick="cekPembaruanSistem()" class="btn-primary" style="background: var(--ink); color: white;">
+                    🔄 Cek Pembaruan Software
+                    <!-- Badge di dalam tombol -->
+                    <span class="badge-notif" id="badge-btn-update">1</span>
+                </button>
+            </div>
+            <!-- AKHIR: KOTAK CEK PEMBARUAN SISTEM -->
+
+        </div> <!-- Penutup tab-credit -->
 
     </main>
 
