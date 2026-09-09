@@ -774,7 +774,28 @@ expressApp.get('/api/settings', (req, res) => {
 
 expressApp.post('/api/settings', (req, res) => {
     try {
-        fs.writeFileSync(settingsPath, JSON.stringify(req.body, null, 2));
+        let oldSettings = {};
+        if (fs.existsSync(settingsPath)) {
+            oldSettings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+        }
+
+        const newSettings = req.body;
+
+        // Mencegah token hilang jika frontend mengirim kolom kosong
+        if (newSettings.global) {
+            if ((!newSettings.global.cloudflareToken || newSettings.global.cloudflareToken === "") && oldSettings.global && oldSettings.global.cloudflareToken) {
+                newSettings.global.cloudflareToken = oldSettings.global.cloudflareToken;
+            }
+        }
+
+        fs.writeFileSync(settingsPath, JSON.stringify(newSettings, null, 2));
+
+        // Langsung jalankan tunnel
+        if (newSettings.global && newSettings.global.cloudflareToken) {
+            console.log("🔄 Eksekusi Cloudflare Tunnel dari Pengaturan Umum...");
+            startCloudflareTunnel();
+        }
+
         res.json({ success: true, message: "Pengaturan berhasil disimpan!" });
     } catch (err) { res.json({ success: false, message: "Gagal menyimpan pengaturan." }); }
 });
@@ -1727,28 +1748,26 @@ expressApp.get('/api/settings/qris', (req, res) => {
 expressApp.post('/api/settings/qris', express.json(), (req, res) => {
     const { type, dynamicPrice, midtransServerKey, midtransClientKey, cloudflareToken } = req.body;
     
-    let isTokenChanged = false;
-
     if (type) qrisSettings.type = type;
     if (dynamicPrice) qrisSettings.dynamicPrice = dynamicPrice;
     if (midtransServerKey !== undefined) qrisSettings.midtransServerKey = midtransServerKey;
     if (midtransClientKey !== undefined) qrisSettings.midtransClientKey = midtransClientKey;
     
-    // Deteksi dan Simpan Token
-    if (cloudflareToken !== undefined) {
-        if (qrisSettings.cloudflareToken !== cloudflareToken) {
-            isTokenChanged = true;
-        }
-        qrisSettings.cloudflareToken = cloudflareToken;
-    }
-    
-    // Tulis pengaturan ke file permanen qris_data.json
     fs.writeFileSync(qrisDataPath, JSON.stringify(qrisSettings, null, 2));
 
-    // Eksekusi Cloudflare langsung jika token berubah atau baru diisi
-    if (isTokenChanged && qrisSettings.cloudflareToken && qrisSettings.cloudflareToken.trim() !== "") {
-        console.log("🔄 Token Cloudflare tersimpan! Menyambungkan ke Internet...");
-        startCloudflareTunnel();
+    // Sinkronisasi token ke database utama
+    if (cloudflareToken && cloudflareToken.trim() !== "") {
+        try {
+            let dbSet = {};
+            if (fs.existsSync(settingsPath)) dbSet = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+            if (!dbSet.global) dbSet.global = {};
+            
+            dbSet.global.cloudflareToken = cloudflareToken;
+            fs.writeFileSync(settingsPath, JSON.stringify(dbSet, null, 2));
+            
+            console.log("🔄 Eksekusi Cloudflare Tunnel dari Pengaturan QRIS...");
+            startCloudflareTunnel();
+        } catch(e) {}
     }
     
     res.json({ success: true, message: 'Pengaturan QRIS & Token disimpan!', data: qrisSettings });
