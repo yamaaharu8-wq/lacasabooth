@@ -12,6 +12,13 @@
     "compression": "normal",
     "appId": "com.lacasabooth.id",
     "productName": "Lacasabooth",
+    "publish": [
+    {
+      "provider": "github",
+      "owner": "yamaaharu8-wq",
+      "repo": "https://github.com/yamaaharu8-wq/lacasabooth.git"
+    }
+  ],
     "extraResources": [
       "oauth_credentials.json"
     ],
