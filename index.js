@@ -1707,7 +1707,8 @@ let qrisSettings = {
     staticImageUrl: '/assets/qris_static.png',
     dynamicPrice: 35000,
     midtransServerKey: '', 
-    midtransClientKey: '' 
+    midtransClientKey: '',
+    cloudflareToken: '' // <-- Menyatukan token ke database terpisah ini
 };
 
 // Mencegah data hilang saat restart dengan membaca file permanen
@@ -1720,56 +1721,37 @@ if (fs.existsSync(qrisDataPath)) {
 
 // --- 2. API Pengaturan ---
 expressApp.get('/api/settings/qris', (req, res) => {
-    let currentToken = "";
-    try {
-        // Ambil token dari settings.json agar tampil di kolom saat dashboard dibuka
-        if (fs.existsSync(settingsPath)) {
-            const dbSet = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
-            if (dbSet.global && dbSet.global.cloudflareToken) {
-                currentToken = dbSet.global.cloudflareToken;
-            }
-        }
-    } catch(e) {}
-    res.json({ ...qrisSettings, cloudflareToken: currentToken });
+    res.json(qrisSettings);
 });
 
 expressApp.post('/api/settings/qris', express.json(), (req, res) => {
-    // Menangkap token cloudflare dari kiriman frontend
     const { type, dynamicPrice, midtransServerKey, midtransClientKey, cloudflareToken } = req.body;
     
+    let isTokenChanged = false;
+
     if (type) qrisSettings.type = type;
     if (dynamicPrice) qrisSettings.dynamicPrice = dynamicPrice;
     if (midtransServerKey !== undefined) qrisSettings.midtransServerKey = midtransServerKey;
     if (midtransClientKey !== undefined) qrisSettings.midtransClientKey = midtransClientKey;
     
-    // Tulis pengaturan QRIS ke file permanen
-    fs.writeFileSync(qrisDataPath, JSON.stringify(qrisSettings, null, 2));
-
-    // Masukkan Cloudflare Token ke settings.json agar dibaca oleh fungsi startCloudflareTunnel
+    // Deteksi dan Simpan Token
     if (cloudflareToken !== undefined) {
-        try {
-            if (fs.existsSync(settingsPath)) {
-                let dbSet = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
-                if (!dbSet.global) dbSet.global = {};
-                
-                // Deteksi apakah ada perubahan token
-                const isTokenChanged = dbSet.global.cloudflareToken !== cloudflareToken;
-                
-                dbSet.global.cloudflareToken = cloudflareToken;
-                fs.writeFileSync(settingsPath, JSON.stringify(dbSet, null, 2));
-                
-                // [TWEAK BARU] Langsung sambungkan ke Cloudflare tanpa perlu restart aplikasi
-                if (isTokenChanged && cloudflareToken.trim() !== "") {
-                    console.log("🔄 Token baru terdeteksi! Menyambungkan ulang Cloudflare Tunnel...");
-                    startCloudflareTunnel();
-                }
-            }
-        } catch(e) {
-            console.error("Gagal menyimpan token Cloudflare:", e);
+        if (qrisSettings.cloudflareToken !== cloudflareToken) {
+            isTokenChanged = true;
         }
+        qrisSettings.cloudflareToken = cloudflareToken;
     }
     
-    res.json({ success: true, message: 'Pengaturan QRIS disimpan & Tunnel aktif!', data: qrisSettings });
+    // Tulis pengaturan ke file permanen qris_data.json
+    fs.writeFileSync(qrisDataPath, JSON.stringify(qrisSettings, null, 2));
+
+    // Eksekusi Cloudflare langsung jika token berubah atau baru diisi
+    if (isTokenChanged && qrisSettings.cloudflareToken && qrisSettings.cloudflareToken.trim() !== "") {
+        console.log("🔄 Token Cloudflare tersimpan! Menyambungkan ke Internet...");
+        startCloudflareTunnel();
+    }
+    
+    res.json({ success: true, message: 'Pengaturan QRIS & Token disimpan!', data: qrisSettings });
 });
 // --- 3. API Generate QRIS Midtrans (Bisa untuk Sesi Utama & Cetak Extra) ---
 expressApp.get('/api/payment/qris-dynamic', async (req, res) => {
@@ -1869,20 +1851,11 @@ let cfTunnelProcess = null;
 
 function startCloudflareTunnel() {
     try {
-        // Cek apakah ada token di pengaturan (bisa Anda tambahkan inputnya di Dashboard HTML nanti)
-        // Jika belum ada input di dashboard, Anda bisa hardcode tokennya di sini untuk tes
-        let cfToken = ""; 
-        if (fs.existsSync(settingsPath)) {
-            const dbSet = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
-            if (dbSet.global && dbSet.global.cloudflareToken) {
-                cfToken = dbSet.global.cloudflareToken;
-            }
-        }
+        // Ambil token dari memori qrisSettings
+        let cfToken = qrisSettings.cloudflareToken || ""; 
 
-       // UBAH VARIABEL INI:
-const cloudflaredPath = path.join(__dirname, 'cloudflared.exe').replace('app.asar', 'app.asar.unpacked');
+        const cloudflaredPath = path.join(__dirname, 'cloudflared.exe').replace('app.asar', 'app.asar.unpacked');
 
-        // Cek apakah file cloudflared.exe sudah dimasukkan ke folder
         if (!fs.existsSync(cloudflaredPath)) {
             console.log("⚠️ [CLOUDFLARE] Batal jalan: File cloudflared.exe tidak ditemukan di folder proyek.");
             return;
