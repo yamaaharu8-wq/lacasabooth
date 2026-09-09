@@ -13,12 +13,12 @@
     "appId": "com.lacasabooth.id",
     "productName": "Lacasabooth",
     "publish": [
-  {
-    "provider": "github",
-    "owner": "yamaaharu8-wq",
-    "repo": "lacasabooth"
-  }
-],
+      {
+        "provider": "github",
+        "owner": "yamaaharu8-wq",
+        "repo": "lacasabooth"
+      }
+    ],
     "extraResources": [
       "oauth_credentials.json"
     ],

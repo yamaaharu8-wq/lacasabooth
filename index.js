@@ -6,7 +6,11 @@ const http = require('http');
 const { Server } = require('socket.io');
 const fs = require('fs');
 const { google } = require('googleapis');
+const { autoUpdater } = require('electron-updater');
 
+// Atur agar auto-update berjalan diam-diam tanpa mengganggu klien
+autoUpdater.autoDownload = true;
+autoUpdater.autoInstallOnAppQuit = true;
 // 1. DEKLARASIKAN FOLDER AMAN UNTUK MENULIS DATA (AppData)
 const userDataPath = electronApp.getPath('userData');
 
@@ -448,6 +452,23 @@ electronApp.whenReady().then(() => {
     // ------------------------------------
 
     createWindow(); // Baru buat window setelah izin di-bypass
+if (electronApp.isPackaged) {
+        setTimeout(() => {
+            console.log("🔍 Mengecek pembaruan aplikasi utama dari GitHub Releases...");
+            autoUpdater.checkForUpdatesAndNotify();
+        }, 5000); // Beri jeda 5 detik setelah aplikasi nyala agar tidak berat
+    }
+});
+
+// Event Listener jika update sedang diunduh di belakang layar
+autoUpdater.on('update-available', () => {
+    console.log('🔄 Pembaruan sistem ditemukan! Sedang mengunduh di latar belakang...');
+});
+
+// Otomatis restart aplikasi jika unduhan selesai
+autoUpdater.on('update-downloaded', () => {
+    console.log('✅ Update selesai diunduh. Memulai ulang aplikasi untuk memasang pembaruan...');
+    autoUpdater.quitAndInstall(); 
 });
 electronApp.on('window-all-closed', () => { if (process.platform !== 'darwin') electronApp.quit(); });
 
