@@ -484,10 +484,16 @@
                 activeCameraMode = 'canon';
             }
         }
-        
-        // --- 2. SETTING LAINNYA ---
+       // --- 2. SETTING LAINNYA ---
         if (data.global?.flashWorkaround !== undefined) settingFlashWorkaround = data.global.flashWorkaround;
         if (data.global?.liveViewBrightness) settingKecerahanLV = data.global.liveViewBrightness;
+        
+        // --- [TAMBAHKAN INI] LOGIKA SEMBUNYIKAN LIVE PHOTO ---
+        if (data.global?.livePhotoEnabled === false) {
+            const lpWrapper = document.getElementById('livePhotoWrapper');
+            if(lpWrapper) lpWrapper.style.display = 'none';
+        }
+        // -----------------------------------------------------
         if (data.photobox?.sessionTimer) settingWaktuIdleMilih = parseInt(data.photobox.sessionTimer);
 
         if (data.global?.extraPrintPrice) hargaExtraCetakPerLembar = parseInt(data.global.extraPrintPrice);
@@ -860,11 +866,11 @@ tempCanvas.height = (video.videoHeight / video.videoWidth) * 640;
                 const data = await (await fetch('/api/generate-photobox', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' }, 
                    body: JSON.stringify({ 
-    templateId: templateTerpilih, 
+   templateId: templateTerpilih, 
     selectedPhotos: fotoTerpilih, 
     sessionId: currentSessionId, 
     effect: efekTerpilihServer,
-    livePhoto: document.getElementById('chk-livePhoto-studio')?.checked || false // <-- PARAMETER BARU
+    livePhoto: document.getElementById('chk-livePhoto-self')?.checked || false // <-- SUDAH DIGANTI MENJADI 'self'
 })
                 })).json();
                 
@@ -920,23 +926,109 @@ tempCanvas.height = (video.videoHeight / video.videoWidth) * 640;
             }
         }
 
-        function prosesCetakFinal() {
+       // --- VARIABEL BARU UNTUK POLLING STATUS QRIS EXTRA CETAK ---
+let extraPrintOrderId = null;
+let extraPrintCheckInterval = null;
+
+async function prosesCetakFinal() {
     if (isEventBerbayar && jumlahCetakDipilih > 1) {
         let biayaTambahan = (jumlahCetakDipilih - 1) * hargaExtraCetakPerLembar;
         document.getElementById('payment-text-info').innerHTML = `Silakan selesaikan pembayaran untuk <b>${jumlahCetakDipilih - 1} lembar tambahan</b> sebesar <br><b style="font-size:1.8rem; color:var(--ink);">Rp ${biayaTambahan.toLocaleString('id-ID')}</b>`;
         
         const qrisImg = document.getElementById('qris-image-preview');
+        const paymentButtons = document.getElementById('payment-buttons');
+        const btnSudahBayar = paymentButtons.querySelector('button:nth-child(3)'); // Tombol QRIS
         
-        // Tembak file statis dan paksa tampilkan
-        qrisImg.src = `/assets/qris_static.png?t=${new Date().getTime()}`;
-        qrisImg.style.display = 'block'; 
-
+        // 1. Tampilkan modal dengan UI Loading terlebih dahulu
+        qrisImg.src = "";
+        qrisImg.alt = "Memuat QRIS...";
         document.getElementById('qris-section').style.display = 'block';
         document.getElementById('payment-buttons').style.display = 'flex';
         document.getElementById('cash-validation-section').style.display = 'none';
         document.getElementById('paymentModalOverlay').style.display = 'flex';
+
+        try {
+            // 2. Panggil API pengaturan untuk mengecek posisi toggle (Statis / Dinamis)
+            const resSettings = await fetch('/api/settings/qris');
+            const qrisSettings = await resSettings.json();
+
+            if (qrisSettings.type === 'dynamic') {
+                // --- MODE DINAMIS (MIDTRANS) ---
+                // Kirim nominal biaya tambahan ke backend untuk di-generate jadi QRIS baru
+                const resDynamic = await fetch('/api/payment/qris-dynamic', {
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ amount: biayaTambahan })
+                });
+                
+                const dataDynamic = await resDynamic.json();
+                
+                if (dataDynamic.success) {
+                    qrisImg.src = dataDynamic.qrImage;
+                    extraPrintOrderId = dataDynamic.orderId;
+
+                    // Ubah tombol menjadi mode otomatis mendengarkan
+                    btnSudahBayar.innerText = "⏳ Menunggu Pembayaran...";
+                    btnSudahBayar.style.pointerEvents = "none";
+                    btnSudahBayar.style.background = "var(--bg-color)";
+                    
+                    // Mulai proses pengecekan (polling) ke Midtrans setiap 3 detik
+                    if(extraPrintCheckInterval) clearInterval(extraPrintCheckInterval);
+                    extraPrintCheckInterval = setInterval(checkExtraPrintStatus, 3000);
+                } else {
+                    throw new Error("Gagal generate QR Dinamis dari server.");
+                }
+            } else {
+                // --- MODE STATIS ---
+                tampilkanQrisStatis(qrisSettings.staticImageUrl, btnSudahBayar);
+            }
+        } catch (err) {
+            console.error("Error memuat QRIS:", err);
+            // Fallback aman (Penyelamatan): Jika API gagal dipanggil, paksa jadi Statis
+            tampilkanQrisStatis(null, btnSudahBayar);
+        }
     } else { 
         jalankanPerintahCetakKePrinter(); 
+    }
+}
+// Fungsi pembantu jika jatuh ke mode Statis
+function tampilkanQrisStatis(customUrl, btnSudahBayar) {
+    const qrisImg = document.getElementById('qris-image-preview');
+    // Jika ada link gambar di DB pakai link tersebut, jika tidak panggil gambar default di lokal
+    qrisImg.src = customUrl ? customUrl : `/assets/qris_static.png?t=${new Date().getTime()}`;
+    
+    // Kembalikan tombol ke mode konfirmasi klik manual oleh admin
+    btnSudahBayar.innerText = "Sudah Bayar (QRIS) ✅";
+    btnSudahBayar.style.pointerEvents = "auto";
+    btnSudahBayar.style.background = "var(--green)";
+}
+
+// Fungsi Polling untuk mengecek status pembayaran dinamis ke Midtrans
+async function checkExtraPrintStatus() {
+    if (!extraPrintOrderId) return;
+    try {
+        const res = await fetch(`/api/payment/check-status/${extraPrintOrderId}`);
+        const data = await res.json();
+        
+        if (data.success && data.status === 'settlement') {
+            clearInterval(extraPrintCheckInterval); // Matikan polling
+            
+            const btnSudahBayar = document.getElementById('payment-buttons').querySelector('button:nth-child(3)');
+            btnSudahBayar.innerText = "✅ Pembayaran Berhasil!";
+            btnSudahBayar.style.background = "var(--green)";
+            
+            // Beri jeda efek visual 1 detik, lalu otomatis lanjutkan proses cetak printer
+            setTimeout(() => {
+                simulasikanPaymentSukses();
+            }, 1000);
+        }
+        else if (data.success && (data.status === 'expire' || data.status === 'cancel')) {
+            clearInterval(extraPrintCheckInterval);
+            alert("⚠️ Waktu pembayaran QRIS telah habis atau dibatalkan.");
+            batalkanPaymentExtra();
+        }
+    } catch (e) {
+        console.log("Polling error:", e);
     }
 }
 
@@ -949,8 +1041,13 @@ tempCanvas.height = (video.videoHeight / video.videoWidth) * 640;
             if (e.key === 'y' || e.key === 'Y') { window.removeEventListener('keydown', validasiAdminKeyListener); simulasikanPaymentSukses(); }
         }
 
-        function batalkanPaymentExtra() { document.getElementById('paymentModalOverlay').style.display = 'none'; window.removeEventListener('keydown', validasiAdminKeyListener); }
-        function simulasikanPaymentSukses() { batalkanPaymentExtra(); jalankanPerintahCetakKePrinter(); }
+       function batalkanPaymentExtra() { 
+    document.getElementById('paymentModalOverlay').style.display = 'none'; 
+    window.removeEventListener('keydown', validasiAdminKeyListener); 
+    // Hentikan interval polling agar tidak membebani server/browser
+    if (extraPrintCheckInterval) clearInterval(extraPrintCheckInterval); 
+}
+  function simulasikanPaymentSukses() { batalkanPaymentExtra(); jalankanPerintahCetakKePrinter(); }
 
         async function jalankanPerintahCetakKePrinter() {
             if (!namaFileCetak) return; const btn = document.getElementById('btn-action-cetak'); btn.disabled = true; btn.innerText = `⏳ Mengirim (${jumlahCetakDipilih}x)...`; btn.style.opacity = '0.5';

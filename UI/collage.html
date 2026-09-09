@@ -216,10 +216,12 @@
                 <button class="effect-btn" id="btn-efek-mono" onclick="terapkanFilterLive('monochrome', 'grayscale(100%) contrast(120%) brightness(105%)', this)"><div class="color-circle" style="background: #374151;"></div> Monochrome</button>
                 <button class="effect-btn" id="btn-efek-sepia" onclick="terapkanFilterLive('sepia', 'sepia(80%) contrast(110%) brightness(95%)', this)"><div class="color-circle" style="background: #b48a66;"></div> Vintage Sepia</button>
                 <button class="effect-btn" id="btn-efek-soft" onclick="terapkanFilterLive('soft', 'saturate(130%) brightness(115%) contrast(90%)', this)"><div class="color-circle" style="background: #a7f3d0;"></div> Soft Pop</button>
-                <div style="background: var(--bg-color); border: 2px dashed var(--ink); padding: 12px; border-radius: 12px; margin-top: 10px; display: flex; align-items: center; gap: 10px; cursor: pointer;" onclick="const cb = document.getElementById('chk-livePhoto-collage'); cb.checked = !cb.checked;">
-    <input type="checkbox" id="chk-livePhoto-collage" checked style="width: 20px; height: 20px; accent-color: var(--pink); cursor: pointer;" onclick="event.stopPropagation()">
-    <label style="font-weight: 700; color: var(--ink); font-size: 0.95rem; cursor: pointer;">🎬 Sertakan Video Live (GIF)</label>
-</div>
+                
+                <div id="livePhotoWrapper" style="background: var(--bg-color); border: 2px dashed var(--ink); padding: 12px; border-radius: 12px; margin-top: 10px; display: flex; align-items: center; gap: 10px; cursor: pointer;" onclick="const cb = document.getElementById('chk-livePhoto-collage'); cb.checked = !cb.checked;">
+                    <input type="checkbox" id="chk-livePhoto-collage" checked style="width: 20px; height: 20px; accent-color: var(--pink); cursor: pointer;" onclick="event.stopPropagation()">
+                    <label style="font-weight: 700; color: var(--ink); font-size: 0.95rem; cursor: pointer;">🎬 Sertakan Video Live (GIF)</label>
+                </div>
+                
                 <button id="btn-rakit" onclick="rakitDanSimpanFinal()" class="btn-aksi" style="background: var(--yellow); color: var(--ink); margin-top: 15px; padding: 15px; width: 100%;">Lanjut Merakit & Simpan ›</button>
             </div>
         </div>
@@ -314,13 +316,13 @@
         let settingMaxRetake = 3; let retakeCounts = []; let isEventBerbayar = false; let hargaExtraCetakPerLembar = 15000; 
         let jumlahCetakDipilih = 1; let isLiveViewRunning = false; let sisaWaktuSesi = 300; let intervalTimerSesi = null; let timeoutIdleAkhir = null; 
         let currentSessionId = 'COL-' + Date.now();
-        let intervalCekPembayaranExtra = null; // Variabel baru untuk QRIS Extra
-        let activeCameraMode = 'canon'; // Default ke Canon
+        let intervalCekPembayaranExtra = null; 
+        let activeCameraMode = 'canon'; 
         let webcamStream = null;
-        // VARIABLE UNTUK MENYIMPAN BASE64 DARI DASHBOARD
         let qrisBase64Tersemat = "";
         
         function formatWaktu(detik) { let m = Math.floor(detik / 60); let s = detik % 60; return (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s); }
+        
         function mulaiHitungMundurSesi() {
             const timerUI = document.getElementById('sessionTimerDisplay'); const timerText = document.getElementById('sessionTimerText'); timerText.innerText = formatWaktu(sisaWaktuSesi); timerUI.style.display = 'flex';
             intervalTimerSesi = setInterval(() => {
@@ -353,20 +355,38 @@
                 await fetch('/api/start-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId: currentSessionId }) });
                 const resSet = await fetch('/api/settings'); const dataSet = await resSet.json();
                 
+                // Ambil Pengaturan QRIS
+                const resQris = await fetch('/api/settings/qris'); 
+                const dataQris = await resQris.json();
+                
                 if (dataSet.global?.liveViewBrightness) settingKecerahanLV = dataSet.global.liveViewBrightness;
                 if (dataSet.collage?.timer) settingCountdownCollage = dataSet.collage.timer;
                 if (dataSet.global?.flashWorkaround !== undefined) settingFlashWorkaround = dataSet.global.flashWorkaround;
                 if (dataSet.collage?.sessionTimer) sisaWaktuSesi = dataSet.collage.sessionTimer;
                 if (dataSet.collage?.maxRetake !== undefined) settingMaxRetake = parseInt(dataSet.collage.maxRetake);
-                if (dataSet.global?.extraPrintPrice) hargaExtraCetakPerLembar = parseInt(dataSet.global.extraPrintPrice);
-                // Ganti variabel "dataSet" dengan "data" jika Anda mengedit file photobox.html
-let mesinKamera = (dataSet.global && (dataSet.global.cameraEngine || dataSet.global.kameraUtama)) || 'canon';
-if (mesinKamera.toLowerCase().includes('webcam')) {
-    activeCameraMode = 'webcam';
-} else {
-    activeCameraMode = 'canon';
-}
-                // MENGAMBIL DATA QRIS BASE64 DARI DASHBOARD
+                
+                // --- PENENTUAN HARGA EXTRA (STATIS / DINAMIS) ---
+                let qrisType = dataQris.type || 'static';
+                if (qrisType === 'dynamic') {
+                    hargaExtraCetakPerLembar = dataQris.dynamicExtraPrice || 15000;
+                } else {
+                    hargaExtraCetakPerLembar = dataSet.global?.extraPrintPriceStatic || 15000;
+                }
+
+                // --- SEMBUNYIKAN LIVE PHOTO BILA DINONAKTIFKAN ---
+                if (dataSet.global?.livePhotoEnabled === false) {
+                    const lpWrapper = document.getElementById('livePhotoWrapper');
+                    if(lpWrapper) lpWrapper.style.display = 'none';
+                }
+
+                let mesinKamera = (dataSet.global && (dataSet.global.cameraEngine || dataSet.global.kameraUtama)) || 'canon';
+                if (mesinKamera.toLowerCase().includes('webcam')) {
+                    activeCameraMode = 'webcam';
+                } else {
+                    activeCameraMode = 'canon';
+                }
+
+                // Ambil data Base64 QRIS jika tersedia
                 if (dataSet.global?.qrisData) qrisBase64Tersemat = dataSet.global.qrisData;
 
                 const resEvent = await fetch('/api/current-event'); const dataEvent = await resEvent.json();
@@ -383,29 +403,30 @@ if (mesinKamera.toLowerCase().includes('webcam')) {
             isMirror = !isMirror; 
             document.getElementById('liveView').classList.toggle('mirrored', isMirror); 
             document.querySelectorAll('.btn-mirror').forEach(btn => btn.innerText = isMirror ? "🪞 Cermin: ON" : "🪞 Cermin: OFF"); 
-            document.getElementById('webcam-view').classList.toggle('mirrored', isMirror); // <--- PINDAHKAN KE DALAM SINI
+            document.getElementById('webcam-view').classList.toggle('mirrored', isMirror); 
         }
-       async function kembaliKeTemplate() { 
+        
+        async function kembaliKeTemplate() { 
             document.getElementById('kamera-container').style.display = 'none'; 
             document.getElementById('panel-template').classList.add('active-panel'); 
             isLiveViewRunning = false; 
             await fetch('/toggle-liveview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: false }) }); 
             const vid = document.getElementById('poseVideoPlayer'); 
             if(vid) vid.pause();
-            
-            matikanWebcam(); // <--- CUKUP PANGGIL INI SAJA
+            matikanWebcam(); 
         }
+
         function masukKeKamera(idTemplate) {
             templateTerpilih = idTemplate; fotoTerpilih = []; indexFotoSaatIni = 1; retakeCounts = new Array(targetJepretan).fill(settingMaxRetake);
             document.getElementById('panel-template').classList.remove('active-panel'); document.getElementById('kamera-container').style.display = 'flex';
             siapkanMiniGallery(); document.getElementById('mode-jepret').style.display = 'flex'; document.getElementById('mode-retake').style.display = 'none'; document.getElementById('previewImage').style.display = 'none'; document.getElementById('liveView').style.display = 'block';
             document.getElementById('liveView').classList.toggle('mirrored', isMirror); document.getElementById('liveView').style.filter = `brightness(${settingKecerahanLV}%)`;
-           if (activeCameraMode === 'webcam') {
-    jalankanWebcam();
-} else {
-    fetch('/toggle-liveview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: true }) });
-    isLiveViewRunning = true; jalankanLiveViewAman();
-}
+            if (activeCameraMode === 'webcam') {
+                jalankanWebcam();
+            } else {
+                fetch('/toggle-liveview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: true }) });
+                isLiveViewRunning = true; jalankanLiveViewAman();
+            }
         }
 
         function siapkanMiniGallery() { const container = document.getElementById('miniGallery'); container.innerHTML = ''; for (let i = 1; i <= targetJepretan; i++) { container.innerHTML += `<div class="mini-slot" id="slot-${i}" onclick="klikMiniGallery(${i})">${i} <div class="overlay-review">Lihat/Retake</div></div>`; } updateSorotanMiniGallery(); }
@@ -430,7 +451,6 @@ if (mesinKamera.toLowerCase().includes('webcam')) {
                 if (dataAwal.success && dataAwal.files.length > 0) namaFotoSebelumnya = dataAwal.files[0].name; 
             } catch (e) {}
 
-            // --- 1. MULAI REKAM FRAME VIDEO WEBCAM ---
             let webcamFrames = [];
             let recordInterval = null;
             if (activeCameraMode === 'webcam') {
@@ -447,7 +467,6 @@ if (mesinKamera.toLowerCase().includes('webcam')) {
                     webcamFrames.push(tempCanvas.toDataURL('image/jpeg', 0.6));
                 }, 100);
             }
-            // ------------------------------------------
 
             countdownLayar.style.display = 'flex'; 
             for (let i = settingCountdownCollage; i > 0; i--) { 
@@ -456,7 +475,6 @@ if (mesinKamera.toLowerCase().includes('webcam')) {
             } 
             countdownLayar.style.display = 'none';
 
-            // HENTIKAN REKAMAN
             if(recordInterval) clearInterval(recordInterval);
 
             if (settingFlashWorkaround) { 
@@ -475,14 +493,12 @@ if (mesinKamera.toLowerCase().includes('webcam')) {
             teksLoading.innerText = "✨ Tunggu sebentar ya..."; 
             teksLoading.style.display = 'block'; 
             
-            // JIKA MENGGUNAKAN WEBCAM
             if (activeCameraMode === 'webcam') {
                 const video = document.getElementById('webcam-view');
                 const canvas = document.getElementById('webcam-canvas');
                 canvas.width = video.videoWidth; canvas.height = video.videoHeight;
                 const ctx = canvas.getContext('2d');
 
-                // Terapkan efek Mirroring secara fisik ke file hasil
                 if (isMirror) { ctx.translate(canvas.width, 0); ctx.scale(-1, 1); }
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                 const base64Image = canvas.toDataURL('image/jpeg', 0.9);
@@ -492,12 +508,10 @@ if (mesinKamera.toLowerCase().includes('webcam')) {
                     body: JSON.stringify({ 
                         imageBase64: base64Image, 
                         isMirrored: false,
-                        liveFramesBase64: webcamFrames // KASIH DATA VIDEO KE BACKEND
+                        liveFramesBase64: webcamFrames 
                     }) 
                 });
-            } 
-            // JIKA MENGGUNAKAN CANON
-            else {
+            } else {
                 await fetch('/capture', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'collage', mirror: isMirror, lvActive: settingFlashWorkaround }) });
             }
 
@@ -529,11 +543,11 @@ if (mesinKamera.toLowerCase().includes('webcam')) {
 
         function lanjutKeLiveView() {
             document.getElementById('mode-jepret').style.display = 'flex'; document.getElementById('previewImage').style.display = 'none'; document.getElementById('liveView').style.display = 'block'; document.getElementById('liveView').classList.toggle('mirrored', isMirror); document.getElementById('liveView').style.filter = `brightness(${settingKecerahanLV}%)`; setTimeout(() => { fetch('/toggle-liveview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: true }) }).then(() => { if (activeCameraMode === 'webcam') {
-    jalankanWebcam();
-} else {
-    fetch('/toggle-liveview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: true }) });
-    isLiveViewRunning = true; jalankanLiveViewAman();
-} }); }, 800); 
+                jalankanWebcam();
+            } else {
+                fetch('/toggle-liveview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: true }) });
+                isLiveViewRunning = true; jalankanLiveViewAman();
+            } }); }, 800); 
         }
 
         async function bukaPanelEfek() {
@@ -580,7 +594,6 @@ if (mesinKamera.toLowerCase().includes('webcam')) {
                 
                 if (data.success) { 
                     linkGoogleDriveUnik = data.driveLink || "https://drive.google.com/"; 
-                    // [BARU] Kirim URL foto dan URL GIF (jika ada) ke fungsi penampil hasil
                     tampilkanPreviewAkhir(data.file, data.livePhoto); 
                 } else { 
                     alert("Oops, error: " + data.message); 
@@ -601,7 +614,6 @@ if (mesinKamera.toLowerCase().includes('webcam')) {
             namaFileTerbaruToCetak = urlFotoFinal; 
             document.getElementById('finalImageResult').src = urlFotoFinal + "?t=" + Date.now();
             
-            // [BARU] Tampilkan GIF jika URL-nya dikirim dari server
             const elemenGif = document.getElementById('img-hasil-gif');
             if (urlGifFinal) {
                 elemenGif.src = urlGifFinal + "?t=" + Date.now();
@@ -620,94 +632,84 @@ if (mesinKamera.toLowerCase().includes('webcam')) {
         function ubahJumlahCetak(nilai) { let num = jumlahCetakDipilih + nilai; if (num < 1) num = 1; if (num > 10) num = 10; jumlahCetakDipilih = num; updateUIJumlahCetak(); }
         function updateUIJumlahCetak() { document.getElementById('label-jumlah-cetak').innerText = jumlahCetakDipilih + " Lembar"; const btnAction = document.getElementById('btn-action-cetak'); if (isEventBerbayar && jumlahCetakDipilih > 1) { let biayaTambahan = (jumlahCetakDipilih - 1) * hargaExtraCetakPerLembar; btnAction.innerText = `💳 Bayar Extra & Cetak (${jumlahCetakDipilih} Lbr) - Rp ${biayaTambahan.toLocaleString('id-ID')}`; btnAction.style.background = "var(--yellow)"; } else { btnAction.innerText = `🖨️ Cetak (${jumlahCetakDipilih} Lembar)`; btnAction.style.background = "var(--blue)"; } }
 
-      async function prosesCetakFinal() {
-    if (isEventBerbayar && jumlahCetakDipilih > 1) {
-        let biayaTambahan = (jumlahCetakDipilih - 1) * hargaExtraCetakPerLembar;
-        document.getElementById('payment-text-info').innerHTML = `Silakan selesaikan pembayaran untuk <b>${jumlahCetakDipilih - 1} lembar tambahan</b> sebesar <br><b style="font-size:1.8rem; color:var(--ink);">Rp ${biayaTambahan.toLocaleString('id-ID')}</b>`;
-        
-        const qrisImg = document.getElementById('qris-image-preview');
-        
-        // Pastikan gambar ditampilkan
-        qrisImg.style.display = 'block';
-        qrisImg.src = ''; 
-        qrisImg.alt = 'Memuat QRIS...';
-        
-        document.getElementById('qris-section').style.display = 'block'; 
-        document.getElementById('payment-buttons').style.display = 'flex'; 
-        document.getElementById('cash-validation-section').style.display = 'none';
-        document.getElementById('paymentModalOverlay').style.display = 'flex';
-
-        try {
-            // 1. CEK DULU SETTINGAN QRIS DARI SERVER (STATIS ATAU DINAMIS)
-            const resSetting = await fetch('/api/settings/qris');
-            const qrisSetting = await resSetting.json();
-
-            // 2. LOGIKA PERCABANGAN
-            if (qrisSetting.type === 'static') {
-                // --- MODE STATIS ---
-                // Langsung ambil gambar statis yang di-upload dari dashboard
-                qrisImg.src = `/assets/qris_static.png?t=${Date.now()}`;
+        async function prosesCetakFinal() {
+            if (isEventBerbayar && jumlahCetakDipilih > 1) {
+                let biayaTambahan = (jumlahCetakDipilih - 1) * hargaExtraCetakPerLembar;
+                document.getElementById('payment-text-info').innerHTML = `Silakan selesaikan pembayaran untuk <b>${jumlahCetakDipilih - 1} lembar tambahan</b> sebesar <br><b style="font-size:1.8rem; color:var(--ink);">Rp ${biayaTambahan.toLocaleString('id-ID')}</b>`;
                 
-                // Beri tahu pelanggan bahwa ini pengecekan manual
-                document.getElementById('payment-text-info').innerHTML += `<br><span style="font-size:0.9rem; color:#666;">(Harap klik "Sudah Bayar" setelah berhasil transfer)</span>`;
+                const qrisImg = document.getElementById('qris-image-preview');
+                qrisImg.style.display = 'block';
+                qrisImg.src = ''; 
+                qrisImg.alt = 'Memuat QRIS...';
                 
-                // CATATAN: Di mode statis, kita TIDAK memanggil cekStatusPembayaranExtra() 
-                // karena tidak ada webhook Midtrans.
+                document.getElementById('qris-section').style.display = 'block'; 
+                document.getElementById('payment-buttons').style.display = 'flex'; 
+                document.getElementById('cash-validation-section').style.display = 'none';
+                document.getElementById('paymentModalOverlay').style.display = 'flex';
 
-            } else {
-                // --- MODE DINAMIS (MIDTRANS) ---
-                const response = await fetch(`/api/payment/qris-dynamic?amount=${biayaTambahan}`);
-                const data = await response.json();
-                
-                if (data.success) {
-                    qrisImg.src = data.qrImage; // Gambar barcode unik dari Midtrans
-                    cekStatusPembayaranExtra(data.orderId); // Jalankan Polling otomatis
-                } else {
-                    document.getElementById('payment-text-info').innerHTML = `<br><b style="color:#ef4444; font-size:1.1rem;">Gagal membuat QRIS:<br>${data.message}</b>`;
+                try {
+                    const resSetting = await fetch('/api/settings/qris');
+                    const qrisSetting = await resSetting.json();
+
+                    if (qrisSetting.type === 'static') {
+                        if (qrisBase64Tersemat) {
+                            qrisImg.src = qrisBase64Tersemat;
+                        } else {
+                            qrisImg.src = `/assets/qris_static.png?t=${Date.now()}`;
+                        }
+                        
+                        document.getElementById('payment-text-info').innerHTML += `<br><span style="font-size:0.9rem; color:#666;">(Harap klik "Sudah Bayar" setelah berhasil transfer)</span>`;
+                    } else {
+                        const response = await fetch(`/api/payment/qris-dynamic?amount=${biayaTambahan}`);
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            qrisImg.src = data.qrImage; 
+                            cekStatusPembayaranExtra(data.orderId); 
+                        } else {
+                            document.getElementById('payment-text-info').innerHTML = `<br><b style="color:#ef4444; font-size:1.1rem;">Gagal membuat QRIS:<br>${data.message}</b>`;
+                            qrisImg.style.display = 'none';
+                            setTimeout(() => { batalkanPaymentExtra(); }, 3000);
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error fetch QRIS:", error);
+                    document.getElementById('payment-text-info').innerHTML = `<br><b style="color:#ef4444; font-size:1.1rem;">Kesalahan koneksi server saat memuat QRIS.</b>`;
                     qrisImg.style.display = 'none';
                     setTimeout(() => { batalkanPaymentExtra(); }, 3000);
                 }
+            } else { 
+                jalankanPerintahCetakKePrinter(); 
             }
-        } catch (error) {
-            console.error("Error fetch QRIS:", error);
-            document.getElementById('payment-text-info').innerHTML = `<br><b style="color:#ef4444; font-size:1.1rem;">Kesalahan koneksi server saat memuat QRIS.</b>`;
-            qrisImg.style.display = 'none';
-            setTimeout(() => { batalkanPaymentExtra(); }, 3000);
         }
-    } else { 
-        jalankanPerintahCetakKePrinter(); 
-    }
-}
-// Fungsi baru untuk mengecek ke server apakah pelanggan sudah bayar Extra Cetak
-function cekStatusPembayaranExtra(orderId) {
-    // Bersihkan interval lama jika masih menyala
-    if (intervalCekPembayaranExtra) clearInterval(intervalCekPembayaranExtra);
-    
-    intervalCekPembayaranExtra = setInterval(async () => {
-        try {
-            const response = await fetch(`/api/payment/check-status/${orderId}`);
-            const data = await response.json();
+
+        function cekStatusPembayaranExtra(orderId) {
+            if (intervalCekPembayaranExtra) clearInterval(intervalCekPembayaranExtra);
             
-            // Jika Midtrans bilang Lunas (settlement)
-            if (data.success && (data.status === 'settlement' || data.status === 'capture')) {
-                clearInterval(intervalCekPembayaranExtra); // Hentikan pengecekan
-                simulasikanPaymentSukses(); // Otomatis jalankan perintah cetak!
-            }
-        } catch (error) {
-            console.error("Gagal cek status pembayaran extra:", error);
+            intervalCekPembayaranExtra = setInterval(async () => {
+                try {
+                    const response = await fetch(`/api/payment/check-status/${orderId}`);
+                    const data = await response.json();
+                    
+                    if (data.success && (data.status === 'settlement' || data.status === 'capture')) {
+                        clearInterval(intervalCekPembayaranExtra); 
+                        simulasikanPaymentSukses(); 
+                    }
+                } catch (error) {
+                    console.error("Gagal cek status pembayaran extra:", error);
+                }
+            }, 3000); 
         }
-    }, 3000); // Mengecek ke server setiap 3 detik
-}
 
         function pilihTunai() { document.getElementById('qris-section').style.display = 'none'; document.getElementById('payment-buttons').style.display = 'none'; document.getElementById('cash-validation-section').style.display = 'flex'; window.addEventListener('keydown', validasiAdminKeyListener); }
         function validasiAdminKeyListener(e) { if (e.key === 'y' || e.key === 'Y') { window.removeEventListener('keydown', validasiAdminKeyListener); simulasikanPaymentSukses(); } }
-       function batalkanPaymentExtra() { 
-    // Hentikan pengecekan pembayaran ke Midtrans
-    if (intervalCekPembayaranExtra) clearInterval(intervalCekPembayaranExtra);
-    
-    document.getElementById('paymentModalOverlay').style.display = 'none'; 
-    window.removeEventListener('keydown', validasiAdminKeyListener); 
-}
+        
+        function batalkanPaymentExtra() { 
+            if (intervalCekPembayaranExtra) clearInterval(intervalCekPembayaranExtra);
+            document.getElementById('paymentModalOverlay').style.display = 'none'; 
+            window.removeEventListener('keydown', validasiAdminKeyListener); 
+        }
+        
         function simulasikanPaymentSukses() { batalkanPaymentExtra(); jalankanPerintahCetakKePrinter(); }
         
         async function jalankanPerintahCetakKePrinter() {
@@ -728,18 +730,17 @@ function cekStatusPembayaranExtra(orderId) {
             } catch (err) { inputWa.disabled = false; btnWa.disabled = false; btnWa.innerText = "Kirim"; alert("Kesalahan server."); }
         }
         
-        
-    function jalankanWebcam() {
-    document.getElementById('liveView').style.display = 'none'; // Sembunyikan Canon
-    const vid = document.getElementById('webcam-view');
-    vid.style.display = 'block'; // Tampilkan Webcam
-    
-    navigator.mediaDevices.getUserMedia({ video: { width: 1920, height: 1080 } })
-        .then(stream => { webcamStream = stream; vid.srcObject = stream; })
-        .catch(err => { alert("Webcam gagal diakses atau tidak diizinkan browser!"); });
-}
+        function jalankanWebcam() {
+            document.getElementById('liveView').style.display = 'none'; 
+            const vid = document.getElementById('webcam-view');
+            vid.style.display = 'block'; 
+            
+            navigator.mediaDevices.getUserMedia({ video: { width: 1920, height: 1080 } })
+                .then(stream => { webcamStream = stream; vid.srcObject = stream; })
+                .catch(err => { alert("Webcam gagal diakses atau tidak diizinkan browser!"); });
+        }
 
-function matikanWebcam() {
+        function matikanWebcam() {
             if (webcamStream) {
                 webcamStream.getTracks().forEach(track => track.stop());
                 webcamStream = null;
@@ -754,53 +755,48 @@ function matikanWebcam() {
         function endDragNumpad() { isDragging = false; document.removeEventListener('mousemove', dragNumpad); document.removeEventListener('touchmove', dragNumpad); document.removeEventListener('mouseup', endDragNumpad); document.removeEventListener('touchend', endDragNumpad); }
         function tekanAngka(angka) { if(inputTarget) inputTarget.value += angka; } function hapusAngka() { if(inputTarget) inputTarget.value = inputTarget.value.slice(0, -1); } function tutupNumpad() { if(virtualNumpad) virtualNumpad.style.display = 'none'; }
     </script>
+    
     <!-- PERBAIKAN BUG FOCUS ALERT & WHATSAPP -->
-<script>
-    // Timpa fungsi alert bawaan Windows agar menggunakan animasi UI yang aman
-    window.alert = function(pesan) {
-        let container = document.getElementById('custom-toast-container');
-        if (!container) {
-            container = document.createElement('div');
-            container.id = 'custom-toast-container';
-            // Posisi di tengah bawah layar
-            container.style.cssText = 'position:fixed; bottom:100px; left:50%; transform:translateX(-50%); z-index:999999; display:flex; flex-direction:column; gap:10px; pointer-events:none;';
-            document.body.appendChild(container);
-        }
-        
-        const toast = document.createElement('div');
-        let bgColor = '#3b82f6'; // Biru bawaan
-        
-        // Deteksi pesan error/kesalahan
-        if (pesan.toLowerCase().includes('gagal') || pesan.toLowerCase().includes('error') || pesan.toLowerCase().includes('kesalahan') || pesan.includes('❌')) {
-            bgColor = '#ef4444'; // Merah
-        } else if (pesan.toLowerCase().includes('berhasil') || pesan.includes('✅') || pesan.includes('terkirim')) {
-            bgColor = '#10b981'; // Hijau
-        }
+    <script>
+        window.alert = function(pesan) {
+            let container = document.getElementById('custom-toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'custom-toast-container';
+                container.style.cssText = 'position:fixed; bottom:100px; left:50%; transform:translateX(-50%); z-index:999999; display:flex; flex-direction:column; gap:10px; pointer-events:none;';
+                document.body.appendChild(container);
+            }
+            
+            const toast = document.createElement('div');
+            let bgColor = '#3b82f6'; 
+            
+            if (pesan.toLowerCase().includes('gagal') || pesan.toLowerCase().includes('error') || pesan.toLowerCase().includes('kesalahan') || pesan.includes('❌')) {
+                bgColor = '#ef4444'; 
+            } else if (pesan.toLowerCase().includes('berhasil') || pesan.includes('✅') || pesan.includes('terkirim')) {
+                bgColor = '#10b981'; 
+            }
 
-        toast.style.cssText = `background:${bgColor}; color:white; padding:15px 35px; border-radius:50px; font-weight:700; font-size:1.2rem; box-shadow:0 10px 20px rgba(0,0,0,0.3); border:3px solid #fff; text-align:center; transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55); opacity: 0; transform: translateY(40px); font-family: 'Fredoka', sans-serif;`;
-        toast.innerHTML = pesan.replace(/\n/g, '<br>');
-        
-        container.appendChild(toast);
-        
-        // Animasi Masuk
-        requestAnimationFrame(() => {
-            toast.style.opacity = '1';
-            toast.style.transform = 'translateY(0)';
-        });
+            toast.style.cssText = `background:${bgColor}; color:white; padding:15px 35px; border-radius:50px; font-weight:700; font-size:1.2rem; box-shadow:0 10px 20px rgba(0,0,0,0.3); border:3px solid #fff; text-align:center; transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55); opacity: 0; transform: translateY(40px); font-family: 'Fredoka', sans-serif;`;
+            toast.innerHTML = pesan.replace(/\n/g, '<br>');
+            
+            container.appendChild(toast);
+            
+            requestAnimationFrame(() => {
+                toast.style.opacity = '1';
+                toast.style.transform = 'translateY(0)';
+            });
 
-        // Animasi Keluar setelah 4 detik
-        setTimeout(() => {
-            toast.style.opacity = '0';
-            toast.style.transform = 'translateY(20px)';
-            setTimeout(() => toast.remove(), 400);
-        }, 4000);
-        
-        // Kembalikan fokus ke body agar input teks tidak macet
-        setTimeout(() => {
-            window.focus();
-            document.body.focus();
-        }, 50);
-    };
-</script>
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(20px)';
+                setTimeout(() => toast.remove(), 400);
+            }, 4000);
+            
+            setTimeout(() => {
+                window.focus();
+                document.body.focus();
+            }, 50);
+        };
+    </script>
 </body>
 </html>

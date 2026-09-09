@@ -732,7 +732,6 @@
             </div>
         </div>
 
-        <!-- TAMBAHAN: PENGATURAN HARGA CETAK EXTRA ADA DI SINI -->
         <!-- TAB QRIS BARU -->
         <div id="tab-qris" class="tab-panel">
             <div class="top-bar">
@@ -740,7 +739,7 @@
                 <p class="tab-desc">Atur metode pembayaran QRIS (Statis/Dinamis) dan harga cetak tambahan untuk photobooth berbayar.</p>
             </div>
             <div class="grid-2">
-                <!-- KARTU 1: PENGATURAN QRIS -->
+                <!-- KARTU 1: PENGATURAN QRIS DINAMIS -->
                 <div class="card" style="background: var(--blue);">
                     <div class="card-header" style="border-bottom-color: var(--ink);">💳 Pengaturan QRIS</div>
                     
@@ -757,27 +756,37 @@
                         <label>Harga Sesi Photobooth (Rp):</label>
                         <input type="number" id="qrisPrice" placeholder="Contoh: 35000" style="font-weight: bold; font-size: 1.1rem; margin-bottom: 15px;">
                         
+                        <label>Harga Cetak Extra Dinamis (Rp):</label>
+                        <input type="number" id="sys-extraPrintPriceDynamic" placeholder="Misal: 15000" style="font-weight: bold; font-size: 1.1rem; margin-bottom: 15px;">
+                        
                         <label>Midtrans Server Key:</label>
                         <input type="text" id="midtransServerKey" placeholder="Mulai dengan SB-Mid-server-..." style="font-weight: bold; font-size: 0.9rem; margin-bottom: 10px;">
-                        <label style="font-weight: 600; font-size: 0.9rem; color: var(--ink); margin-top: 15px; display: block;">
-    Midtrans Client Key:
-</label>
-<input type="text" id="midtransClientKey" placeholder="Contoh: Mid-client-XXXXX..." style="width: 100%; padding: 12px; border: 2px solid var(--ink); border-radius: 10px; font-weight: bold;">
+                        
+                        <label style="font-weight: 600; font-size: 0.9rem; color: var(--ink); margin-top: 15px; display: block;">Midtrans Client Key:</label>
+                        <input type="text" id="midtransClientKey" placeholder="Contoh: Mid-client-XXXXX..." style="width: 100%; padding: 12px; border: 2px solid var(--ink); border-radius: 10px; font-weight: bold;">
+                        
                         <!-- KODE BARU CLOUDFLARE -->
-<hr style="border: 1px dashed var(--ink); margin: 20px 0;">
-<label style="color: #3b82f6; display: flex; align-items: center; gap: 5px;">🌐 Token Cloudflare Tunnel:</label>
-<input type="text" id="input-cf-token" placeholder="eyJh... (Paste token panjang di sini)" style="font-weight: bold; font-size: 0.9rem; font-family: monospace; border: 2px solid #3b82f6;">
-<p style="font-size: 0.8rem; color: #444; margin-top: 8px;">*Wajib diisi agar Midtrans bisa berkomunikasi dengan Mini PC Photobooth ini secara online.</p>
-<!-- AKHIR KODE BARU CLOUDFLARE -->
-  </div>
+                        <hr style="border: 1px dashed var(--ink); margin: 20px 0;">
+                        <label style="color: #3b82f6; display: flex; align-items: center; gap: 5px;">🌐 Token Cloudflare Tunnel:</label>
+                        <input type="text" id="input-cf-token" placeholder="eyJh... (Paste token panjang di sini)" style="font-weight: bold; font-size: 0.9rem; font-family: monospace; border: 2px solid #3b82f6;">
+                        <p style="font-size: 0.8rem; color: #444; margin-top: 8px;">*Wajib diisi agar Midtrans bisa berkomunikasi dengan Mini PC Photobooth ini secara online.</p>
+                        <!-- AKHIR KODE BARU CLOUDFLARE -->
+                    </div>
                     
-                    <!-- TAMBAHKAN TOMBOL SIMPAN DI SINI -->
-                    <button type="button" class="btn-primary" style="background: var(--ink); color: white; width: 100%;" onclick="saveQrisSettings()">💾 Simpan Setelan QRIS</button>
+                    <button type="button" class="btn-primary" style="background: var(--ink); color: white; width: 100%;" onclick="saveQrisSettings()">💾 Simpan Setelan QRIS Dinamis</button>
                 </div>
-                <!-- KARTU 2: UPLOAD QRIS STATIS -->
+
+                <!-- KARTU 2: UPLOAD QRIS STATIS & HARGA EXTRA STATIS -->
                 <div class="card">
-                    <div class="card-header">📲 Upload QRIS Toko (Statis)</div>
+                    <div class="card-header">📲 Setup QRIS (Statis)</div>
                     <p style="font-size: 0.85rem; color: #666; margin-bottom: 15px;">(Hanya digunakan jika Anda memilih Tipe QRIS Statis di samping kiri).</p>
+                    
+                    <div class="form-group" style="background: rgba(255,255,255,0.5); padding: 15px; border-radius: 10px; border: 2px dashed var(--ink); margin-bottom: 15px;">
+                        <label>Harga Cetak Extra Statis (Rp):</label>
+                        <input type="number" id="sys-extraPrintPriceStatic" placeholder="Misal: 15000" style="font-weight: bold; font-size: 1.1rem; width: 100%; padding: 10px; margin-bottom: 10px; border: 2px solid var(--ink); border-radius: 10px;">
+                        <button type="button" class="btn-primary" style="background:var(--pink); color:var(--ink); width: 100%;" onclick="simpanPengaturan()">💾 Simpan Harga Extra Statis</button>
+                    </div>
+
                     <form id="formQrisUpload">
                         <div class="form-group">
                             <label>Gambar QRIS (PNG/JPG)</label>
@@ -785,16 +794,6 @@
                         </div>
                         <button type="submit" class="btn-primary" style="background:var(--yellow); color:var(--ink);">📤 Simpan Gambar QRIS</button>
                     </form>
-                </div>
-
-                <!-- KARTU 3: HARGA EXTRA PRINT -->
-                <div class="card" style="grid-column: 1 / -1; background: var(--paper-white);">
-                    <div class="card-header">🏷️ Harga Cetak Tambahan (Extra Print)</div>
-                    <div class="form-group">
-                        <label>Harga Per Lembar Extra (Rp)</label>
-                        <input type="number" id="sys-extraPrintPrice" placeholder="Misal: 15000">
-                    </div>
-                    <button type="button" class="btn-primary" style="background:var(--pink); color:var(--ink); width: auto;" onclick="simpanPengaturan()">💾 Simpan Harga Extra</button>
                 </div>
             </div>
         </div>
@@ -1058,8 +1057,11 @@ togglePinInput(); // Panggil agar UI menyesuaikan saat dimuat
                 document.getElementById('sys-cloudStorage').value = data.global?.cloudStorage !== false ? "true" : "false";
                 document.getElementById('driveParentFolderId').value = data.global?.driveParentFolderId || "";
                 if (document.getElementById('input-cf-token')) document.getElementById('input-cf-token').value = data.global?.cloudflareToken || "";
-                // Load Harga Extra Print
-                document.getElementById('sys-extraPrintPrice').value = data.global?.extraPrintPrice || "15000";
+                
+                // Load Harga Extra Print Statis
+                if (document.getElementById('sys-extraPrintPriceStatic')) {
+                    document.getElementById('sys-extraPrintPriceStatic').value = data.global?.extraPrintPriceStatic || "15000";
+                }
 
                 document.getElementById('wa-message-text').value = data.waMessage || "Halo dari Lacasaphoto! 📸\n\nTerima kasih sudah berfoto ria bersama kami. Berikut link foto kamu:\n\n🔗 {link}";
 
@@ -1109,7 +1111,7 @@ togglePinInput(); // Panggil agar UI menyesuaikan saat dimuat
                         customIdleScreen: currentCustomIdle,
                         
                         // Konfigurasi Form Lainnya
-                        extraPrintPrice: parseInt(getVal('sys-extraPrintPrice', 15000)) || 15000,
+                        extraPrintPriceStatic: parseInt(getVal('sys-extraPrintPriceStatic', 15000)) || 15000,
                         cameraEngine: getVal('sys-cameraEngine', 'canon'),
                         cameraPort: getVal('sys-cameraPort', ''),
                         liveViewBrightness: parseInt(getVal('sys-brightness', 100)) || 100, 
@@ -1690,8 +1692,14 @@ function toggleDynamicFields(type) {
     document.getElementById('qrisPrice').value = data.dynamicPrice || 35000;
     
     // Tarik kunci yang tersimpan
+    if (document.getElementById('sys-extraPrintPriceDynamic')) document.getElementById('sys-extraPrintPriceDynamic').value = data.dynamicExtraPrice || 15000;
     if (document.getElementById('midtransServerKey')) document.getElementById('midtransServerKey').value = data.midtransServerKey || "";
     if (document.getElementById('midtransClientKey')) document.getElementById('midtransClientKey').value = data.midtransClientKey || "";
+    
+    // Tarik Token Cloudflare yang tersimpan
+    if (document.getElementById('input-cf-token')) {
+        document.getElementById('input-cf-token').value = data.cloudflareToken || "";
+    }
     
     toggleDynamicFields(data.type);
 }
@@ -1700,8 +1708,12 @@ async function saveQrisSettings() {
     try {
         const type = document.getElementById('qrisType').value;
         const price = document.getElementById('qrisPrice').value;
+        const extraDynamicPrice = document.getElementById('sys-extraPrintPriceDynamic').value;
         const serverKey = document.getElementById('midtransServerKey').value;
         const clientKey = document.getElementById('midtransClientKey').value;
+        
+        // 1. Tangkap isi kotak Token Cloudflare
+        const cfToken = document.getElementById('input-cf-token') ? document.getElementById('input-cf-token').value : ''; 
 
         const res = await fetch('/api/settings/qris', {
             method: 'POST',
@@ -1709,8 +1721,10 @@ async function saveQrisSettings() {
             body: JSON.stringify({ 
                 type: type, 
                 dynamicPrice: parseInt(price),
+                dynamicExtraPrice: parseInt(extraDynamicPrice),
                 midtransServerKey: serverKey,
-                midtransClientKey: clientKey
+                midtransClientKey: clientKey,
+                cloudflareToken: cfToken // 2. Kirim token ke Backend (main.js)
             })
         });
         
@@ -1718,7 +1732,7 @@ async function saveQrisSettings() {
 
         const result = await res.json();
         if (result.success) {
-            alert('✅ Pengaturan QRIS & Midtrans berhasil disimpan!');
+            alert('✅ Pengaturan QRIS, Midtrans & Cloudflare berhasil disimpan!');
         }
     } catch (e) {
         alert('❌ GAGAL: ' + e.message);
@@ -2095,7 +2109,7 @@ document.addEventListener('DOMContentLoaded', loadQrisSettings);
                     }
                 }
                 document.getElementById('btn-tier-free').innerText = "Paket Dasar (Free)";
-           
+            
             }
             // ... kode checkUserLicense sebelumnya ...
 

@@ -2,6 +2,7 @@ const { app: electronApp, BrowserWindow, ipcMain, session } = require('electron'
 const path = require('path');
 const koffi = require('koffi');
 const express = require('express');
+const https = require('https');
 const http = require('http');
 const { Server } = require('socket.io');
 const fs = require('fs');
@@ -774,28 +775,7 @@ expressApp.get('/api/settings', (req, res) => {
 
 expressApp.post('/api/settings', (req, res) => {
     try {
-        let oldSettings = {};
-        if (fs.existsSync(settingsPath)) {
-            oldSettings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
-        }
-
-        const newSettings = req.body;
-
-        // Mencegah token hilang jika frontend mengirim kolom kosong
-        if (newSettings.global) {
-            if ((!newSettings.global.cloudflareToken || newSettings.global.cloudflareToken === "") && oldSettings.global && oldSettings.global.cloudflareToken) {
-                newSettings.global.cloudflareToken = oldSettings.global.cloudflareToken;
-            }
-        }
-
-        fs.writeFileSync(settingsPath, JSON.stringify(newSettings, null, 2));
-
-        // Langsung jalankan tunnel
-        if (newSettings.global && newSettings.global.cloudflareToken) {
-            console.log("🔄 Eksekusi Cloudflare Tunnel dari Pengaturan Umum...");
-            startCloudflareTunnel();
-        }
-
+        fs.writeFileSync(settingsPath, JSON.stringify(req.body, null, 2));
         res.json({ success: true, message: "Pengaturan berhasil disimpan!" });
     } catch (err) { res.json({ success: false, message: "Gagal menyimpan pengaturan." }); }
 });
@@ -818,7 +798,6 @@ expressApp.post('/api/factory-reset', (req, res) => {
         if (fs.existsSync(assetsDir)) {
             const assetsFiles = fs.readdirSync(assetsDir);
             assetsFiles.forEach(file => {
-                // Hapus semua file yang berawalan custom-idle-
                 if (file.startsWith('custom-idle-')) {
                     fs.unlinkSync(path.join(assetsDir, file));
                 }
@@ -842,27 +821,54 @@ expressApp.post('/api/factory-reset', (req, res) => {
                 cloudStorage: true,
                 driveParentFolderId: "",
                 printer4R: "",
-                printerA4: ""
+                printerA4: "",
+                cloudflareToken: "" // <-- Token CF di pengaturan umum dikosongkan
             },
             waMessage: "Halo dari Lacasaphoto! 📸\n\nTerima kasih sudah berfoto ria bersama kami. Berikut link foto kamu:\n\n🔗 {link}"
         };
         fs.writeFileSync(settingsPath, JSON.stringify(defaultSettings, null, 2));
+
+        // 4.5. [BARU] Kosongkan Token Cloudflare & Server/Client Key Midtrans QRIS
+        const qrisDataPath = path.join(userDataPath, 'qris_data.json');
+        const defaultQris = {
+            type: 'static', 
+            staticImageUrl: '/assets/qris_static.png',
+            dynamicPrice: 35000,
+            midtransServerKey: '',  // <-- Server Key dikosongkan
+            midtransClientKey: '',  // <-- Client Key dikosongkan
+            cloudflareToken: ''     // <-- Token CF dikosongkan
+        };
+        fs.writeFileSync(qrisDataPath, JSON.stringify(defaultQris, null, 2));
+        
+        // Hentikan Cloudflare Tunnel yang berjalan karena tokennya sudah dihapus
+        if (cfTunnelProcess) {
+            cfTunnelProcess.removeAllListeners('close');
+            cfTunnelProcess.kill();
+        }
+        exec('taskkill /f /im cloudflared.exe', () => {});
 
         // 5. Bersihkan Daftar Event yang sedang berjalan
         fs.writeFileSync(eventsPath, JSON.stringify({ events: [] }, null, 2));
         activeEvent = null; // Matikan event aktif di memori
         activeSessionId = 'DEFAULT_SESSION';
 
-        // 6. Reset Laporan Analitik (Mereset Folder Uploads)
-        // Kita rename folder lama sebagai backup agar foto pelanggan tidak hilang terbakar
-        const timestamp = Date.now();
-       const backupUploadDir = path.join(userDataPath, `uploads_backup_${timestamp}`);
-        
+        // 6. Reset Laporan Analitik (MENGOSONGKAN FOLDER UPLOADS)
+        // [PERBAIKAN BUG EPERM] Kita hapus isinya satu per satu, BUKAN merename foldernya
         if (fs.existsSync(uploadDir)) {
-            fs.renameSync(uploadDir, backupUploadDir); // Ubah nama jadi folder backup
-            fs.mkdirSync(uploadDir, { recursive: true }); // Buat ulang folder uploads yang bersih
-            console.log(`[SISTEM] Analitik direset. File foto lama diamankan ke: uploads_backup_${timestamp}`);
+            const files = fs.readdirSync(uploadDir);
+            for (const file of files) {
+                const filePath = path.join(uploadDir, file);
+                try {
+                    // rmSync akan menghapus file, beserta folder dan sub-foldernya secara paksa
+                    fs.rmSync(filePath, { recursive: true, force: true });
+                } catch (err) {
+                    console.error(`Gagal menghapus file/folder ${file}:`, err.message);
+                }
+            }
+            console.log(`[SISTEM] Analitik direset. Folder uploads telah dikosongkan.`);
         }
+
+        // Catatan: Kredensial GDrive (token.json & oauth_credentials.json) TIDAK disentuh/dihapus.
 
         console.log("✅ Factory Reset Selesai!");
         res.json({ success: true, message: "Sistem berhasil direset ke Default." });
@@ -1742,10 +1748,21 @@ if (fs.existsSync(qrisDataPath)) {
 
 // --- 2. API Pengaturan ---
 expressApp.get('/api/settings/qris', (req, res) => {
-    res.json(qrisSettings);
+    let currentToken = "";
+    try {
+        // Ambil token dari settings.json agar tampil di kolom saat dashboard dibuka
+        if (fs.existsSync(settingsPath)) {
+            const dbSet = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+            if (dbSet.global && dbSet.global.cloudflareToken) {
+                currentToken = dbSet.global.cloudflareToken;
+            }
+        }
+    } catch(e) {}
+    res.json({ ...qrisSettings, cloudflareToken: currentToken });
 });
 
 expressApp.post('/api/settings/qris', express.json(), (req, res) => {
+    // Menangkap token cloudflare dari kiriman frontend
     const { type, dynamicPrice, midtransServerKey, midtransClientKey, cloudflareToken } = req.body;
     
     if (type) qrisSettings.type = type;
@@ -1753,45 +1770,68 @@ expressApp.post('/api/settings/qris', express.json(), (req, res) => {
     if (midtransServerKey !== undefined) qrisSettings.midtransServerKey = midtransServerKey;
     if (midtransClientKey !== undefined) qrisSettings.midtransClientKey = midtransClientKey;
     
+    // Tulis pengaturan QRIS ke file permanen
     fs.writeFileSync(qrisDataPath, JSON.stringify(qrisSettings, null, 2));
 
-    // Sinkronisasi token ke database utama
-    if (cloudflareToken && cloudflareToken.trim() !== "") {
+    // Masukkan Cloudflare Token ke settings.json agar dibaca oleh fungsi startCloudflareTunnel
+    if (cloudflareToken !== undefined) {
         try {
-            let dbSet = {};
-            if (fs.existsSync(settingsPath)) dbSet = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
-            if (!dbSet.global) dbSet.global = {};
-            
-            dbSet.global.cloudflareToken = cloudflareToken;
-            fs.writeFileSync(settingsPath, JSON.stringify(dbSet, null, 2));
-            
-            console.log("🔄 Eksekusi Cloudflare Tunnel dari Pengaturan QRIS...");
-            startCloudflareTunnel();
-        } catch(e) {}
+            if (fs.existsSync(settingsPath)) {
+                let dbSet = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+                if (!dbSet.global) dbSet.global = {};
+                
+                // Deteksi apakah ada perubahan token
+                const isTokenChanged = dbSet.global.cloudflareToken !== cloudflareToken;
+                
+                dbSet.global.cloudflareToken = cloudflareToken;
+                fs.writeFileSync(settingsPath, JSON.stringify(dbSet, null, 2));
+                
+                // [TWEAK BARU] Langsung sambungkan ke Cloudflare tanpa perlu restart aplikasi
+                if (isTokenChanged && cloudflareToken.trim() !== "") {
+                    console.log("🔄 Token baru terdeteksi! Menyambungkan ulang Cloudflare Tunnel...");
+                    startCloudflareTunnel();
+                }
+            }
+        } catch(e) {
+            console.error("Gagal menyimpan token Cloudflare:", e);
+        }
     }
     
-    res.json({ success: true, message: 'Pengaturan QRIS & Token disimpan!', data: qrisSettings });
+    res.json({ success: true, message: 'Pengaturan QRIS disimpan & Tunnel aktif!', data: qrisSettings });
 });
 // --- 3. API Generate QRIS Midtrans (Bisa untuk Sesi Utama & Cetak Extra) ---
-expressApp.get('/api/payment/qris-dynamic', async (req, res) => {
+// Menggunakan expressApp.all agar bisa menerima metode GET maupun POST
+expressApp.all('/api/payment/qris-dynamic', async (req, res) => {
     try {
         // CEK APAKAH INI BAYAR EXTRA PRINT ATAU SESI UTAMA
-        // Jika frontend mengirim ?amount=15000, gunakan itu. Jika tidak, pakai dynamicPrice standar.
-        const reqAmount = parseInt(req.query.amount);
+        let reqAmount = null;
+        
+        // Jika dari Extra Cetak (POST), ambil harga dari body
+        if (req.method === 'POST' && req.body && req.body.amount) {
+            reqAmount = parseInt(req.body.amount);
+        } 
+        // Jika dari parameter URL (GET)
+        else if (req.query && req.query.amount) {
+            reqAmount = parseInt(req.query.amount);
+        }
+        
+        // Jika tidak ada request khusus, gunakan harga default photobooth
         const amount = reqAmount ? reqAmount : qrisSettings.dynamicPrice; 
         
-        const serverKey = qrisSettings.midtransServerKey;
+        const serverKey = qrisSettings.midtransServerKey ? qrisSettings.midtransServerKey.trim() : "";
+        const clientKey = qrisSettings.midtransClientKey ? qrisSettings.midtransClientKey.trim() : "";
         
         if (!serverKey) throw new Error("Server Key Midtrans belum diisi di Dashboard.");
         if (!amount || amount <= 0) throw new Error("Harga belum diatur di Dashboard.");
 
         const coreApi = new midtransClient.CoreApi({
-            isProduction: !serverKey.startsWith('SB-'), 
+            // Otomatis deteksi mode Sandbox/Production dari awalan kunci 'SB-'
+            isProduction: true,
             serverKey: serverKey,
-            clientKey: qrisSettings.midtransClientKey
+            clientKey: clientKey
         });
 
-        // Bedakan ID Order agar rapi di laporan Midtrans
+        // Bedakan ID Order agar rapi di laporan Dashboard Midtrans
         const orderPrefix = reqAmount ? 'EXTRAPRINT-' : 'PHOTOBOOTH-';
         const orderId = orderPrefix + Date.now();
         
@@ -1852,7 +1892,7 @@ expressApp.get('/api/payment/check-status/:orderId', async (req, res) => {
         if (!serverKey) return res.json({ success: false, status: 'not_found' });
 
         const coreApi = new midtransClient.CoreApi({
-            isProduction: !serverKey.startsWith('SB-'),
+            isProduction: true,
             serverKey: serverKey,
             clientKey: qrisSettings.midtransClientKey
         });
@@ -1867,16 +1907,22 @@ expressApp.get('/api/payment/check-status/:orderId', async (req, res) => {
 // [BARU] INTEGRASI CLOUDFLARE TUNNELS OTOMATIS
 // =======================================================
 let cfTunnelProcess = null;
+let isIntentionalRestart = false; // <--- TAMBAHKAN FLAG INI
 
 function startCloudflareTunnel() {
     try {
-        // Ambil token dari memori qrisSettings
-        let cfToken = qrisSettings.cloudflareToken || ""; 
+        let cfToken = ""; 
+        if (fs.existsSync(settingsPath)) {
+            const dbSet = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+            if (dbSet.global && dbSet.global.cloudflareToken) {
+                cfToken = dbSet.global.cloudflareToken;
+            }
+        }
 
         const cloudflaredPath = path.join(__dirname, 'cloudflared.exe').replace('app.asar', 'app.asar.unpacked');
 
         if (!fs.existsSync(cloudflaredPath)) {
-            console.log("⚠️ [CLOUDFLARE] Batal jalan: File cloudflared.exe tidak ditemukan di folder proyek.");
+            console.log("⚠️ [CLOUDFLARE] Batal jalan: File cloudflared.exe tidak ditemukan.");
             return;
         }
 
@@ -1887,9 +1933,20 @@ function startCloudflareTunnel() {
 
         console.log("🌐 [CLOUDFLARE] Menghubungkan Mini PC ke Internet...");
         
-        // Membunuh proses lama jika sebelumnya nyangkut
+        // 1. Beri tanda bahwa ini direstart secara sengaja
+        isIntentionalRestart = true;
+        
+        // 2. Cabut pendengar event 'close' dari proses sebelumnya agar tidak looping
+        if (cfTunnelProcess) {
+            cfTunnelProcess.removeAllListeners('close');
+            cfTunnelProcess.kill();
+        }
+        
+        // 3. Matikan semua proses cloudflared yang tersangkut di Windows
         exec('taskkill /f /im cloudflared.exe', (err) => {
-            // Menjalankan cloudflared di background
+            
+            // 4. Reset tanda, mulai proses baru
+            isIntentionalRestart = false;
             cfTunnelProcess = spawn(cloudflaredPath, ['tunnel', '--no-autoupdate', 'run', '--token', cfToken]);
 
             cfTunnelProcess.stdout.on('data', (data) => {
@@ -1898,15 +1955,17 @@ function startCloudflareTunnel() {
 
             cfTunnelProcess.stderr.on('data', (data) => {
                 const msg = data.toString().trim();
-                // Sembunyikan log info biasa agar terminal tidak terlalu penuh, tampilkan yg penting
                 if(msg.includes('Registered tunnel connection') || msg.includes('ERR')) {
                     console.log(`[CF TUNNEL] ${msg}`);
                 }
             });
 
             cfTunnelProcess.on('close', (code) => {
-                console.log(`[CLOUDFLARE] Tunnel terputus (Kode: ${code}). Mencoba ulang dalam 10 detik...`);
-                setTimeout(startCloudflareTunnel, 10000); // Auto-restart jika putus
+                // 5. Hanya lakukan auto-restart 10 detik jika putusnya BUKAN karena disengaja ganti token
+                if (!isIntentionalRestart) {
+                    console.log(`[CLOUDFLARE] Tunnel terputus (Kode: ${code}). Mencoba ulang dalam 10 detik...`);
+                    setTimeout(startCloudflareTunnel, 10000); 
+                }
             });
         });
 
