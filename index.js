@@ -457,6 +457,65 @@ ipcMain.on('app-quit', () => {
     console.log("🛑 Tombol Matikan Sistem ditekan. Menutup aplikasi...");
     electronApp.quit();
 });
+// =======================================================
+// [BARU] FITUR SINKRONISASI TEMPLATE DARI GITHUB
+// =======================================================
+ipcMain.handle('sync-templates', async (event, githubBaseUrl) => {
+    return new Promise((resolve, reject) => {
+        const dbPath = path.join(userDataPath, 'database_frame.json');
+        const frameDir = path.join(userDataPath, 'frames');
+        if (!fs.existsSync(frameDir)) fs.mkdirSync(frameDir, { recursive: true });
+
+        // 1. Unduh file database_frame.json dari GitHub
+        const dbUrl = `${githubBaseUrl}/database_frame.json`;
+
+        https.get(dbUrl, (res) => {
+            if (res.statusCode !== 200) return reject({ error: `Gagal membaca GitHub (Error ${res.statusCode})` });
+            
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => {
+                try {
+                    const dbBaru = JSON.parse(data);
+                    
+                    // 2. Timpa file database di PC Klien
+                    fs.writeFileSync(dbPath, JSON.stringify(dbBaru, null, 4));
+
+                    // 3. Cari daftar nama gambar yang perlu diunduh
+                    let filesToDownload = [];
+                    for (let format in dbBaru) {
+                        dbBaru[format].forEach(template => {
+                            filesToDownload.push(`${template.id}.png`); // Gambar Frame Asli
+                            if (template.img) {
+                                const thumbName = template.img.replace('/frames/', '');
+                                filesToDownload.push(thumbName); // Gambar Thumbnail
+                            }
+                        });
+                    }
+
+                    // 4. Unduh gambar satu per satu dari folder /frames/ di GitHub
+                    let downloadedCount = 0;
+                    filesToDownload.forEach(fileName => {
+                        const fileUrl = `${githubBaseUrl}/frames/${fileName}`;
+                        const filePath = path.join(frameDir, fileName);
+                        
+                        const fileStream = fs.createWriteStream(filePath);
+                        https.get(fileUrl, (imgRes) => {
+                            if(imgRes.statusCode === 200) {
+                                imgRes.pipe(fileStream);
+                                fileStream.on('finish', () => fileStream.close());
+                            }
+                        }).on('error', () => { /* Abaikan jika ada 1 gambar gagal agar tidak crash */ });
+                    });
+
+                    resolve({ success: true, message: "Sinkronisasi berhasil! Refresh halaman ini." });
+                } catch (err) {
+                    reject({ error: "Format JSON di GitHub salah." });
+                }
+            });
+        }).on('error', (err) => reject({ error: err.message }));
+    });
+});
 
 // =======================================================
 // 5. 🗄️ ENDPOINT DATABASE (EVENT MANAGER & SESSION)
