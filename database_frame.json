@@ -1,0 +1,618 @@
+{
+  "1": [],
+  "2": [],
+  "4": [],
+  "6": [
+    {
+      "id": "default-jes",
+      "nama": "Jessi",
+      "img": "/frames/thumb_default-jes.jpg",
+      "isHidden": false,
+      "layout": {
+        "coords": [
+          {
+            "x": 128,
+            "y": 188,
+            "width": 1008,
+            "height": 900
+          },
+          {
+            "x": 108,
+            "y": 1095,
+            "width": 1029,
+            "height": 940
+          },
+          {
+            "x": 121,
+            "y": 2015,
+            "width": 1015,
+            "height": 913
+          },
+          {
+            "x": 1244,
+            "y": 181,
+            "width": 1029,
+            "height": 893
+          },
+          {
+            "x": 1244,
+            "y": 1095,
+            "width": 1022,
+            "height": 907
+          },
+          {
+            "x": 1250,
+            "y": 2008,
+            "width": 1029,
+            "height": 934
+          }
+        ]
+      }
+    },
+    {
+      "id": "default-grey",
+      "nama": "Grey",
+      "img": "/frames/thumb_default-grey.jpg",
+      "isHidden": false,
+      "layout": {
+        "coords": [
+          {
+            "x": 114,
+            "y": 181,
+            "width": 1029,
+            "height": 920
+          },
+          {
+            "x": 114,
+            "y": 1095,
+            "width": 1029,
+            "height": 920
+          },
+          {
+            "x": 121,
+            "y": 2015,
+            "width": 1029,
+            "height": 920
+          },
+          {
+            "x": 1244,
+            "y": 181,
+            "width": 1029,
+            "height": 920
+          },
+          {
+            "x": 1244,
+            "y": 1095,
+            "width": 1029,
+            "height": 920
+          },
+          {
+            "x": 1250,
+            "y": 2022,
+            "width": 1029,
+            "height": 900
+          }
+        ]
+      }
+    },
+    {
+      "id": "default-bs",
+      "nama": "Blue sky",
+      "img": "/frames/thumb_default-bs.jpg",
+      "isHidden": false,
+      "layout": {
+        "coords": [
+          {
+            "x": 61,
+            "y": 91,
+            "width": 508,
+            "height": 453
+          },
+          {
+            "x": 61,
+            "y": 551,
+            "width": 511,
+            "height": 453
+          },
+          {
+            "x": 61,
+            "y": 1004,
+            "width": 511,
+            "height": 463
+          },
+          {
+            "x": 625,
+            "y": 94,
+            "width": 514,
+            "height": 457
+          },
+          {
+            "x": 625,
+            "y": 547,
+            "width": 514,
+            "height": 453
+          },
+          {
+            "x": 622,
+            "y": 1007,
+            "width": 514,
+            "height": 463
+          }
+        ]
+      }
+    },
+    {
+      "id": "default-splsh",
+      "nama": "Splash Red",
+      "img": "/frames/thumb_default-splsh.jpg",
+      "isHidden": false,
+      "layout": {
+        "coords": [
+          {
+            "x": 61,
+            "y": 91,
+            "width": 497,
+            "height": 436
+          },
+          {
+            "x": 61,
+            "y": 550,
+            "width": 494,
+            "height": 442
+          },
+          {
+            "x": 61,
+            "y": 1003,
+            "width": 497,
+            "height": 446
+          },
+          {
+            "x": 625,
+            "y": 95,
+            "width": 497,
+            "height": 439
+          },
+          {
+            "x": 625,
+            "y": 547,
+            "width": 500,
+            "height": 446
+          },
+          {
+            "x": 622,
+            "y": 1006,
+            "width": 504,
+            "height": 456
+          }
+        ]
+      }
+    },
+    {
+      "id": "default-rw",
+      "nama": "Red White",
+      "img": "/frames/thumb_default-rw.jpg",
+      "isHidden": false,
+      "layout": {
+        "coords": [
+          {
+            "x": 61,
+            "y": 91,
+            "width": 497,
+            "height": 442
+          },
+          {
+            "x": 61,
+            "y": 550,
+            "width": 497,
+            "height": 442
+          },
+          {
+            "x": 61,
+            "y": 1003,
+            "width": 500,
+            "height": 449
+          },
+          {
+            "x": 625,
+            "y": 95,
+            "width": 500,
+            "height": 449
+          },
+          {
+            "x": 625,
+            "y": 547,
+            "width": 497,
+            "height": 442
+          },
+          {
+            "x": 622,
+            "y": 1006,
+            "width": 507,
+            "height": 453
+          }
+        ]
+      }
+    },
+    {
+      "id": "default-redbt",
+      "nama": "Red Blue",
+      "img": "/frames/thumb_default-redbt.jpg",
+      "isHidden": false,
+      "layout": {
+        "coords": [
+          {
+            "x": 61,
+            "y": 91,
+            "width": 508,
+            "height": 450
+          },
+          {
+            "x": 61,
+            "y": 551,
+            "width": 511,
+            "height": 450
+          },
+          {
+            "x": 50,
+            "y": 1007,
+            "width": 531,
+            "height": 470
+          },
+          {
+            "x": 625,
+            "y": 94,
+            "width": 518,
+            "height": 450
+          },
+          {
+            "x": 625,
+            "y": 547,
+            "width": 514,
+            "height": 457
+          },
+          {
+            "x": 622,
+            "y": 1007,
+            "width": 518,
+            "height": 463
+          }
+        ]
+      }
+    },
+    {
+      "id": "default-red",
+      "nama": "Red",
+      "img": "/frames/thumb_default-red.jpg",
+      "isHidden": false,
+      "layout": {
+        "coords": [
+          {
+            "x": 61,
+            "y": 91,
+            "width": 504,
+            "height": 447
+          },
+          {
+            "x": 61,
+            "y": 551,
+            "width": 511,
+            "height": 437
+          },
+          {
+            "x": 61,
+            "y": 1004,
+            "width": 511,
+            "height": 457
+          },
+          {
+            "x": 629,
+            "y": 97,
+            "width": 508,
+            "height": 437
+          },
+          {
+            "x": 629,
+            "y": 547,
+            "width": 508,
+            "height": 460
+          },
+          {
+            "x": 622,
+            "y": 1018,
+            "width": 518,
+            "height": 450
+          }
+        ]
+      }
+    },
+    {
+      "id": "default-tsrty",
+      "nama": "T Story",
+      "img": "/frames/thumb_default-tsrty.jpg",
+      "isHidden": false,
+      "layout": {
+        "coords": [
+          {
+            "x": 113,
+            "y": 159,
+            "width": 1041,
+            "height": 955
+          },
+          {
+            "x": 113,
+            "y": 1074,
+            "width": 1041,
+            "height": 955
+          },
+          {
+            "x": 113,
+            "y": 2009,
+            "width": 1041,
+            "height": 955
+          },
+          {
+            "x": 1240,
+            "y": 172,
+            "width": 1041,
+            "height": 955
+          },
+          {
+            "x": 1240,
+            "y": 1087,
+            "width": 1041,
+            "height": 955
+          },
+          {
+            "x": 1240,
+            "y": 1996,
+            "width": 1041,
+            "height": 955
+          }
+        ]
+      }
+    },
+    {
+      "id": "default-td",
+      "nama": "Ticket booth",
+      "img": "/frames/thumb_default-td.jpg",
+      "isHidden": false,
+      "layout": {
+        "coords": [
+          {
+            "x": 113,
+            "y": 159,
+            "width": 1041,
+            "height": 955
+          },
+          {
+            "x": 113,
+            "y": 1074,
+            "width": 1041,
+            "height": 955
+          },
+          {
+            "x": 113,
+            "y": 2009,
+            "width": 1041,
+            "height": 955
+          },
+          {
+            "x": 1240,
+            "y": 172,
+            "width": 1041,
+            "height": 955
+          },
+          {
+            "x": 1240,
+            "y": 1087,
+            "width": 1041,
+            "height": 955
+          },
+          {
+            "x": 1240,
+            "y": 1996,
+            "width": 1041,
+            "height": 955
+          }
+        ]
+      }
+    },
+    {
+      "id": "default-spdman",
+      "nama": "Spider Man",
+      "img": "/frames/thumb_default-spdman.jpg",
+      "isHidden": false,
+      "layout": {
+        "coords": [
+          {
+            "x": 113,
+            "y": 159,
+            "width": 1041,
+            "height": 955
+          },
+          {
+            "x": 113,
+            "y": 1074,
+            "width": 1041,
+            "height": 955
+          },
+          {
+            "x": 113,
+            "y": 2009,
+            "width": 1041,
+            "height": 955
+          },
+          {
+            "x": 1240,
+            "y": 172,
+            "width": 1041,
+            "height": 955
+          },
+          {
+            "x": 1240,
+            "y": 1087,
+            "width": 1041,
+            "height": 955
+          },
+          {
+            "x": 1240,
+            "y": 1996,
+            "width": 1041,
+            "height": 955
+          }
+        ]
+      }
+    },
+    {
+      "id": "default-gwenn",
+      "nama": "Spider gwen",
+      "img": "/frames/thumb_default-gwenn.jpg",
+      "isHidden": false,
+      "layout": {
+        "coords": [
+          {
+            "x": 113,
+            "y": 159,
+            "width": 1041,
+            "height": 955
+          },
+          {
+            "x": 113,
+            "y": 1074,
+            "width": 1041,
+            "height": 955
+          },
+          {
+            "x": 113,
+            "y": 2009,
+            "width": 1041,
+            "height": 955
+          },
+          {
+            "x": 1240,
+            "y": 172,
+            "width": 1041,
+            "height": 955
+          },
+          {
+            "x": 1240,
+            "y": 1087,
+            "width": 1041,
+            "height": 955
+          },
+          {
+            "x": 1240,
+            "y": 1996,
+            "width": 1041,
+            "height": 955
+          }
+        ]
+      }
+    },
+    {
+      "id": "default-bwcom",
+      "nama": "Comic Bw",
+      "img": "/frames/thumb_default-bwcom.jpg",
+      "isHidden": false,
+      "layout": {
+        "coords": [
+          {
+            "x": 113,
+            "y": 159,
+            "width": 1041,
+            "height": 955
+          },
+          {
+            "x": 113,
+            "y": 1074,
+            "width": 1041,
+            "height": 955
+          },
+          {
+            "x": 113,
+            "y": 2009,
+            "width": 1041,
+            "height": 955
+          },
+          {
+            "x": 1240,
+            "y": 172,
+            "width": 1041,
+            "height": 955
+          },
+          {
+            "x": 1240,
+            "y": 1087,
+            "width": 1041,
+            "height": 955
+          },
+          {
+            "x": 1240,
+            "y": 1996,
+            "width": 1041,
+            "height": 955
+          }
+        ]
+      }
+    }
+  ],
+  "news-1": [],
+  "news-3": [
+    {
+      "id": "default-jurnal",
+      "nama": "Lacasa Journal",
+      "img": "/frames/thumb_default-jurnal.jpg",
+      "isHidden": false,
+      "layout": {
+        "coords": [
+          {
+            "x": 1125,
+            "y": 720,
+            "width": 1250,
+            "height": 1111
+          },
+          {
+            "x": 77,
+            "y": 2229,
+            "width": 1432,
+            "height": 755
+          },
+          {
+            "x": 1691,
+            "y": 2739,
+            "width": 685,
+            "height": 433
+          }
+        ]
+      }
+    },
+    {
+      "id": "default-paper",
+      "nama": "Lacapaper",
+      "img": "/frames/thumb_default-paper.jpg",
+      "isHidden": false,
+      "layout": {
+        "coords": [
+          {
+            "x": 859,
+            "y": 664,
+            "width": 1453,
+            "height": 1153
+          },
+          {
+            "x": 154,
+            "y": 2467,
+            "width": 873,
+            "height": 678
+          },
+          {
+            "x": 1425,
+            "y": 2488,
+            "width": 894,
+            "height": 538
+          }
+        ]
+      }
+    }
+  ]
+}

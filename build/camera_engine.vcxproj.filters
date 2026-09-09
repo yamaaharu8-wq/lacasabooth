@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="..">
+      <UniqueIdentifier>{13ED4249-1F9C-5F0F-2651-29A73F3A7059}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="C:">
+      <UniqueIdentifier>{F87FD356-0FEB-9BC5-D1FA-368C81420008}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="C:\Users">
+      <UniqueIdentifier>{707347A1-1ABA-A9B2-9AF4-DE122F5D7F08}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="C:\Users\Admin">
+      <UniqueIdentifier>{7699017B-45EA-87C1-9185-15B1FBFF2877}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="C:\Users\Admin\Documents">
+      <UniqueIdentifier>{A6B140C2-EC61-188F-22F2-AD1FFCF65561}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="C:\Users\Admin\Documents\Lacasaphoto-App">
+      <UniqueIdentifier>{AB9004FD-3F48-9A0B-8CC7-33FCE12655FF}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="C:\Users\Admin\Documents\Lacasaphoto-App\node_modules">
+      <UniqueIdentifier>{126A39EA-1D28-5689-C126-0DA0AB5837A0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="C:\Users\Admin\Documents\Lacasaphoto-App\node_modules\node-gyp">
+      <UniqueIdentifier>{49558BB4-6D34-CA91-A65D-85A65792DC11}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="C:\Users\Admin\Documents\Lacasaphoto-App\node_modules\node-gyp\src">
+      <UniqueIdentifier>{F1003AD6-4B6D-45DF-3F56-5CAC869BF55E}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..">
+      <UniqueIdentifier>{13ED4249-1F9C-5F0F-2651-29A73F3A7059}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\camera_engine.cpp">
+      <Filter>..</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\Admin\Documents\Lacasaphoto-App\node_modules\node-gyp\src\win_delay_load_hook.cc">
+      <Filter>C:\Users\Admin\Documents\Lacasaphoto-App\node_modules\node-gyp\src</Filter>
+    </ClCompile>
+    <None Include="..\binding.gyp">
+      <Filter>..</Filter>
+    </None>
+  </ItemGroup>
+</Project>

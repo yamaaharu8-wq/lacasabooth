@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lacasaphoto - Self Studio</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/theme.css">
+    <style>
+        /* ========================================== */
+        /* 🎨 TEMA AESTHETIC DOODLE / BRUTALISM      */
+        /* ========================================== */
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        html, body {
+            width: 100%; min-height: 100vh; overflow-x: hidden; position: relative;
+            background-color: var(--bg-color); color: var(--ink); 
+            font-family: 'Fredoka', sans-serif; text-align: center;
+            background-image: radial-gradient(var(--dot-color) 2px, transparent 2px);
+            background-size: 40px 40px; touch-action: manipulation; user-select: none;
+        }
+
+        /* --- TIMER SESI GLOBAL (FLOATING) --- */
+        #sessionTimerDisplay {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            background: var(--paper-white); color: var(--ink); padding: 10px 30px;
+            font-size: 1.8rem; font-weight: 700; z-index: 999999;
+            border: var(--doodle-border); border-radius: 50px;
+            box-shadow: 5px 5px 0px var(--ink); display: none; align-items: center; gap: 10px;
+            transition: all 0.3s ease; font-family: 'Fredoka', sans-serif;
+        }
+        .timer-warning { background: var(--pink) !important; animation: shake 0.5s infinite; color: white !important;}
+        .timer-warning span { color: white !important; }
+        @keyframes shake { 0%, 100% { transform: translateX(-50%) rotate(0deg); } 25% { transform: translateX(calc(-50% - 2px)) rotate(-2deg); } 75% { transform: translateX(calc(-50% + 2px)) rotate(2deg); } }
+
+        /* --- PENGATURAN PANEL --- */
+        .panel { display: none; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 100vh; padding: 85px 20px 20px 20px; box-sizing: border-box; position: relative; z-index: 10; }
+        .active-panel { display: flex !important; animation: doodlePop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes doodlePop { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        
+        /* --- TYPOGRAPHY --- */
+        .judul-interaktif { font-family: 'Caveat', cursive; font-size: 4rem; color: var(--ink); margin-bottom: 5px; font-weight: 700; line-height: 1.1; }
+        .sub-judul { font-size: 1.1rem; color: #555; margin-bottom: 25px; font-weight: 500; }
+
+        /* --- NAVIGASI & TOMBOL DOODLE --- */
+        .nav-bar { position: fixed; top: 25px; left: 30px; right: 30px; display: flex; justify-content: space-between; z-index: 1000; pointer-events: none; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .btn-doodle {
+            pointer-events: auto; background: var(--paper-white); color: var(--ink);
+            border: var(--doodle-border); padding: 10px 20px; font-size: 1rem; cursor: pointer; 
+            border-radius: 50px; font-weight: 600; font-family: 'Fredoka', sans-serif;
+            transition: 0.2s; box-shadow: 4px 4px 0px var(--ink); display: flex; align-items: center; gap: 8px; justify-content: center;
+        }
+        .btn-doodle:hover { background: var(--yellow); transform: translateY(-3px); box-shadow: 6px 6px 0px var(--ink); }
+        .btn-doodle:active { transform: translate(2px, 2px); box-shadow: 0px 0px 0px var(--ink); }
+        select.btn-doodle { appearance: none; outline: none; padding-right: 40px; cursor: pointer; }
+
+        /* --- CARD WAKTU --- */
+        .grid-waktu { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin-top: 10px; max-width: 1000px;}
+        .btn-waktu { 
+            background: var(--paper-white); border: var(--doodle-border); color: var(--ink); 
+            padding: 30px 20px; border-radius: var(--doodle-radius); cursor: pointer; 
+            font-size: 1.3rem; transition: all 0.2s ease; width: 210px; 
+            box-shadow: 6px 6px 0px var(--ink); font-weight: 700; display: flex; flex-direction: column; align-items: center; gap: 10px; 
+        }
+        .icon-waktu { font-size: 3rem; background: var(--bg-color); width: 75px; height: 75px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px dashed var(--ink); transition: 0.2s; }
+        .btn-waktu:hover { transform: translateY(-5px); background: var(--blue); box-shadow: 8px 8px 0px var(--ink); }
+        .btn-waktu:hover .icon-waktu { background: var(--paper-white); border-style: solid; transform: scale(1.1) rotate(5deg); }
+
+        /* --- KAMERA & PIP VIDEO --- */
+        #panel-kamera { padding: 0; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #e5e5e5; overflow: hidden; z-index: 50; }
+        #liveView { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1; transition: filter 0.3s; }
+        #previewImageOverlay { display: none; width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 15; }
+        .mirrored { transform: scaleX(-1) !important; }
+        
+        .pip-video { position: absolute; bottom: 40px; left: 40px; width: 180px; height: 270px; background: white; border-radius: 20px; overflow: hidden; border: 4px solid var(--ink); box-shadow: 6px 6px 0px var(--ink); z-index: 5; pointer-events: none; }
+        .pip-video video { width: 100%; height: 100%; object-fit: cover; }
+        .pip-label { position: absolute; bottom: 0; left: 0; width: 100%; background: var(--yellow); padding: 8px 0; color: var(--ink); border-top: 3px solid var(--ink); font-family: 'Caveat', cursive; font-size: 1.5rem; line-height: 1; font-weight: 700; text-align: center; }
+
+        /* --- MINI GALLERY KAMERA --- */
+        .mini-gallery-container { position: absolute; top: 50%; right: 40px; transform: translateY(-50%); display: flex; flex-direction: column; gap: 10px; z-index: 10; background: rgba(255,255,255,0.8); padding: 15px; border-radius: 20px; border: 3px solid var(--ink); box-shadow: 5px 5px 0px var(--ink); max-height: 70vh; overflow-y: auto; backdrop-filter: blur(5px); }
+        .mini-slot { width: 80px; height: 60px; background: var(--bg-color); border: 2px solid var(--ink); border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; transition: 0.3s; cursor: pointer; flex-shrink: 0; }
+        .mini-slot:hover { transform: scale(1.05); border-color: var(--pink); }
+        .mini-slot img { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; }
+        .mini-slot .overlay-review { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); color: white; display: none; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold; }
+        .mini-slot:hover .overlay-review { display: flex; }
+        
+        #btn-tutup-preview { display: none; position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 20; background: var(--pink); color: white; border: 3px solid var(--ink); padding: 15px 30px; font-size: 1.2rem; font-weight: bold; border-radius: 50px; cursor: pointer; box-shadow: 5px 5px 0px var(--ink); }
+
+        /* --- TOMBOL JEPRET --- */
+        .kamera-ui-bottom { position: absolute; bottom: 35px; left: 0; width: 100vw; z-index: 10; display: flex; align-items: center; justify-content: center; gap: 15px; }
+        .btn-diafragma { background: var(--paper-white); color: var(--ink); border: 4px solid var(--ink); border-radius: 50%; width: 90px; height: 90px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 5px 5px 0px var(--ink); transition: 0.2s; pointer-events: auto; }
+        .btn-diafragma:hover:not(:disabled) { transform: scale(1.1) rotate(10deg); background: var(--pink); }
+        .btn-diafragma:active { transform: scale(0.95); box-shadow: 0px 0px 0px var(--ink); }
+        .btn-diafragma:disabled { background: #d1d5db; cursor: not-allowed; opacity: 0.7; box-shadow: 0 0 0 transparent; transform: none; }
+        
+        .teks-petunjuk-jepret { font-family: 'Caveat', cursive; font-size: 1.8rem; font-weight: 700; color: var(--ink); background: var(--paper-white); padding: 5px 25px; border: 3px solid var(--ink); border-radius: 50px; box-shadow: 4px 4px 0px var(--ink); pointer-events: none; animation: pulsePetunjuk 2s infinite ease-in-out; }
+        @keyframes pulsePetunjuk { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+
+        /* --- UI COUNTDOWN & LOADING --- */
+        #jepretCountdown { display: none; flex-direction: column; align-items: center; justify-content: center; position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); color: white; font-weight: 700; z-index: 20; text-shadow: 3px 3px 0px var(--ink), -2px -2px 0px var(--ink); }
+        .ikon-atas { font-family: 'Caveat', cursive; font-size: 4rem; line-height: 1; margin-bottom: 5px; color: var(--yellow); }
+        .angka-kamera { font-size: 15rem; line-height: 1; font-family: 'Fredoka', sans-serif; }
+        
+        #loadingTeks { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--paper-white); padding: 25px 50px; border-radius: 50px; border: 3px solid var(--ink); font-family: 'Caveat', cursive; font-size: 2.5rem; font-weight: 700; color: var(--ink); z-index: 30; box-shadow: 6px 6px 0px var(--ink); }
+
+        /* --- GRID TEMPLATE & FOTO --- */
+        .grid-template, .grid-foto { display: grid; gap: 20px; width: 100%; margin: 15px auto 30px auto; justify-content: center; }
+        .grid-template { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); max-width: 900px; }
+        .grid-foto { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); max-width: 1000px; }
+        
+        .card-doodle { background: var(--paper-white); padding: 15px; border: var(--doodle-border); border-radius: var(--doodle-radius); box-shadow: 5px 6px 0px var(--ink); cursor: pointer; transition: 0.2s; position: relative; }
+        .card-doodle:hover { transform: translateY(-5px) rotate(-1deg); box-shadow: 8px 8px 0px var(--ink); }
+        .card-doodle.selected { background: var(--blue); border-color: var(--ink); transform: scale(1.02); }
+        .card-doodle img { width: 100%; border-radius: 10px; border: 2px solid var(--ink); pointer-events: none; object-fit: cover; }
+        .card-foto img { height: 135px; }
+        .nama-template { font-weight: 700; font-size: 1.1rem; margin-top: 10px; font-family: 'Caveat', cursive; font-size: 1.5rem; line-height: 1;}
+        
+        .badge-count { position: absolute; top: -10px; right: -10px; font-size: 1.3rem; font-weight: bold; color: var(--ink); background: var(--yellow); border: 2px solid var(--ink); border-radius: 50%; width: 35px; height: 35px; display: none; align-items: center; justify-content: center; box-shadow: 2px 2px 0px var(--ink); }
+        .card-template.selected::after { content: '✓'; position: absolute; top: -10px; right: -10px; font-size: 1.2rem; font-weight: bold; color: var(--ink); background: var(--yellow); border: 2px solid var(--ink); border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; box-shadow: 2px 2px 0px var(--ink); }
+
+        /* --- PREVIEW EFEK & DRAG DROP PANEL --- */
+        .effect-container { display: flex; gap: 30px; align-items: center; background: var(--paper-white); padding: 25px; border-radius: 20px; box-shadow: 8px 8px 0px var(--ink); border: 4px solid var(--ink); max-width: 950px; width: 100%; margin: 10px auto; }
+        .effect-preview-box { flex: 1; display: flex; flex-direction: column; align-items: center;}
+        .effect-options-box { width: 320px; display: flex; flex-direction: column; gap: 10px; }
+        .effect-options-box h2 { font-size: 1.6rem; margin: 0; color: var(--ink); }
+        .effect-btn { background: var(--paper-white); border: 3px solid var(--ink); padding: 12px 15px; border-radius: 12px; font-size: 1rem; font-weight: 700; color: var(--ink); cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 10px; text-align: left; font-family: 'Fredoka', sans-serif; box-shadow: 3px 3px 0px var(--ink); }
+        .effect-btn:hover { background: var(--yellow); transform: translate(-2px, -2px); box-shadow: 5px 5px 0px var(--ink); }
+        .effect-btn.active { background: var(--green); color: var(--ink); box-shadow: 5px 5px 0px var(--ink); transform: translate(-2px, -2px); }
+        .color-circle { width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--ink); }
+
+        /* --- MODALS & HASIL --- */
+        #customWaktuModal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(253, 251, 247, 0.9); z-index: 10000; justify-content: center; align-items: center; flex-direction: column; }
+        .confirm-box { background: var(--paper-white); padding: 30px; border-radius: 30px; border: 3px solid var(--ink); box-shadow: 10px 10px 0px var(--ink); text-align: center; max-width: 400px; width: 90%; }
+        
+        .card-hasil { background: var(--paper-white); padding: 20px 25px; border-radius: 30px; border: 3px solid var(--ink); box-shadow: 8px 10px 0px var(--ink); width: 100%; max-width: 360px; text-align: center; box-sizing: border-box; }
+        .qr-box { background: var(--bg-color); padding: 15px; border-radius: 20px; margin-top: 15px; border: 3px dashed var(--ink); display: flex; flex-direction: column; align-items: center; box-shadow: inset 3px 3px 0px rgba(0,0,0,0.05); width: 100%; box-sizing: border-box;}
+        
+        .jumlah-kontrol { display: flex; align-items: center; background: var(--paper-white); border: 3px solid var(--ink); border-radius: 12px; overflow: hidden; box-shadow: 3px 3px 0px var(--ink); margin-bottom: 12px; width: 100%; }
+        .btn-jumlah { background: var(--bg-color); border: none; font-size: 1.5rem; font-weight: bold; width: 50px; cursor: pointer; color: var(--ink); transition: 0.2s; padding: 8px; }
+        .btn-jumlah:hover { background: var(--yellow); }
+        .jumlah-kontrol span { flex: 1; font-weight: 700; font-size: 1.1rem; text-align: center; }
+
+        /* --- VIRTUAL NUMPAD DOODLE --- */
+        #virtual-numpad { position: fixed; background: var(--paper-white); padding: 20px; border-radius: 25px; box-shadow: 8px 10px 0px var(--ink); z-index: 99999; border: 3px solid var(--ink); width: 280px; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        .numpad-header { color: var(--ink); text-align: center; font-family: 'Fredoka', sans-serif; font-size: 1.1rem; font-weight: bold; margin-bottom: 15px; background: var(--yellow); padding: 8px; border-radius: 8px; border: 2px solid var(--ink); cursor: grab; }
+        .numpad-header:active { cursor: grabbing; }
+        .numpad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .numpad-grid button { width: 100%; height: 55px; font-size: 1.2rem; font-weight: bold; border: 2px solid var(--ink); border-radius: 15px; background: var(--paper-white); color: var(--ink); cursor: pointer; transition: 0.1s; font-family: 'Fredoka', sans-serif; box-shadow: 4px 4px 0px var(--ink); }
+        .numpad-grid button:active { transform: translateY(4px); box-shadow: 0 0 0 transparent; }
+        .numpad-grid button:hover { background: var(--yellow); }
+        .numpad-grid .btn-del { background: var(--pink); color: white; }
+        .numpad-grid .btn-close { grid-column: span 3; background: var(--green); }
+
+        /* --- MODAL PEMBAYARAN EXTRA --- */
+        #paymentModalOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 99999999; justify-content: center; align-items: center; }
+        .payment-modal { background: var(--paper-white); padding: 30px; border-radius: 20px; border: 4px solid var(--ink); box-shadow: 10px 10px 0px var(--ink); width: 340px; text-align: center; max-height: 90vh; overflow-y: auto;}
+
+        /* --- RESPONSIVE MOBILE --- */
+        @media (max-width: 768px) {
+            .judul-interaktif { font-size: 2.8rem; }
+            .nav-bar { top: 15px; left: 15px; right: 15px; }
+            .panel { padding: 80px 15px 30px 15px; }
+            .pip-video { width: 100px; height: 150px; bottom: 80px; left: 15px; }
+            .mini-gallery-container { right: 15px; top: 50px; transform: none; flex-direction: row; width: calc(100% - 30px); max-height: none; overflow-x: auto; overflow-y: hidden; }
+            .mini-slot { width: 60px; height: 45px; }
+            .effect-container { flex-direction: column; padding: 20px; }
+            .effect-options-box { width: 100%; }
+            #hasilAkhir, #img-hasil-gif { max-height: 45vh !important; max-width: 100%; }
+            .image-showcase { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 🟢 TOMBOL RAHASIA ADMIN -->
+    <div onclick="window.location.href='/idle.html'" style="position: fixed; top: 0; left: 0; width: 60px; height: 60px; z-index: 9999999; cursor: pointer;" title="Admin Exit"></div>
+
+    <div id="sessionTimerDisplay">
+        <span>⏱️</span>
+        <span id="sessionTimerText">--:--</span>
+    </div>
+
+    <!-- PANEL 1: PILIH WAKTU -->
+    <div id="panel-waktu" class="panel active-panel" style="justify-content: center; padding-top: 20px;">
+        <div class="nav-bar" style="justify-content: flex-start;">
+            <button class="btn-doodle" onclick="window.location.href='/idle.html'">‹ KEMBALI</button>
+        </div>
+        <h1 class="judul-interaktif">Pilih Waktu Sesimu! 📸</h1>
+        <p class="sub-judul">Tentukan durasi bebas berpose untuk kamu dan teman-teman.</p>
+        
+        <div class="grid-waktu">
+            <div class="btn-waktu" onclick="mulaiSesiKamera(180)">
+                <div class="icon-waktu">⏱️</div> 3 Menit
+            </div>
+            <div class="btn-waktu" onclick="mulaiSesiKamera(300)">
+                <div class="icon-waktu">✨</div> 5 Menit
+            </div>
+            <div class="btn-waktu" onclick="mulaiSesiKamera(600)">
+                <div class="icon-waktu">👑</div> 10 Menit
+            </div>
+            <div class="btn-waktu" onclick="bukaModalCustomWaktu()">
+                <div class="icon-waktu">⚙️</div> Custom
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CUSTOM WAKTU -->
+    <div id="customWaktuModal">
+        <div class="confirm-box">
+            <h2 style="font-size: 2.5rem; margin-bottom: 5px; font-family: 'Caveat', cursive; line-height: 1; color: var(--ink);">Atur Waktu ⏳</h2>
+            <p style="color: #555; font-size: 1rem; margin-bottom: 20px; font-weight: 500;">Ketik durasi sesi dalam hitungan detik.</p>
+            
+            <div id="displayCustomWaktu" style="background: white; border: 3px solid var(--ink); border-radius: 15px; padding: 15px; margin-bottom: 20px; font-size: 2.5rem; font-weight: bold; color: var(--ink); height: 75px; display: flex; align-items: center; justify-content: center; box-shadow: inset 4px 4px 0px rgba(0,0,0,0.05); transition: 0.3s; font-family: 'Fredoka', sans-serif;">0</div>
+            
+            <div class="numpad-grid" style="gap: 12px;">
+                <button type="button" onclick="inputAngkaWaktu('1')">1</button>
+                <button type="button" onclick="inputAngkaWaktu('2')">2</button>
+                <button type="button" onclick="inputAngkaWaktu('3')">3</button>
+                <button type="button" onclick="inputAngkaWaktu('4')">4</button>
+                <button type="button" onclick="inputAngkaWaktu('5')">5</button>
+                <button type="button" onclick="inputAngkaWaktu('6')">6</button>
+                <button type="button" onclick="inputAngkaWaktu('7')">7</button>
+                <button type="button" onclick="inputAngkaWaktu('8')">8</button>
+                <button type="button" onclick="inputAngkaWaktu('9')">9</button>
+                <button type="button" class="btn-del" onclick="hapusAngkaWaktu()">DEL</button>
+                <button type="button" onclick="inputAngkaWaktu('0')">0</button>
+                <button type="button" class="btn-close" onclick="submitAngkaWaktu()">Mulai Sesi ›</button>
+            </div>
+            
+            <button onclick="tutupModalCustomWaktu()" class="btn-doodle" style="margin-top: 20px; width: 100%; justify-content: center; background: var(--bg-color);">Batalkan</button>
+        </div>
+    </div>
+
+    <!-- PANEL 2: KAMERA LIVE -->
+    <div id="panel-kamera" class="panel">
+        <img id="liveView" src="" class="mirrored"> 
+        <video id="webcam-view" autoplay playsinline class="mirrored" style="display: none; width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1;"></video>
+<canvas id="webcam-canvas" style="display: none;"></canvas>
+        <img id="previewImageOverlay" src=""> 
+
+        <div id="jepretCountdown"></div>
+        <div id="loadingTeks">✨ Tahan Gaya...</div>
+        
+        <div class="pip-video">
+            <video src="/assets/pose.mp4" autoplay loop muted playsinline></video>
+            <div class="pip-label">Ide Pose! 💡</div>
+        </div>
+
+        <div class="nav-bar">
+            <div style="display: flex; gap: 10px; pointer-events: auto; flex-wrap: wrap;">
+                <button class="btn-doodle" onclick="toggleMirror()" id="btn-mirror" style="background: var(--yellow);">🪞 Cermin: ON</button>
+                <select id="jepret-timer" class="btn-doodle" style="background: var(--paper-white);">
+                    <option value="3">⏳ 3 Detik</option>
+                    <option value="5">⏳ 5 Detik</option>
+                </select>
+            </div>
+            <button class="btn-doodle" onclick="btnAkhiriSesiDitekan()" style="background: var(--green); color: var(--ink);">SELESAI FOTO ›</button>
+        </div>
+        
+        <!-- Mini Gallery Camera -->
+        <div id="miniGallery" class="mini-gallery-container"></div>
+        <button id="btn-tutup-preview" onclick="tutupPreviewFoto()">Tutup Preview ✕</button>
+
+        <div class="kamera-ui-bottom">
+            <div class="teks-petunjuk-jepret">Klik untuk jepret! ›</div>
+            <button id="btn-jepret" onclick="jepretKamera()" class="btn-diafragma">
+                <svg viewBox="0 0 24 24" width="40" height="40" stroke="currentColor" stroke-width="2.5" fill="none">
+                    <circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- PANEL 3: PILIH TEMPLATE -->
+    <div id="panel-template" class="panel">
+        <h1 class="judul-interaktif">Pilih Bingkai Favorit! 🎨</h1>
+        <p class="sub-judul" style="margin-bottom: 5px;">Pilih satu tata letak untuk merakit fotomu.</p>
+        <div id="list-template" class="grid-template"></div>
+    </div>
+
+    <!-- PANEL 4: PILIH FOTO (BEBAS DUPLIKAT) -->
+    <div id="panel-pilih-foto" class="panel">
+        <div class="nav-bar">
+            <button class="btn-doodle" onclick="bukaPanel('panel-template')">‹ Ganti Bingkai</button>
+        </div>
+        <h1 class="judul-interaktif">Pilih 6 Foto Cetar! ⭐</h1>
+        <p class="sub-judul" style="margin-bottom: 10px;">Kamu bisa memilih foto yang sama lebih dari sekali. Klik untuk menambahkan.</p>
+        
+        <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 15px; justify-content: center; width: 100%; flex-wrap: wrap;">
+            <p class="btn-doodle" id="teks-jumlah-foto" style="cursor: default; pointer-events: none; background: var(--bg-color);">Terpilih: 0 / 6</p>
+            <button class="btn-doodle" onclick="resetPilihanFoto()" style="background: var(--pink); color: var(--ink);">🔄 Ulangi Pilihan</button>
+            <button class="btn-doodle" id="btn-lanjut-rakit" onclick="lanjutKePreviewEfek()" style="background: var(--ink); color: white; display: none;">Preview & Efek ›</button>
+        </div>
+        
+        <div id="list-foto" class="grid-foto"></div>
+    </div>
+
+    <!-- PANEL 5: PREVIEW EFEK & DRAG DROP -->
+    <div id="panel-efek" class="panel">
+        <div class="nav-bar">
+            <button class="btn-doodle" onclick="bukaPanel('panel-pilih-foto')">‹ Ganti Foto</button>
+        </div>
+        <h1 class="judul-interaktif" style="font-size: 3rem; margin-bottom: 0;">Geser & Beri Filter 🪄</h1>
+        <div class="effect-container">
+            <div class="effect-preview-box">
+                <div id="effectPreviewContainer" style="width: 100%; display: flex; justify-content: center; align-items: center;"></div>
+                <p style="color: var(--ink); opacity: 0.8; font-size: 0.85rem; margin-top: 10px; text-align: center; font-weight: 600;">
+                    💡 Tips: Klik, tahan, dan geser foto (Drag & Drop) untuk menukar urutan posisinya!
+                </p>
+            </div>
+            <div class="effect-options-box">
+                <h2>Pilih Filter</h2>
+                <p style="color: var(--ink); opacity: 0.8; font-size: 0.85rem; margin-bottom: 5px;">Pilih efek warna untuk fotomu.</p>
+                
+                <button class="effect-btn active" id="btn-efek-none" onclick="terapkanFilterLive('none', 'none', this)">
+                    <div class="color-circle" style="background: linear-gradient(45deg, #ff9a9e, #fecfef);"></div> Original
+                </button>
+                <button class="effect-btn" id="btn-efek-mono" onclick="terapkanFilterLive('monochrome', 'grayscale(100%) contrast(120%) brightness(105%)', this)">
+                    <div class="color-circle" style="background: #374151;"></div> Monochrome
+                </button>
+                <button class="effect-btn" id="btn-efek-sepia" onclick="terapkanFilterLive('sepia', 'sepia(80%) contrast(110%) brightness(95%)', this)">
+                    <div class="color-circle" style="background: #b48a66;"></div> Vintage Sepia
+                </button>
+                <button class="effect-btn" id="btn-efek-soft" onclick="terapkanFilterLive('soft', 'saturate(130%) brightness(115%) contrast(90%)', this)">
+                    <div class="color-circle" style="background: #a7f3d0;"></div> Soft Pop
+                </button>
+                <div style="background: var(--paper-white); border: 2px dashed var(--ink); padding: 12px; border-radius: 12px; margin-top: 10px; display: flex; align-items: center; gap: 10px; cursor: pointer;" onclick="const cb = document.getElementById('chk-livePhoto-studio'); cb.checked = !cb.checked;">
+    <input type="checkbox" id="chk-livePhoto-studio" checked style="width: 20px; height: 20px; accent-color: var(--pink); cursor: pointer;" onclick="event.stopPropagation()">
+    <label style="font-weight: 700; color: var(--ink); font-size: 1rem; font-family: 'Fredoka', sans-serif; cursor: pointer;">🎬 Cetak + Video Live (GIF)</label>
+</div>
+                <button id="btn-rakit" onclick="validasiDanRakit(false)" class="btn-doodle" style="background: var(--yellow); color: var(--ink); margin-top: 5px; padding: 12px; width: 100%; font-size: 1.1rem;">Rakit Sekarang ›</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANEL 6: HASIL AKHIR -->
+    <div id="panel-hasil" class="panel" style="justify-content: center; padding-top: 80px;">
+        <h1 class="judul-interaktif" style="font-size: 3rem; margin-bottom: 10px;">Voila! Karya Ajaibmu 🎉</h1>
+        
+        <div style="display: flex; gap: 30px; align-items: center; justify-content: center; flex-wrap: wrap; width: 100%; padding: 0 10px; box-sizing: border-box; max-height: 85vh;">
+            
+            <!-- [BARU] Wadah untuk Foto dan GIF -->
+            <div class="image-showcase" style="display: flex; gap: 20px; align-items: center; justify-content: center; min-width: 0; flex-shrink: 1; height: 100%;">
+                <img id="hasilAkhir" src="" style="max-height: 65vh; max-width: 100%; object-fit: contain; border-radius: 20px; border: 4px solid var(--ink); box-shadow: 10px 10px 0px var(--ink); background: white; flex-shrink: 1; min-width: 0;">
+                <img id="img-hasil-gif" src="" style="display: none; max-height: 65vh; max-width: 100%; object-fit: contain; border-radius: 20px; border: 4px solid var(--ink); box-shadow: 10px 10px 0px var(--ink); background: white; flex-shrink: 1; min-width: 0;">
+            </div>
+            
+            <div class="card-hasil" style="flex-shrink: 0;">
+                <!-- KONTROL JUMLAH CETAK -->
+                <div class="jumlah-kontrol">
+                    <button class="btn-jumlah" onclick="ubahJumlahCetak(-1)">-</button>
+                    <span id="label-jumlah-cetak">1 Lembar</span>
+                    <button class="btn-jumlah" onclick="ubahJumlahCetak(1)">+</button>
+                </div>
+                
+                <button id="btn-action-cetak" onclick="prosesCetakFinal()" class="btn-doodle" style="background: var(--blue); width: 100%; padding: 12px; font-size: 1.1rem; justify-content: center; margin-bottom: 5px;">🖨️ Cetak (1 Lembar)</button>
+                
+                <div class="qr-box">
+                    <div id="qrCodeContainer" style="padding: 10px; background: white; border: 2px solid var(--ink); border-radius: 15px;"></div>
+                    <p style="font-weight: 700; margin-top: 10px; color: var(--ink); text-align: center; font-size: 0.9rem;">Scan QR untuk Unduh 📲</p>
+                    <hr style="width: 100%; border: 0; border-top: 2px dashed var(--ink); margin: 10px 0;">
+                    <p style="color: var(--ink); font-weight: 700; font-size: 0.9rem; margin: 0; text-align: center;">Atau Kirim Link via WA</p>
+                    
+                    <div style="display: flex; width: 100%; gap: 5px; margin-top: 10px; align-items: center; justify-content: space-between;">
+                        <input type="text" id="inputWA" readonly placeholder="Contoh: 0812..." style="flex: 1; min-width: 0; padding: 10px 12px; border-radius: 12px; border: 2px solid var(--ink); outline: none; font-family: inherit; font-size: 0.9rem; box-sizing: border-box; background: white; font-weight: 600; cursor: pointer;">
+                        <button id="btnKirimWA" onclick="kirimFotoKeWA()" class="btn-doodle" style="background: var(--pink); color: var(--ink); border-radius: 12px; padding: 10px 15px; margin: 0;">Kirim</button>
+                    </div>
+                </div>
+                
+                <button onclick="window.location.href='/idle.html'" class="btn-doodle" style="width: 100%; justify-content: center; margin-top: 15px; background: #ef4444; color: white; padding: 12px; font-size: 1.1rem;">Selesai & Keluar 👋</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- VIRTUAL NUMPAD -->
+    <div id="virtual-numpad" style="display: none;">
+        <div class="numpad-header" id="numpad-drag-handle">☰ Geser Numpad</div>
+        <div class="numpad-grid">
+            <button type="button" class="num-btn" onclick="tekanAngka('1')">1</button>
+            <button type="button" class="num-btn" onclick="tekanAngka('2')">2</button>
+            <button type="button" class="num-btn" onclick="tekanAngka('3')">3</button>
+            <button type="button" class="num-btn" onclick="tekanAngka('4')">4</button>
+            <button type="button" class="num-btn" onclick="tekanAngka('5')">5</button>
+            <button type="button" class="num-btn" onclick="tekanAngka('6')">6</button>
+            <button type="button" class="num-btn" onclick="tekanAngka('7')">7</button>
+            <button type="button" class="num-btn" onclick="tekanAngka('8')">8</button>
+            <button type="button" class="num-btn" onclick="tekanAngka('9')">9</button>
+            <button type="button" class="btn-del" onclick="hapusAngka()">DEL</button>
+            <button type="button" class="num-btn" onclick="tekanAngka('0')">0</button>
+            <button type="button" class="btn-close" onclick="tutupNumpad()">OK</button>
+        </div>
+    </div>
+
+    <!-- MODAL PEMBAYARAN EXTRA CETAK -->
+    <div id="paymentModalOverlay">
+        <div class="payment-modal">
+            <h2 style="margin-top: 0; font-size: 1.8rem; font-family: 'Fredoka', sans-serif;">Pembayaran Extra</h2>
+            <p id="payment-text-info" style="margin-bottom: 15px; font-weight: 500;">Silakan selesaikan pembayaran untuk tambahan cetak.</p>
+            
+            <div id="qris-section" style="margin-bottom: 20px;">
+                <img id="qris-image-preview" src="" style="width: 200px; height: 200px; object-fit: contain; border: 2px dashed var(--ink); border-radius: 10px; margin: 0 auto; display: block;" alt="Loading QRIS...">
+                  <p style="font-size: 0.85rem; color: #666; margin-top: 5px;">Scan kode di atas dengan aplikasi e-Wallet</p>
+            </div>
+
+            <div id="cash-validation-section" style="display: none; flex-direction: column; align-items: center; margin-bottom: 20px;">
+                <div style="font-size: 3rem; margin-bottom: 10px;">💵</div>
+                <p style="font-weight: 700; color: var(--ink); font-size: 1.1rem; margin-bottom: 15px;">⏳ Menunggu Admin memvalidasi pembayaran tunai Anda...</p>
+                <p style="font-size: 0.75rem; color: #888; font-style: italic;">(Admin: Tekan tombol 'Y' di keyboard untuk Acc)</p>
+            </div>
+
+            <div id="payment-buttons" style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+                <button onclick="batalkanPaymentExtra()" class="btn-doodle" style="background: #ef4444; color: white; flex: 1;">Batal</button>
+                <button onclick="pilihTunai()" class="btn-doodle" style="background: var(--yellow); flex: 1;">Tunai 💵</button>
+                <button onclick="simulasikanPaymentSukses()" class="btn-doodle" style="background: var(--green); width: 100%;">Sudah Bayar (QRIS) ✅</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- SISTEM TEMA DINAMIS ---
+        fetch('/api/settings').then(res => res.json()).then(data => {
+            if (data.global && data.global.theme) document.body.className = data.global.theme;
+        }).catch(e => console.error("Gagal memuat tema:", e));
+
+        let isMirror = true; 
+        let isLiveViewActive = false; 
+        let liveViewTimer; 
+        
+        let templateTerpilih = "", fotoTerpilih = [];
+        let namaFileCetak = ""; let efekTerpilihServer = "none";
+        let activePanelId = 'panel-waktu';
+        
+        let settingKecerahanLV = 100;
+        let settingFlashWorkaround = true; 
+        let settingWaktuIdleMilih = 300; 
+        let activeCameraMode = 'canon'; // Default ke Canon
+        let webcamStream = null;
+        // Sistem Pembayaran & Extra Cetak
+        let isEventBerbayar = false; 
+        let hargaExtraCetakPerLembar = 15000; 
+        let jumlahCetakDipilih = 1;
+
+        let sisaWaktuSesi = 0;
+        let intervalTimerSesi = null;
+        let currentSessionId = "";
+        let waktuMulaiSesiTimestamp = 0; 
+        let linkGoogleDriveUnik = "https://drive.google.com/"; 
+        let jumlahFotoTerjepret = 0; 
+
+        let idleTimerAkhir = null;
+        let isAutoRendering = false;
+        let databaseTemplate = {};
+
+        // FUNGSI CUSTOM WAKTU
+        let nilaiCustomWaktu = "";
+        function bukaModalCustomWaktu() {
+            nilaiCustomWaktu = ""; document.getElementById('displayCustomWaktu').innerText = "0";
+            document.getElementById('displayCustomWaktu').style.borderColor = 'var(--ink)';
+            document.getElementById('customWaktuModal').style.display = 'flex';
+        }
+        function tutupModalCustomWaktu() { document.getElementById('customWaktuModal').style.display = 'none'; }
+        function inputAngkaWaktu(angka) { if (nilaiCustomWaktu.length < 4) { nilaiCustomWaktu += angka; document.getElementById('displayCustomWaktu').innerText = parseInt(nilaiCustomWaktu).toString(); } }
+        function hapusAngkaWaktu() { nilaiCustomWaktu = nilaiCustomWaktu.slice(0, -1); document.getElementById('displayCustomWaktu').innerText = nilaiCustomWaktu === "" ? "0" : nilaiCustomWaktu; }
+        function submitAngkaWaktu() {
+            const angka = parseInt(nilaiCustomWaktu);
+            if (!isNaN(angka) && angka > 0) { tutupModalCustomWaktu(); mulaiSesiKamera(angka); } 
+            else { const display = document.getElementById('displayCustomWaktu'); display.style.borderColor = 'var(--pink)'; display.style.color = 'var(--pink)'; setTimeout(() => { display.style.borderColor = 'var(--ink)'; display.style.color = 'var(--ink)'; }, 400); }
+        }
+
+        async function muatPengaturanTimer() {
+    try {
+        const res = await fetch('/api/settings'); const data = await res.json();
+        
+        // --- 1. PERBAIKAN LOGIKA PEMBACAAN KAMERA ---
+        if (data.global) {
+            // Deteksi semua kemungkinan nama variabel dari Dashboard
+            let mesinKamera = data.global.cameraEngine || data.global.kameraUtama || 'canon';
+            // Jika mengandung kata 'webcam', pastikan mode berubah
+            if (mesinKamera.toLowerCase().includes('webcam')) {
+                activeCameraMode = 'webcam';
+            } else {
+                activeCameraMode = 'canon';
+            }
+        }
+        
+        // --- 2. SETTING LAINNYA ---
+        if (data.global?.flashWorkaround !== undefined) settingFlashWorkaround = data.global.flashWorkaround;
+        if (data.global?.liveViewBrightness) settingKecerahanLV = data.global.liveViewBrightness;
+        if (data.photobox?.sessionTimer) settingWaktuIdleMilih = parseInt(data.photobox.sessionTimer);
+
+        if (data.global?.extraPrintPrice) hargaExtraCetakPerLembar = parseInt(data.global.extraPrintPrice);
+        if (data.global?.qrisData) { 
+            const qrisImg = document.getElementById('qris-image-preview');
+            if(qrisImg) qrisImg.src = data.global.qrisData; 
+        }
+
+        // Cek apakah event saat ini diset berbayar
+        const resEvent = await fetch('/api/current-event'); 
+        const dataEvent = await resEvent.json();
+        if (dataEvent.success && dataEvent.event && dataEvent.event.payment === 'with_payment') {
+            isEventBerbayar = true;
+        }
+
+        const resTpl = await fetch('/api/frames'); databaseTemplate = await resTpl.json();
+    } catch (e) {
+        console.log("Gagal memuat pengaturan:", e);
+    }
+}
+        muatPengaturanTimer();
+
+        function formatWaktu(detik) { let m = Math.floor(detik / 60); let s = detik % 60; return (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s); }
+
+        function mulaiSesiKamera(detik) {
+            sisaWaktuSesi = detik; waktuMulaiSesiTimestamp = Date.now() - 5000; jumlahFotoTerjepret = 0; isAutoRendering = false;
+            currentSessionId = "SS-" + Math.floor(Date.now() / 1000); 
+            fetch('/api/start-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId: currentSessionId }) });
+            document.getElementById('miniGallery').innerHTML = ''; 
+            bukaPanel('panel-kamera'); 
+            mulaiHitungMundurGlobal("kamera", true);
+        }
+
+        function mulaiHitungMundurGlobal(mode, isReset = true) {
+            if (intervalTimerSesi) clearInterval(intervalTimerSesi);
+            const timerUI = document.getElementById('sessionTimerDisplay'); const timerText = document.getElementById('sessionTimerText');
+            timerUI.style.display = 'flex'; timerUI.classList.remove('timer-warning'); timerText.style.color = "var(--ink)";
+            
+            if (isReset) {
+                if (mode === "post-camera") { sisaWaktuSesi = settingWaktuIdleMilih; }
+            }
+            
+            timerText.innerText = formatWaktu(sisaWaktuSesi);
+
+            intervalTimerSesi = setInterval(() => {
+                sisaWaktuSesi--;
+                if (sisaWaktuSesi > 0) { 
+                    timerText.innerText = formatWaktu(sisaWaktuSesi); 
+                    if (sisaWaktuSesi <= 30) { timerUI.classList.add('timer-warning'); } 
+                }
+                
+                if (sisaWaktuSesi <= 0) { 
+                    clearInterval(intervalTimerSesi);
+                    if (mode === "kamera") {
+                        if (jumlahFotoTerjepret < 3) { 
+                            timerText.innerText = "WAKTU HABIS"; timerUI.classList.remove('timer-warning'); 
+                            alert(`⚠️ Waktu Habis! Tapi kamu baru memotret ${jumlahFotoTerjepret} kali. Lanjutkan memotret sampai minimal 3 kali ya.`); 
+                        } else { 
+                            akhiriSesiKameraLanjut(); 
+                        }
+                    } else if (mode === "post-camera") {
+                        if(!isAutoRendering) { isAutoRendering = true; autoRakitOtomatis(); }
+                    }
+                }
+            }, 1000);
+        }
+
+        function btnAkhiriSesiDitekan() {
+            if(jumlahFotoTerjepret < 3) { alert(`⚠️ Kamu baru memotret ${jumlahFotoTerjepret} foto. Harus berfoto minimal 3 kali untuk bisa lanjut!`); return; }
+            if(intervalTimerSesi) clearInterval(intervalTimerSesi); akhiriSesiKameraLanjut();
+        }
+
+       function updateLiveView() {
+    // TAMBAHKAN KUNCI GEMBOK DI SINI:
+    if (!isLiveViewActive || activeCameraMode === 'webcam') return; 
+    
+    const imgUrl = `/liveview.jpg?t=${Date.now()}`; const tempImg = new Image(); 
+    tempImg.onload = function() { if (isLiveViewActive) { document.getElementById('liveView').src = imgUrl; liveViewTimer = setTimeout(updateLiveView, 90); } };
+    tempImg.onerror = function() { if (isLiveViewActive) liveViewTimer = setTimeout(updateLiveView, 500); }; tempImg.src = imgUrl;
+}
+
+        async function bukaPanel(idPanel) {
+            if (activePanelId === 'panel-kamera' && idPanel !== 'panel-kamera') {
+                isLiveViewActive = false; clearTimeout(liveViewTimer); document.getElementById('liveView').src = "";
+                await fetch('/toggle-liveview', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ state: false }) });
+                
+                matikanWebcam(); // <-- TAMBAHKAN INI
+            }
+            
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active-panel'));
+            document.getElementById(idPanel).classList.add('active-panel');
+            if (idPanel !== 'panel-template') window.scrollTo(0, 0); 
+            
+            if (idPanel === 'panel-kamera') {
+                // <-- LOGIKA PERCABANGAN KAMERA BARU
+                if (activeCameraMode === 'webcam') {
+                    jalankanWebcam();
+                } else {
+                    await fetch('/toggle-liveview', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ state: true }) });
+                    document.getElementById('liveView').style.filter = `brightness(${settingKecerahanLV}%)`;
+                    isLiveViewActive = true; updateLiveView();
+                }
+            }
+            activePanelId = idPanel;
+        }
+
+        function toggleMirror() {
+            isMirror = !isMirror; 
+            document.getElementById('liveView').classList.toggle('mirrored', isMirror); document.getElementById('btn-mirror').innerText = isMirror ? "🪞 Cermin: ON" : "🪞 Cermin: OFF";
+            document.getElementById('webcam-view').classList.toggle('mirrored', isMirror);
+        }
+
+        // ==========================================
+        // BUG FIX: LOGIC JEPRET KAMERA (LIVE VIEW)
+        // ==========================================
+        async function jepretKamera() {
+    const btn = document.getElementById('btn-jepret'); if (btn.disabled) return; btn.disabled = true; 
+    let namaFotoSebelumnya = ""; try { const resAwal = await fetch('/api/photobox-raws'); const dataAwal = await resAwal.json(); if (dataAwal.success && dataAwal.files.length > 0) namaFotoSebelumnya = dataAwal.files[0].name; } catch (e) {}
+
+    const timerPilihan = parseInt(document.getElementById('jepret-timer').value); const countdownLayar = document.getElementById('jepretCountdown'); const teksLoading = document.getElementById('loadingTeks');
+    
+    // --- 1. MULAI REKAM FRAME VIDEO WEBCAM ---
+    let webcamFrames = [];
+    let recordInterval = null;
+    if (activeCameraMode === 'webcam') {
+        const video = document.getElementById('webcam-view');
+        const tempCanvas = document.createElement('canvas');
+        // Resolusi dikecilkan sedikit agar upload cepat dan jaringan aman
+        tempCanvas.width = 480; 
+        tempCanvas.height = 360;// Otomatis menghitung rasio aspek asli dari Webcam (Anti-Gepeng)
+tempCanvas.width = 640; 
+tempCanvas.height = (video.videoHeight / video.videoWidth) * 640; 
+        const tCtx = tempCanvas.getContext('2d');
+        
+        recordInterval = setInterval(() => {
+            if(isMirror) { tCtx.save(); tCtx.translate(tempCanvas.width, 0); tCtx.scale(-1, 1); }
+            tCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+            if(isMirror) { tCtx.restore(); }
+            // Simpan frame jepretan ringan setiap 100ms
+            webcamFrames.push(tempCanvas.toDataURL('image/jpeg', 0.6));
+        }, 100); // 10 FPS (Akan dapat ~30 frame selama 3 detik)
+    }
+    // ------------------------------------------
+
+    countdownLayar.style.display = 'flex';
+    for (let i = timerPilihan; i > 0; i--) { countdownLayar.innerHTML = `<div class="ikon-atas">Smile!</div><div class="angka-kamera">${i}</div>`; await new Promise(r => setTimeout(r, 1000)); }
+    countdownLayar.style.display = 'none';
+
+    // HENTIKAN REKAMAN
+    if(recordInterval) clearInterval(recordInterval);
+
+    isLiveViewActive = false; 
+    clearTimeout(liveViewTimer); 
+
+    if (settingFlashWorkaround) {
+        document.getElementById('liveView').src = ""; 
+        document.getElementById('liveView').style.background = "#e5e7eb"; 
+        document.getElementById('liveView').style.filter = "brightness(100%)";
+    }
+
+    const flash = document.createElement('div'); 
+    flash.style = "position:fixed;top:0;left:0;width:100vw;height:100vh;background:white;z-index:9999;opacity:1;transition:0.4s ease-out;"; 
+    document.body.appendChild(flash);
+    setTimeout(() => { flash.style.opacity = '0'; }, 50); 
+    setTimeout(() => { flash.remove(); }, 500);
+
+    teksLoading.style.display = 'block'; 
+
+    // JIKA MENGGUNAKAN WEBCAM
+    if (activeCameraMode === 'webcam') {
+        const video = document.getElementById('webcam-view');
+        const canvas = document.getElementById('webcam-canvas');
+        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        
+        if (isMirror) { ctx.translate(canvas.width, 0); ctx.scale(-1, 1); }
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const base64Image = canvas.toDataURL('image/jpeg', 0.9);
+        
+        await fetch('/api/upload-webcam', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                imageBase64: base64Image, 
+                isMirrored: false, // Diset false karena canvas di atas sudah membaliknya secara visual
+                liveFramesBase64: webcamFrames // KASIH DATA VIDEO KE BACKEND
+            }) 
+        });
+    } 
+    // JIKA MENGGUNAKAN CANON
+    else {
+        await fetch('/capture', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'photobox', mirror: isMirror, lvActive: settingFlashWorkaround }) });
+    }
+    
+    let fotoBaruDitemukan = false; let waktuTunggu = 0; let namaFotoBaru = ""; let urlFotoBaru = "";
+    while (!fotoBaruDitemukan && waktuTunggu < 10000) {
+        await new Promise(r => setTimeout(r, 400)); waktuTunggu += 400;
+        try {
+            const resCek = await fetch('/api/photobox-raws'); const dataCek = await resCek.json();
+            if (dataCek.success && dataCek.files.length > 0 && dataCek.files[0].name !== namaFotoSebelumnya) {
+                namaFotoBaru = dataCek.files[0].name; urlFotoBaru = dataCek.files[0].file; fotoBaruDitemukan = true; 
+            }
+        } catch (e) { }
+    }
+
+    if (fotoBaruDitemukan) {
+        jumlahFotoTerjepret++; 
+        await new Promise(r => setTimeout(r, 800)); 
+        
+        const gallery = document.getElementById('miniGallery');
+        gallery.innerHTML += `<div class="mini-slot" onclick="previewFoto('${urlFotoBaru}')"><img src="${urlFotoBaru}"><div class="overlay-review">Preview</div></div>`;
+        gallery.scrollTop = gallery.scrollHeight;
+
+        const imgHasil = new Image();
+        imgHasil.onload = function() { 
+            teksLoading.style.display = 'none'; 
+            document.getElementById('liveView').classList.remove('mirrored');
+            document.getElementById('liveView').style.filter = "brightness(100%)";
+            document.getElementById('liveView').src = imgHasil.src; 
+        };
+        imgHasil.onerror = function() { teksLoading.style.display = 'none'; };
+        imgHasil.src = `${urlFotoBaru}?t=${Date.now()}`;
+    } else { teksLoading.style.display = 'none'; }
+
+    await new Promise(r => setTimeout(r, 1500)); 
+
+    if (activePanelId === 'panel-kamera') {
+        document.getElementById('liveView').classList.toggle('mirrored', isMirror); 
+        document.getElementById('liveView').style.filter = `brightness(${settingKecerahanLV}%)`;
+        
+        if (activeCameraMode === 'webcam') {
+            jalankanWebcam();
+        } else {
+            fetch('/toggle-liveview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: true }) }).then(() => { 
+                isLiveViewActive = true; 
+                clearTimeout(liveViewTimer); 
+                updateLiveView(); 
+            });
+        }
+    }
+    btn.disabled = false; 
+    if (sisaWaktuSesi <= 0 && jumlahFotoTerjepret >= 3) { akhiriSesiKameraLanjut(); }
+}
+        // ==========================================
+
+        function previewFoto(url) {
+            document.getElementById('liveView').style.display = 'none';
+            document.getElementById('previewImageOverlay').src = url + "?t=" + Date.now();
+            document.getElementById('previewImageOverlay').style.display = 'block';
+            document.getElementById('btn-tutup-preview').style.display = 'block';
+            document.querySelector('.pip-video').style.display = 'none'; 
+        }
+        function tutupPreviewFoto() {
+            document.getElementById('liveView').style.display = 'block';
+            document.getElementById('previewImageOverlay').style.display = 'none';
+            document.getElementById('btn-tutup-preview').style.display = 'none';
+            document.querySelector('.pip-video').style.display = 'block';
+        }
+
+        async function akhiriSesiKameraLanjut() {
+            bukaPanel('panel-template'); 
+            
+            mulaiHitungMundurGlobal("post-camera", true); 
+            
+            const container = document.getElementById('list-template'); container.innerHTML = "";
+            if(!databaseTemplate["6"] || databaseTemplate["6"].length === 0) return container.innerHTML = "<h3 style='font-family: Fredoka;'>Oops! Belum ada template 6 foto nih.</h3>";
+            databaseTemplate["6"].forEach((t, index) => {
+                if(index === 0 && !templateTerpilih) { templateTerpilih = t.id; }
+                const namaBingkai = t.name ? t.name : 'Bingkai ' + (index + 1); 
+                container.innerHTML += `<div class="card-doodle card-template ${index === 0 ? 'selected' : ''}" id="tpl_${t.id}" onclick="pilihTemplate('${t.id}')"><img src="${t.img}"><div class="nama-template">${namaBingkai}</div></div>`;
+            });
+        }
+
+        function pilihTemplate(idTemplate) {
+            templateTerpilih = idTemplate; document.querySelectorAll('.card-template').forEach(c => c.classList.remove('selected'));
+            document.getElementById(`tpl_${idTemplate}`).classList.add('selected'); setTimeout(() => { bukaPanel('panel-pilih-foto'); muatGaleriMentah(); }, 400);
+        }
+
+        async function muatGaleriMentah() {
+            const data = await (await fetch('/api/photobox-raws')).json(); const container = document.getElementById('list-foto'); container.innerHTML = ""; fotoTerpilih = []; updateTeksJumlah();
+            const fotoSesiIni = data.files.filter(f => f.mtime >= waktuMulaiSesiTimestamp);
+            if (fotoSesiIni.length === 0) return container.innerHTML = "<h3 style='font-family: Fredoka;'>Yah, belum ada foto yang terjepret dari sesi ini!</h3>";
+            fotoSesiIni.forEach(f => {
+                const idDiv = `foto_${f.name.replace('.jpg','')}`;
+                container.innerHTML += `<div class="card-doodle card-foto" id="${idDiv}" data-filename="${f.name}" onclick="tambahPilihanFoto('${f.name}')"><img src="${f.file}"><div class="badge-count" id="badge_${f.name}">0</div></div>`;
+            });
+        }
+        
+        function tambahPilihanFoto(namaFile) { if (fotoTerpilih.length < 6) { fotoTerpilih.push(namaFile); updateTeksJumlah(); } }
+        function resetPilihanFoto() { fotoTerpilih = []; updateTeksJumlah(); }
+        function updateTeksJumlah() {
+            document.getElementById('teks-jumlah-foto').innerText = `Terpilih: ${fotoTerpilih.length} / 6`;
+            document.querySelectorAll('.card-foto').forEach(card => {
+                const fName = card.getAttribute('data-filename'); const hitunganBerapaKaliDipilih = fotoTerpilih.filter(name => name === fName).length; const badge = card.querySelector('.badge-count');
+                if (hitunganBerapaKaliDipilih > 0) { card.classList.add('selected'); badge.style.display = 'flex'; badge.innerText = hitunganBerapaKaliDipilih; } 
+                else { card.classList.remove('selected'); badge.style.display = 'none'; }
+            });
+            if(fotoTerpilih.length === 6) { document.getElementById('btn-lanjut-rakit').style.display = 'block'; } 
+            else { document.getElementById('btn-lanjut-rakit').style.display = 'none'; }
+        }
+
+        // --- PREVIEW EFEK & DRAG DROP ---
+        function lanjutKePreviewEfek() {
+            bukaPanel('panel-efek');
+            
+            const previewContainer = document.getElementById('effectPreviewContainer');
+            previewContainer.innerHTML = '<p style="color:var(--ink); font-weight:bold;">Menyiapkan preview...</p>';
+
+            const templateInfo = databaseTemplate["6"].find(t => t.id === templateTerpilih);
+            const frameUrl = `/frames/${templateTerpilih}.png`; 
+            const frameImg = new Image(); frameImg.src = frameUrl;
+            
+            frameImg.onload = () => {
+                const canvasW = frameImg.naturalWidth; const canvasH = frameImg.naturalHeight;
+                let htmlDom = `<div style="height: 60vh; max-height: 400px; width: auto; aspect-ratio: ${canvasW} / ${canvasH}; position: relative; border-radius: 12px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); overflow: hidden; background: white;"><div id="filterTarget" style="position: absolute; top:0; left:0; width:100%; height:100%; transition: filter 0.3s ease;">`;
+                
+                fotoTerpilih.forEach((fotoName, i) => {
+                    const urlFoto = `/uploads/${currentSessionId}/${fotoName}?t=${Date.now()}`; const coord = templateInfo.layout.coords[i];
+                    const fWidth = coord.width || templateInfo.layout.width; const fHeight = coord.height || templateInfo.layout.height;
+                    const leftPct = (coord.x / canvasW) * 100; const topPct = (coord.y / canvasH) * 100; const wPct = (fWidth / canvasW) * 100; const hPct = (fHeight / canvasH) * 100;
+                    htmlDom += `<img src="${urlFoto}" data-index="${i}" class="drag-img" draggable="true" style="position: absolute; left: ${leftPct}%; top: ${topPct}%; width: ${wPct}%; height: ${hPct}%; object-fit: cover; z-index: 2; cursor: grab;">`;
+                });
+                
+                htmlDom += `</div><img src="${frameUrl}" style="position: absolute; top:0; left:0; width:100%; height:100%; z-index: 10; pointer-events: none;"></div>`;
+                previewContainer.innerHTML = htmlDom; 
+                terapkanFilterLive('none', 'none', document.getElementById('btn-efek-none')); 
+                inisiasiDragAndDrop(); 
+            };
+        }
+
+        function inisiasiDragAndDrop() {
+            const dragImgs = document.querySelectorAll('.drag-img'); let draggedIndex = null;
+            dragImgs.forEach(img => {
+                img.addEventListener('dragstart', (e) => { draggedIndex = e.target.getAttribute('data-index'); e.target.style.opacity = '0.5'; e.dataTransfer.effectAllowed = 'move'; });
+                img.addEventListener('dragend', (e) => { e.target.style.opacity = '1'; });
+                img.addEventListener('dragover', (e) => { e.preventDefault(); });
+                img.addEventListener('drop', (e) => { e.preventDefault(); let targetIndex = e.target.getAttribute('data-index'); if (draggedIndex !== null && targetIndex !== null && draggedIndex !== targetIndex) tukarPosisiFoto(draggedIndex, targetIndex); });
+                img.addEventListener('touchstart', (e) => { draggedIndex = e.target.getAttribute('data-index'); e.target.style.opacity = '0.5'; }, {passive: true});
+                img.addEventListener('touchend', (e) => { e.target.style.opacity = '1'; let touch = e.changedTouches[0]; let elementBawah = document.elementFromPoint(touch.clientX, touch.clientY); if (elementBawah && elementBawah.classList.contains('drag-img')) { let targetIndex = elementBawah.getAttribute('data-index'); if (draggedIndex !== null && targetIndex !== null && draggedIndex !== targetIndex) tukarPosisiFoto(draggedIndex, targetIndex); } });
+            });
+        }
+
+        function tukarPosisiFoto(idx1, idx2) {
+            let temp = fotoTerpilih[parseInt(idx1)];
+            fotoTerpilih[parseInt(idx1)] = fotoTerpilih[parseInt(idx2)];
+            fotoTerpilih[parseInt(idx2)] = temp;
+            lanjutKePreviewEfek(); 
+        }
+
+        function terapkanFilterLive(namaServer, cssFilter, btnElem) {
+            efekTerpilihServer = namaServer; const filterTarget = document.getElementById('filterTarget'); if(filterTarget) filterTarget.style.filter = cssFilter;
+            document.querySelectorAll('.effect-btn').forEach(btn => btn.classList.remove('active')); btnElem.classList.add('active');
+        }
+
+        async function autoRakitOtomatis() {
+            if (!templateTerpilih) { if(databaseTemplate["6"] && databaseTemplate["6"].length > 0) templateTerpilih = databaseTemplate["6"][0].id; }
+            const data = await (await fetch('/api/photobox-raws')).json(); const fotoSesiIni = data.files.filter(f => f.mtime >= waktuMulaiSesiTimestamp);
+            if (fotoSesiIni.length === 0) { window.location.href = '/idle.html'; return; }
+            let idx = 0; while(fotoTerpilih.length < 6) { fotoTerpilih.push(fotoSesiIni[idx % fotoSesiIni.length].name); idx++; }
+            validasiDanRakit(true);
+        }
+
+        async function validasiDanRakit(isAuto = false) {
+            if(fotoTerpilih.length < 6) return;
+            const btn = document.getElementById('btn-rakit');
+            
+            if(!isAuto) { btn.innerText = "⏳ Merakit..."; btn.disabled = true; }
+            if(isAuto) { document.getElementById('loadingTeks').innerText = "Waktu Habis! Merakit Otomatis..."; document.getElementById('loadingTeks').style.display = 'block'; }
+
+            try {
+                const data = await (await fetch('/api/generate-photobox', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, 
+                   body: JSON.stringify({ 
+    templateId: templateTerpilih, 
+    selectedPhotos: fotoTerpilih, 
+    sessionId: currentSessionId, 
+    effect: efekTerpilihServer,
+    livePhoto: document.getElementById('chk-livePhoto-studio')?.checked || false // <-- PARAMETER BARU
+})
+                })).json();
+                
+                if (data.success) {
+                    if (intervalTimerSesi) clearInterval(intervalTimerSesi); document.getElementById('sessionTimerDisplay').style.display = 'none';
+                    if(isAuto) document.getElementById('loadingTeks').style.display = 'none';
+                    bukaPanel('panel-hasil');
+                    
+                    // Render foto
+                    document.getElementById('hasilAkhir').src = data.file + "?t=" + Date.now(); 
+                    namaFileCetak = data.file;
+
+                    // [BARU] Render GIF jika dinyalakan
+                    const elemenGif = document.getElementById('img-hasil-gif');
+                    if (data.livePhoto) {
+                        elemenGif.src = data.livePhoto + "?t=" + Date.now();
+                        elemenGif.style.display = 'block';
+                    } else {
+                        elemenGif.style.display = 'none';
+                        elemenGif.src = '';
+                    }
+
+                    // Tampilkan QR Code
+                    if (data.driveLink) linkGoogleDriveUnik = data.driveLink;
+                    document.getElementById('qrCodeContainer').innerHTML = ""; 
+                    new QRCode(document.getElementById("qrCodeContainer"), { text: linkGoogleDriveUnik, width: 130, height: 130, colorDark: "#292524", colorLight: "#ffffff" });
+                    
+                    jumlahCetakDipilih = 1; updateUIJumlahCetak(); resetIdleHalamanHasil();
+                } else {
+                    if(isAuto) document.getElementById('loadingTeks').style.display = 'none';
+                    alert("Gagal merakit gambar!"); btn.innerText = "Rakit Sekarang ›"; btn.disabled = false;
+                }
+            } catch (e) {
+                if(isAuto) document.getElementById('loadingTeks').style.display = 'none';
+                alert("Kesalahan koneksi ke server!"); btn.innerText = "Rakit Sekarang ›"; btn.disabled = false;
+            }
+        }
+
+        function resetIdleHalamanHasil() { if (activePanelId === 'panel-hasil') { clearTimeout(idleTimerAkhir); idleTimerAkhir = setTimeout(() => { window.location.href = '/idle.html'; }, 120000); } }
+        ['mousemove','click','touchstart','keypress'].forEach(evt => document.addEventListener(evt, resetIdleHalamanHasil));
+
+        // --- SISTEM PEMBAYARAN & EXTRA CETAK ---
+        function ubahJumlahCetak(nilai) { let num = jumlahCetakDipilih + nilai; if (num < 1) num = 1; if (num > 10) num = 10; jumlahCetakDipilih = num; updateUIJumlahCetak(); }
+        
+        function updateUIJumlahCetak() {
+            document.getElementById('label-jumlah-cetak').innerText = jumlahCetakDipilih + " Lembar"; const btnAction = document.getElementById('btn-action-cetak');
+            if (isEventBerbayar && jumlahCetakDipilih > 1) {
+                let biayaTambahan = (jumlahCetakDipilih - 1) * hargaExtraCetakPerLembar;
+                btnAction.innerText = `💳 Bayar Extra & Cetak (${jumlahCetakDipilih} Lbr) - Rp ${biayaTambahan.toLocaleString('id-ID')}`;
+                btnAction.style.background = "var(--yellow)";
+            } else {
+                btnAction.innerText = `🖨️ Cetak (${jumlahCetakDipilih} Lembar)`; btnAction.style.background = "var(--blue)";
+            }
+        }
+
+        function prosesCetakFinal() {
+    if (isEventBerbayar && jumlahCetakDipilih > 1) {
+        let biayaTambahan = (jumlahCetakDipilih - 1) * hargaExtraCetakPerLembar;
+        document.getElementById('payment-text-info').innerHTML = `Silakan selesaikan pembayaran untuk <b>${jumlahCetakDipilih - 1} lembar tambahan</b> sebesar <br><b style="font-size:1.8rem; color:var(--ink);">Rp ${biayaTambahan.toLocaleString('id-ID')}</b>`;
+        
+        const qrisImg = document.getElementById('qris-image-preview');
+        
+        // Tembak file statis dan paksa tampilkan
+        qrisImg.src = `/assets/qris_static.png?t=${new Date().getTime()}`;
+        qrisImg.style.display = 'block'; 
+
+        document.getElementById('qris-section').style.display = 'block';
+        document.getElementById('payment-buttons').style.display = 'flex';
+        document.getElementById('cash-validation-section').style.display = 'none';
+        document.getElementById('paymentModalOverlay').style.display = 'flex';
+    } else { 
+        jalankanPerintahCetakKePrinter(); 
+    }
+}
+
+        function pilihTunai() {
+            document.getElementById('qris-section').style.display = 'none'; document.getElementById('payment-buttons').style.display = 'none'; document.getElementById('cash-validation-section').style.display = 'flex';
+            window.addEventListener('keydown', validasiAdminKeyListener);
+        }
+
+        function validasiAdminKeyListener(e) {
+            if (e.key === 'y' || e.key === 'Y') { window.removeEventListener('keydown', validasiAdminKeyListener); simulasikanPaymentSukses(); }
+        }
+
+        function batalkanPaymentExtra() { document.getElementById('paymentModalOverlay').style.display = 'none'; window.removeEventListener('keydown', validasiAdminKeyListener); }
+        function simulasikanPaymentSukses() { batalkanPaymentExtra(); jalankanPerintahCetakKePrinter(); }
+
+        async function jalankanPerintahCetakKePrinter() {
+            if (!namaFileCetak) return; const btn = document.getElementById('btn-action-cetak'); btn.disabled = true; btn.innerText = `⏳ Mengirim (${jumlahCetakDipilih}x)...`; btn.style.opacity = '0.5';
+            try { 
+                for(let i = 0; i < jumlahCetakDipilih; i++) { await fetch('/api/print', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ fileName: namaFileCetak, mode: 'photobox' }) }); await new Promise(r => setTimeout(r, 800)); }
+                btn.innerText = `✅ ${jumlahCetakDipilih} Lembar Dikirim`; btn.style.background = "var(--green)"; btn.style.opacity = '1'; setTimeout(() => { btn.disabled = false; updateUIJumlahCetak(); }, 3000);
+            } catch (e) { btn.disabled = false; updateUIJumlahCetak(); btn.style.opacity = '1'; alert("Gagal mencetak!"); }
+        }
+
+        async function kirimFotoKeWA() {
+    const inputWa = document.getElementById('inputWA'); 
+    const btnWa = document.getElementById('btnKirimWA'); 
+    const nomor = inputWa.value;
+    if (nomor.length < 10) return;
+    
+    inputWa.disabled = true; btnWa.disabled = true; btnWa.innerText = "⏳";
+    try {
+        // Fallback keamanan link drive
+        let linkFinal = linkGoogleDriveUnik || "https://drive.google.com/";
+        
+        const res = await fetch('/api/send-wa', { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify({ nomorWa: nomor, linkFoto: linkFinal }) 
+        }); 
+        const data = await res.json();
+        
+        if (data.success) {
+            btnWa.innerText = "Terkirim ✅"; btnWa.style.background = "var(--green)"; btnWa.style.color = "var(--ink)"; 
+            // Buka lagi dalam 3 detik
+            setTimeout(() => {
+                inputWa.disabled = false; btnWa.disabled = false;
+                btnWa.innerText = "Kirim"; btnWa.style.background = "var(--pink)"; btnWa.style.color = "var(--ink)";
+                inputWa.value = "";
+            }, 3000);
+        } else { 
+            inputWa.disabled = false; btnWa.disabled = false; btnWa.innerText = "Kirim"; 
+            alert("Gagal kirim WA: " + data.message); 
+        }
+    } catch (err) { 
+        inputWa.disabled = false; btnWa.disabled = false; btnWa.innerText = "Kirim"; 
+        alert("Kesalahan server."); 
+    }
+}
+
+function jalankanWebcam() {
+    document.getElementById('liveView').style.display = 'none'; // Sembunyikan Canon
+    const vid = document.getElementById('webcam-view');
+    vid.style.display = 'block'; // Tampilkan Webcam
+    
+    navigator.mediaDevices.getUserMedia({ video: { width: 1920, height: 1080 } })
+        .then(stream => { webcamStream = stream; vid.srcObject = stream; })
+        .catch(err => { alert("Webcam gagal diakses atau tidak diizinkan browser!"); });
+}
+
+function matikanWebcam() {
+    if (webcamStream) {
+        webcamStream.getTracks().forEach(track => track.stop());
+        webcamStream = null;
+    }
+}
+        // --- VIRTUAL NUMPAD DRAGGABLE ---
+        const inputTarget = document.getElementById('inputWA'); const virtualNumpad = document.getElementById('virtual-numpad'); const numpadDragHandle = document.getElementById('numpad-drag-handle');
+        let isDragging = false, startX, startY, initialLeft, initialTop;
+        if (inputTarget && virtualNumpad) {
+            inputTarget.addEventListener('click', function(e) { e.stopPropagation(); virtualNumpad.style.display = 'block'; virtualNumpad.style.top = '50%'; virtualNumpad.style.left = '50%'; virtualNumpad.style.transform = 'translate(-50%, -50%)'; }); 
+            document.addEventListener('click', function(e) { if (!virtualNumpad.contains(e.target) && e.target !== inputTarget) virtualNumpad.style.display = 'none'; });
+        }
+        if (numpadDragHandle) { numpadDragHandle.addEventListener('mousedown', startDragNumpad); numpadDragHandle.addEventListener('touchstart', startDragNumpad, {passive: false}); }
+        function startDragNumpad(e) { isDragging = true; if (e.type === 'touchstart') { startX = e.touches[0].clientX; startY = e.touches[0].clientY; } else { startX = e.clientX; startY = e.clientY; } const rect = virtualNumpad.getBoundingClientRect(); virtualNumpad.style.transform = 'none'; virtualNumpad.style.left = rect.left + 'px'; virtualNumpad.style.top = rect.top + 'px'; initialLeft = rect.left; initialTop = rect.top; document.addEventListener('mousemove', dragNumpad); document.addEventListener('touchmove', dragNumpad, {passive: false}); document.addEventListener('mouseup', endDragNumpad); document.addEventListener('touchend', endDragNumpad); }
+        function dragNumpad(e) { if (!isDragging) return; e.preventDefault(); let currentX, currentY; if (e.type === 'touchmove') { currentX = e.touches[0].clientX; currentY = e.touches[0].clientY; } else { currentX = e.clientX; currentY = e.clientY; } const diffX = currentX - startX; const diffY = currentY - startY; virtualNumpad.style.left = (initialLeft + diffX) + 'px'; virtualNumpad.style.top = (initialTop + diffY) + 'px'; }
+        function endDragNumpad() { isDragging = false; document.removeEventListener('mousemove', dragNumpad); document.removeEventListener('touchmove', dragNumpad); document.removeEventListener('mouseup', endDragNumpad); document.removeEventListener('touchend', endDragNumpad); }
+        function tekanAngka(angka) { if(inputTarget) inputTarget.value += angka; } function hapusAngka() { if(inputTarget) inputTarget.value = inputTarget.value.slice(0, -1); } function tutupNumpad() { if(virtualNumpad) virtualNumpad.style.display = 'none'; }
+    </script>
+</body>
+<!-- PERBAIKAN BUG FOCUS ALERT & WHATSAPP -->
+<script>
+    // Timpa fungsi alert bawaan Windows agar menggunakan animasi UI yang aman
+    window.alert = function(pesan) {
+        let container = document.getElementById('custom-toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'custom-toast-container';
+            // Posisi di tengah bawah layar
+            container.style.cssText = 'position:fixed; bottom:100px; left:50%; transform:translateX(-50%); z-index:999999; display:flex; flex-direction:column; gap:10px; pointer-events:none;';
+            document.body.appendChild(container);
+        }
+        
+        const toast = document.createElement('div');
+        let bgColor = '#3b82f6'; // Biru bawaan
+        
+        // Deteksi pesan error/kesalahan
+        if (pesan.toLowerCase().includes('gagal') || pesan.toLowerCase().includes('error') || pesan.toLowerCase().includes('kesalahan') || pesan.includes('❌')) {
+            bgColor = '#ef4444'; // Merah
+        } else if (pesan.toLowerCase().includes('berhasil') || pesan.includes('✅') || pesan.includes('terkirim')) {
+            bgColor = '#10b981'; // Hijau
+        }
+
+        toast.style.cssText = `background:${bgColor}; color:white; padding:15px 35px; border-radius:50px; font-weight:700; font-size:1.2rem; box-shadow:0 10px 20px rgba(0,0,0,0.3); border:3px solid #fff; text-align:center; transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55); opacity: 0; transform: translateY(40px); font-family: 'Fredoka', sans-serif;`;
+        toast.innerHTML = pesan.replace(/\n/g, '<br>');
+        
+        container.appendChild(toast);
+        
+        // Animasi Masuk
+        requestAnimationFrame(() => {
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateY(0)';
+        });
+
+        // Animasi Keluar setelah 4 detik
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(20px)';
+            setTimeout(() => toast.remove(), 400);
+        }, 4000);
+        
+        // Kembalikan fokus ke body agar input teks tidak macet
+        setTimeout(() => {
+            window.focus();
+            document.body.focus();
+        }, 50);
+    };
+</script>
+</html>

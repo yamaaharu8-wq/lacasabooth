@@ -1,0 +1,2301 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lacasaphoto - Admin Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link rel="stylesheet" href="/assets/theme.css">
+   <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Fredoka', sans-serif; }
+        body { 
+            display: flex; height: 100vh; background-color: var(--bg-color); color: var(--ink); 
+            overflow: hidden; background-image: radial-gradient(var(--dot-color) 2px, transparent 2px); background-size: 40px 40px;
+        }
+
+        /* === RESPONSIVE SIDEBAR (DINAMIS MENGIKUTI TEMA) === */
+        .sidebar { 
+            width: 280px; 
+            background-color: var(--paper-white); 
+            border-right: 3px solid var(--ink); 
+            display: flex; flex-direction: column; height: 100vh; overflow-y: auto; flex-shrink: 0; z-index: 100; transition: transform 0.3s ease; 
+        }
+        .sidebar-header { 
+            padding: 30px 20px 20px 20px; text-align: center; margin-bottom: 15px; position: relative; border-bottom: 2px dashed var(--ink); 
+        }
+        .sidebar-header h1 { 
+            font-family: 'Fredoka', sans-serif; font-size: 2rem; font-weight: 700; color: var(--ink); margin: 0; letter-spacing: -0.5px; line-height: 1.2; 
+        }
+        
+        /* Trik Dinamis 1: Background ink, Text paper-white agar selalu kontras di tema apapun */
+        .badge-admin { 
+            display: inline-block; margin-top: 8px; font-size: 0.75rem; font-weight: 700; 
+            background: var(--ink); color: var(--paper-white); 
+            padding: 5px 12px; border-radius: 20px; letter-spacing: 1px; text-transform: uppercase; box-shadow: 2px 2px 0px rgba(0,0,0,0.2); 
+        }
+
+        .nav-menu { display: flex; flex-direction: column; padding: 0 15px; gap: 5px; }
+        .nav-item { 
+            padding: 12px 18px; color: var(--ink); text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 0.95rem; 
+            display: flex; align-items: center; gap: 12px; cursor: pointer; transition: 0.2s; border: none; margin: 0 5px; opacity: 0.75;
+        }
+        .nav-item:hover { 
+            background-color: var(--bg-color); opacity: 1; transform: translateX(5px); 
+        }
+        
+        /* Trik Dinamis 2: Menu aktif membalikkan warna background dan teks */
+        .nav-item.active { 
+            background-color: var(--ink); color: var(--paper-white); opacity: 1; box-shadow: 4px 4px 0px var(--blue); transform: translateX(5px); 
+        }
+        .nav-label { 
+            font-size: 0.75rem; text-transform: uppercase; color: var(--ink); opacity: 0.5; font-weight: 700; margin: 25px 25px 10px 25px; letter-spacing: 1px; 
+        }
+
+        /* === PENYESUAIAN KHUSUS DARK ELEGANCE === */
+        /* Kode di bawah ini hanya aktif jika body memiliki class 'theme-dark' */
+        .theme-dark .sidebar {
+            background-color: #1e293b; /* Warna gelap navy elegan */
+            border-right: 2px solid #334155;
+        }
+        .theme-dark .sidebar-header { border-bottom-color: #334155; }
+        .theme-dark .nav-item { color: #cbd5e1; opacity: 1; }
+        .theme-dark .nav-item:hover { background-color: #334155; color: #ffffff; }
+        .theme-dark .nav-item.active { 
+            background-color: #38bdf8; /* Biru terang neon khas dark mode */
+            color: #0f172a; /* Teks gelap navy agar kontras dan mudah dibaca */
+            box-shadow: 4px 4px 0px #0284c7;
+        }
+        .theme-dark .badge-admin { background: #38bdf8; color: #0f172a; }
+        .theme-dark .nav-label { color: #94a3b8; }
+        /* === EDITOR TEMPLATE (SEJAJAR KIRI KANAN) === */
+        .editor-row { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; align-items: start; margin-bottom: 20px; }
+        @media (max-width: 900px) { .editor-row { grid-template-columns: 1fr; } }
+        .menu-toggle { display: none; position: fixed; top: 20px; left: 20px; z-index: 200; background: var(--paper-white); border: var(--doodle-border); font-size: 1.5rem; padding: 5px 10px; border-radius: 10px; cursor: pointer; box-shadow: 3px 3px 0px var(--ink); }
+
+        /* === MAIN CONTENT === */
+        .main-content { flex: 1; height: 100vh; overflow-y: auto; padding: 40px; position: relative; }
+        .top-bar { margin-bottom: 30px; }
+        .top-bar h2 { font-family: 'Caveat', cursive; font-size: 2.8rem; color: var(--ink); font-weight: 700; margin: 0; line-height: 1; }
+        .tab-desc { font-size: 0.95rem; color: var(--ink); opacity: 0.6; margin-top: 5px; font-weight: 500; max-width: 600px;}
+        
+        .tab-panel { display: none; animation: fadeIn 0.4s ease; }
+        .tab-panel.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-bottom: 25px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 25px; }
+        
+        .card { background: var(--paper-white); border-radius: var(--doodle-radius); padding: 25px; box-shadow: 6px 6px 0px var(--ink); border: var(--doodle-border); }
+        .card-header { font-size: 1.2rem; font-weight: 700; color: var(--ink); margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px dashed var(--ink); padding-bottom: 10px; }
+        
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 0.9rem; color: var(--ink); }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; background: #fff; color: var(--ink); border: 2px solid var(--ink); border-radius: 10px; font-size: 0.95rem; outline: none; transition: 0.2s; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { box-shadow: 3px 3px 0px var(--ink); background: var(--bg-color); }
+        
+        .btn-primary { background: var(--ink); color: white; border: 2px solid var(--ink); padding: 12px 20px; font-weight: 600; border-radius: 50px; cursor: pointer; width: 100%; font-size: 1rem; transition: 0.2s; box-shadow: 4px 4px 0px var(--ink); display: flex; justify-content: center; align-items: center; gap: 8px;}
+        .btn-primary:hover { transform: translateY(-3px); box-shadow: 6px 6px 0px var(--ink); }
+
+        .layout-box { background: var(--bg-color); padding: 15px; border: 2px dashed var(--ink); border-radius: 15px; margin-bottom: 20px; }
+        
+        .template-list-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; margin-top: 15px;}
+        .template-group-title { font-family: 'Caveat', cursive; font-size: 2rem; font-weight: 700; margin: 30px 0 10px 0; border-bottom: 2px dashed var(--ink); padding-bottom: 5px; color: var(--ink);}
+
+        /* Modal Overlay */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(253, 251, 247, 0.9); backdrop-filter: blur(5px); z-index: 999; justify-content: center; align-items: center; }
+        .modal-content { background: var(--paper-white); width: 90%; max-width: 550px; max-height: 90vh; overflow-y: auto; border-radius: 30px; padding: 40px 30px; border: var(--doodle-border); box-shadow: 10px 12px 0px var(--ink); position: relative; }
+        .btn-close-modal { position: absolute; top: 15px; right: 15px; background: #fff; border: 3px solid var(--ink); width: 45px; height: 45px; border-radius: 50%; font-size: 1.5rem; font-weight: bold; cursor: pointer; color: var(--ink); transition: 0.2s; box-shadow: 4px 4px 0px var(--ink); }
+        .btn-close-modal:hover { background: #ef4444; color: white; transform: rotate(90deg) scale(1.1); }
+        
+        .report-table { width: 100%; border-collapse: collapse; margin-top: 10px; background: #fff; border: 2px solid var(--ink); border-radius: 10px; overflow: hidden; }
+        .report-table th, .report-table td { border: 1px solid var(--ink); padding: 12px; text-align: left; }
+        .report-table th { background: var(--blue); font-weight: 700; }
+
+        .guide-box { background: var(--pink); border: 2px solid var(--ink); padding: 15px; border-radius: 10px; margin-bottom: 15px; font-size: 0.85rem; color: #333; line-height: 1.5;}
+        .guide-box h4 { margin: 0 0 5px 0; font-size: 1rem; color: var(--ink); }
+        .guide-box ol, .guide-box ul { margin: 0; padding-left: 20px; }
+        .guide-box li { margin-bottom: 6px; }
+
+        /* === VISUAL EDITOR TEMPLATE === */
+        .ve-container-wrapper { display: none; position: relative; width: 100%; max-width: 450px; margin: 0 auto 15px auto; border: 3px dashed var(--blue); border-radius: 10px; overflow: hidden; background: #e5e7eb; box-shadow: inset 4px 4px 0px rgba(0,0,0,0.05); }
+        .ve-image-target { width: 100%; display: block; user-select: none; pointer-events: none; z-index: 1; position: relative;}
+        
+        .ve-slot {
+            position: absolute; border: 3px dashed #ffffff; background: rgba(239, 68, 68, 0.5);
+            resize: both; overflow: hidden; cursor: move; min-width: 30px; min-height: 30px;
+            display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;
+            text-shadow: 1px 1px 2px black; font-size: 2rem; z-index: 10;
+            box-shadow: 0px 0px 10px rgba(0,0,0,0.5); border-radius: 4px;
+        }
+        .ve-slot::-webkit-resizer { background-color: var(--yellow); border: 2px solid var(--ink); }
+        
+        .mode-btn { flex: 1; padding: 12px; font-size: 1.1rem; font-weight: 700; border-radius: 15px; cursor: pointer; transition: 0.2s; border: 3px solid var(--ink); text-align: center; }
+        .mode-btn.active { background: var(--blue); box-shadow: 4px 4px 0px var(--ink); transform: translateY(-2px); }
+        .mode-btn.inactive { background: var(--bg-color); color: #666; border-color: #ccc; }
+
+       /* === FLOATING BACK BUTTON (MODERN ICON) === */
+        .btn-floating-back {
+            position: fixed; top: 25px; right: 25px; z-index: 9999;
+            background: var(--ink); color: white;
+            width: 50px; height: 50px; border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            text-decoration: none; transition: 0.2s; 
+            box-shadow: 4px 4px 0px var(--yellow); border: 3px solid white;
+        }
+        .btn-floating-back:hover {
+            transform: translateY(-5px) scale(1.05); 
+            box-shadow: 6px 6px 0px var(--yellow);
+            background: var(--blue); color: var(--ink); border-color: var(--ink);
+        }
+
+        @media (max-width: 900px) {
+            .grid-2, .grid-3 { grid-template-columns: 1fr; }
+            .sidebar { position: fixed; transform: translateX(-100%); }
+            .sidebar.show { transform: translateX(0); }
+            .menu-toggle { display: block; }
+            .main-content { padding: 70px 20px 20px 20px; } 
+        }
+        
+    </style>
+</head>
+<body>
+    <!-- SAAS LOGIN OVERLAY -->
+    <div id="saas-login-overlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg-color); z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; background-image: radial-gradient(var(--dot-color) 2px, transparent 2px); background-size: 40px 40px;">
+        <div style="background: var(--paper-white); padding: 40px; border-radius: 20px; border: 4px solid var(--ink); box-shadow: 10px 10px 0px var(--ink); text-align: center; max-width: 450px;">
+            <div style="font-size: 4rem; margin-bottom: 10px;">☁️</div>
+            <h2 style="font-family: 'Caveat', cursive; font-size: 3rem; margin-bottom: 5px;">Lacasabooth</h2>
+            <p style="margin-bottom: 25px; font-weight: 500; font-size: 1rem; color: #444;">Masuk menggunakan Akun Google Anda untuk memverifikasi Lisensi Sistem.</p>
+            
+            <button id="btn-saas-login" class="btn-primary" style="background: #fff; color: var(--ink); border: 3px solid var(--ink); font-size: 1.1rem; justify-content: center; width: 100%;">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" style="width: 25px; margin-right: 10px;"> Lanjutkan dengan Google
+            </button>
+            <p id="saas-login-status" style="margin-top: 15px; font-size: 0.9rem; font-weight: bold; color: var(--ink);"></p>
+        </div>
+    </div>
+    <!-- SCRIPT ANTI-GLITCH (Mencegah Kedipan Layar Login) -->
+    <script>
+        if (localStorage.getItem('saas_user_tier')) {
+            document.getElementById('saas-login-overlay').style.display = 'none';
+        }
+    </script>
+    <!-- Tombol Kembali Modern Mengambang -->
+    <a href="/event-manager.html" class="btn-floating-back" title="Kembali ke Event Manager">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+    </a>
+    
+    <button class="menu-toggle" onclick="toggleSidebar()">☰ Menu</button>
+
+    <aside class="sidebar" id="app-sidebar">
+        <div class="sidebar-header">
+            <div style="font-size: 3.5rem; margin-bottom: 5px; text-shadow: 3px 3px 0px var(--yellow); line-height: 1;">📸</div>
+            <h1>Lacasabooth</h1>
+            <span class="badge-admin" id="teks-email-admin">Admin Panel</span>
+        </div>
+        
+        <div class="nav-label">Beranda</div>
+        <nav class="nav-menu">
+            <a class="nav-item active" onclick="bukaTab('tab-dashboard', this)"><span>🏠</span> Dashboard</a>
+        </nav>
+
+        <div class="nav-label">Pengaturan Studio</div>
+        <nav class="nav-menu">
+            <a class="nav-item" onclick="bukaTab('tab-timer', this)"><span>⏱️</span> Pengaturan Waktu</a>
+            <a class="nav-item" onclick="bukaTab('tab-hardware', this)"><span>🖥️</span> Hardware & Printer</a>
+            <a class="nav-item" onclick="bukaTab('tab-template', this)"><span>🖼️</span> Kelola Template</a>
+            <a class="nav-item" onclick="bukaTab('tab-tema', this)"><span>🎨</span> Tema & Tampilan</a>
+        </nav>
+
+        <div class="nav-label">Integrasi & Pembayaran</div>
+        <nav class="nav-menu">
+            <a class="nav-item" onclick="bukaTab('tab-subscription', this)"><span>⭐</span> Langganan (Subs)</a>
+            <a class="nav-item" onclick="bukaTab('tab-gdrive', this)"><span>☁️</span> Setelan G-Drive</a>
+            <a class="nav-item" onclick="bukaTab('tab-whatsapp', this)"><span>🤖</span> Bot WhatsApp</a>
+            <a class="nav-item" onclick="bukaTab('tab-qris', this)"><span>💳</span> QRIS Toko</a>
+        </nav>
+
+        <div class="nav-label">Manajemen Data</div>
+        <nav class="nav-menu">
+            <a class="nav-item" onclick="window.location.href='/gallery.html'"><span>📁</span> Galeri Foto</a>
+            <a class="nav-item" onclick="bukaTab('tab-analytic', this)"><span>📊</span> Laporan Analitik</a>
+        </nav>
+        <div class="nav-label">Bantuan & Info</div>
+        <nav class="nav-menu">
+            <a class="nav-item" onclick="bukaTab('tab-credit', this)"><span>📞</span> Developer & Credit</a>
+        </nav>
+    </aside>
+
+    <main class="main-content" onclick="tutupSidebarMobile()">
+        
+        <div id="tab-dashboard" class="tab-panel active">
+            <div class="top-bar">
+                <h2>Dashboard Overview ✨</h2>
+                <p class="tab-desc">Pantau statistik harian dan status koneksi perangkatkeras photobooth Anda.</p>
+            </div>
+            <div class="grid-2">
+                <div class="card" style="background: var(--blue);">
+                    <h3 style="font-size: 1.2rem; font-weight: 600; color: var(--ink);">Total Sesi Hari Ini</h3>
+                    <p id="stat-sessions" style="font-family: 'Caveat', cursive; font-size: 4rem; font-weight: 700; margin: 5px 0; line-height: 1;">0</p>
+                    <p style="font-size: 0.9rem; font-weight: 500;">Berdasarkan folder sesi yang terbuat</p>
+                </div>
+                <div class="card" style="background: var(--green);">
+                    <h3 style="font-size: 1.2rem; font-weight: 600; color: var(--ink);">Status Kamera</h3>
+                    <p id="stat-camera" style="font-family: 'Caveat', cursive; font-size: 3rem; font-weight: 700; margin: 15px 0; line-height: 1;">⏳ Mengecek...</p>
+                    <button id="btn-scan-kamera" onclick="scanKameraUSB()" class="btn-primary" style="background: var(--ink); color: white; padding: 8px; font-size: 0.9rem;">🔄 Scan Ulang Kamera</button>
+                </div>
+            </div>
+<!-- KOTAK PENGATURAN KEAMANAN PIN -->
+<div class="card" style="margin-bottom: 25px; border: 3px solid var(--ink); background: var(--pink);">
+    <div class="card-header" style="border-bottom-color: var(--ink);">🔒 Keamanan Admin (PIN)</div>
+    <div class="form-group" style="background: rgba(255,255,255,0.8); padding: 15px; border-radius: 10px; border: 2px dashed var(--ink);">
+        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: bold; color: var(--ink); margin-bottom: 0;">
+            <input type="checkbox" id="sys-usePin" style="width: 20px; height: 20px;" onchange="togglePinInput()">
+            Gunakan PIN saat keluar dari layar Touch to Start
+        </label>
+        <div id="pin-input-container" style="display: none; margin-top: 15px;">
+            <label style="font-size: 0.9rem;">Tentukan PIN Admin (Wajib 4 Angka)</label>
+            <input type="text" id="sys-adminPin" maxlength="4" placeholder="1234" style="font-weight: bold; font-size: 1.5rem; letter-spacing: 10px; width: 150px; text-align: center; background: var(--paper-white);" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+        </div>
+        
+        <!-- TOMBOL SIMPAN -->
+        <button type="button" class="btn-primary" style="background: var(--ink); color: white; width: 100%; margin-top: 15px;" onclick="simpanPengaturan()">💾 Simpan Setelan PIN</button>
+    </div>
+</div>
+            <div class="card" style="margin-top: 25px; background: #fee2e2; border: 3px solid #ef4444; box-shadow: 6px 6px 0px #ef4444;">
+                <div class="card-header" style="color: #ef4444; border-bottom: 2px dashed #ef4444;">⚠️ Danger Zone (Reset Sistem)</div>
+                <p style="font-size: 0.9rem; margin-bottom: 15px; font-weight: 500;">Tombol ini akan memutuskan koneksi G-Drive, Bot WhatsApp, menghapus QRIS Toko, menghapus Video Pose, mereset laporan Analitik, dan mengembalikan pengaturan ke Default.<br><br><b>Jangan khawatir:</b> Template yang sudah di-upload <b>TIDAK</b> akan terhapus.</p>
+                <button onclick="resetSistemTotal()" class="btn-primary" style="background: #ef4444; border-color: #b91c1c; color: white;">🧨 Reset Sistem ke Default</button>
+            </div>
+        </div>
+
+        <div id="tab-timer" class="tab-panel">
+            <div class="top-bar">
+                <h2>Pengaturan Waktu ⏱️</h2>
+                <p class="tab-desc">Atur durasi idle, hitung mundur jepretan, dan batas retake foto untuk klien.</p>
+            </div>
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header">Mode Collage & Newspaper</div>
+                    <div class="form-group">
+                        <label>Durasi Sesi Bebas (Detik)</label>
+                        <input type="number" id="clg-sessionTimer" placeholder="300">
+                    </div>
+                    <div class="form-group">
+                        <label>Jeda Hitung Mundur Jepret (Detik)</label>
+                        <input type="number" id="clg-timer" placeholder="5">
+                    </div>
+                    <div class="form-group">
+                        <label>Batas Maksimal Retake per Slot</label>
+                        <input type="number" id="clg-maxRetake" placeholder="Isi 0 jika tanpa batas" value="3">
+                    </div>
+                </div>
+                <div class="card" style="background: var(--blue);">
+                    <div class="card-header" style="border-bottom-color: var(--ink);">Mode Self Studio</div>
+                    <p style="font-size: 0.85rem; margin-bottom: 15px; font-weight: 500;">Waktu utama pemotretan dipilih tamu di layar awal (3/5/10 Menit).</p>
+                    <div class="form-group" style="background: rgba(255,255,255,0.5); padding: 15px; border-radius: 15px; border: 2px dashed var(--ink);">
+                        <label style="font-size: 1rem;">Waktu Pilih Bingkai & Foto (Detik)</label>
+                        <input type="number" id="pb-sessionTimer" placeholder="300" style="font-weight: bold; font-size: 1.1rem; padding: 12px;">
+                        <p style="font-size: 0.8rem; color: #444; margin-top: 8px;">*Batas waktu untuk merakit/memilih foto.</p>
+                    </div>
+                </div>
+            </div>
+            <button class="btn-primary" style="background: var(--pink); color: var(--ink);" onclick="simpanPengaturan()">💾 Simpan Semua Waktu</button>
+        </div>
+
+        <div id="tab-hardware" class="tab-panel">
+            <div class="top-bar">
+                <h2>Hardware & Printer 🖥️</h2>
+                <p class="tab-desc">Penyesuaian output layar, mesin kamera, port, dan penugasan mesin printer.</p>
+            </div>
+            <div class="grid-3">
+                <div class="card">
+                    <div class="card-header">Layar & Mesin Kamera</div>
+                    <div class="form-group">
+                        <label>Mesin / SDK Kamera Aktif</label>
+                        <select id="sys-cameraEngine">
+                            <option value="canon">Canon (Default)</option>
+                            <option value="webcam">Webcam (Alternative other camera)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Port Kamera / IP (Opsional)</label>
+                        <input type="text" id="sys-cameraPort" placeholder="Contoh: COM3, /dev/video0, atau Kosongkan">
+                    </div>
+                    <hr style="border: 1px dashed #ccc; margin: 15px 0;">
+                    <div class="form-group"><label>Kecerahan Kamera di Layar (%)</label><input type="number" id="sys-brightness" min="10" max="500"></div>
+                    <div class="form-group">
+                        <label>Unsupported Flash External Setting</label>
+                        <select id="sys-flashWorkaround">
+                            <option value="true">ON (Layar mati 1 detik pancing Flash)</option>
+                            <option value="false">OFF (Layar menyala normal)</option>
+                        </select>
+                    </div>
+                    <hr style="border: 1px dashed #ccc; margin: 15px 0;">
+<div class="form-group" style="background: rgba(239, 68, 68, 0.1); padding: 15px; border-radius: 10px; border: 2px dashed #ef4444;">
+    <label style="color: #ef4444; font-weight: bold; font-size: 1rem;">🔥 Fitur Live Photo / GIF</label>
+    <p style="font-size: 0.8rem; margin-bottom: 8px; color: #666;">Merekam video pendek saat jepretan. (⚠️ Membutuhkan CPU tinggi & FFmpeg di Windows)</p>
+    <select id="sys-livePhoto" style="font-weight: bold; border-color: #ef4444;">
+        <option value="false">OFF (Standar - Ringan untuk Mini PC)</option>
+        <option value="true">ON (Aktifkan Live Photo - PC High End)</option>
+    </select>
+</div>
+                </div>
+                <div class="card">
+                    <div class="card-header">🎥 Video Panduan Pose (PIP)</div>
+                    <div class="guide-box" style="background: var(--yellow);">
+                        <h4>Cara Upload Video:</h4>
+                        <ol style="font-size:0.8rem;">
+                            <li>Siapkan video potrait (vertikal).</li>
+                            <li>Format harus <b>.mp4</b> dan ukuran kecil (< 5MB).</li>
+                        </ol>
+                    </div>
+                    <form id="formVideoPose">
+                        <div class="form-group"><label>Ganti Video (MP4)</label><input type="file" id="fileVideoPose" accept="video/mp4" required></div>
+                        <button type="submit" class="btn-primary" style="background:var(--pink); color:var(--ink);">📤 Perbarui Video</button>
+                    </form>
+                </div>
+                <div class="card" style="background: var(--blue);">
+                    <div class="card-header" style="border-bottom-color: var(--ink);">🖨️ Pengaturan Printer</div>
+                    <div class="form-group" style="background: rgba(255,255,255,0.5); padding: 10px; border-radius: 10px; border: 2px dashed var(--ink);">
+                        <label>Printer (Collage & Self Studio)</label>
+                        <select id="sys-printer4R" style="font-weight: bold; margin-bottom: 10px;"></select>
+                        <button type="button" onclick="bukaSetupPrinter('4R')" style="width: 100%; padding: 8px; border-radius: 8px; background: #fff; border: 2px solid var(--ink); font-weight: bold; cursor: pointer; font-size: 0.85rem;">⚙️ Setup Margin</button>
+                    </div>
+                    <div class="form-group" style="background: rgba(255,255,255,0.5); padding: 10px; border-radius: 10px; border: 2px dashed var(--ink);">
+                        <label>Printer (Mode Newspaper)</label>
+                        <select id="sys-printerA4" style="font-weight: bold; margin-bottom: 10px;"></select>
+                        <button type="button" onclick="bukaSetupPrinter('A4')" style="width: 100%; padding: 8px; border-radius: 8px; background: #fff; border: 2px solid var(--ink); font-weight: bold; cursor: pointer; font-size: 0.85rem;">⚙️ Setup Margin</button>
+                    </div>
+                </div>
+            </div>
+        
+            <button class="btn-primary" style="background:var(--ink); color:white;" onclick="simpanPengaturan()">💾 Simpan Hardware & Printer</button>
+        </div>
+
+        <div id="tab-tema" class="tab-panel">
+            <div class="top-bar">
+                <h2>Tema & Tampilan 🎨</h2>
+                <p class="tab-desc">Sesuaikan desain User Interface (UI) photobooth yang dilihat oleh pelanggan.</p>
+            </div>
+            <div class="grid-3">
+                <div class="card theme-card" id="card-theme-pop-art" style="text-align: center;">
+                    <div style="background: #fdfbf7; height: 100px; border-radius: 10px; border: 2px dashed #ccc; margin-bottom: 15px; display:flex; align-items:center; justify-content:center; color: #292524; font-weight: bold;">Pop Art</div>
+                    <h3 style="margin-bottom: 10px;">Pop Art Doodle</h3>
+                    <button class="btn-primary btn-theme" id="btn-theme-pop-art" onclick="ubahTema('theme-pop-art')" style="background: var(--ink); color: white;">Pilih Tema</button>
+                </div>
+
+                <div class="card theme-card" id="card-theme-dark" style="text-align: center;">
+                    <div style="background: #171717; height: 100px; border-radius: 10px; margin-bottom: 15px; display:flex; align-items:center; justify-content:center; color: white; font-weight: bold;">Dark Elegance</div>
+                    <h3 style="margin-bottom: 10px;">Dark Elegance</h3>
+                    <button class="btn-primary btn-theme" id="btn-theme-dark" onclick="ubahTema('theme-dark')" style="background: var(--ink); color: white;">Pilih Tema</button>
+                </div>
+
+                <div class="card theme-card" id="card-theme-minimalist" style="text-align: center;">
+                    <div style="background: #ffffff; height: 100px; border-radius: 10px; margin-bottom: 15px; display:flex; align-items:center; justify-content:center; color: #333333; border: 1px solid #e5e7eb; font-weight: bold;">Minimalist</div>
+                    <h3 style="margin-bottom: 10px;">Minimalist Clean</h3>
+                    <button class="btn-primary btn-theme" id="btn-theme-minimalist" onclick="ubahTema('theme-minimalist')" style="background: var(--ink); color: white;">Pilih Tema</button>
+                </div>
+            </div>
+            
+            <div class="card" style="margin-top: 30px;">
+                <div class="card-header">📺 Custom Layar Utama (Touch to Start)</div>
+                <div class="guide-box" style="background: var(--pink); border-color: var(--ink);">
+                    <h4>⚠️ Panduan Resolusi & Format (Wajib!):</h4>
+                    <ul style="font-size: 0.85rem;">
+                        <li><b>Ukuran Tepat:</b> Wajib <b>1920x1080 pixel</b> (Landscape) atau <b>1080x1920 pixel</b> (Portrait).</li>
+                        <li><b>Format File:</b> Gambar (JPG/PNG) atau Video Animasi Singkat (MP4). (Max 10MB)</li>
+                    </ul>
+                </div>
+
+                <div style="background: var(--bg-color); padding: 15px; border: 2px dashed var(--ink); border-radius: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <p style="font-weight: bold; font-size: 0.95rem; margin: 0; color: var(--ink);">Status Saat Ini: <span id="status-idle-screen" style="color: #666; font-weight: normal;">Bawaan Tema (Default)</span></p>
+                    <button type="button" onclick="resetIdleScreen()" class="btn-primary" style="background: #ef4444; color: white; width: auto; padding: 6px 15px; font-size: 0.85rem; border-radius: 10px;">🗑️ Hapus & Gunakan Bawaan</button>
+                </div>
+
+                <form id="formIdleScreen">
+                    <div class="form-group">
+                        <label>Upload File Layar Utama (JPG / PNG / MP4)</label>
+                        <input type="file" id="fileIdleScreen" accept="image/jpeg, image/png, video/mp4" required>
+                    </div>
+                    <button type="submit" class="btn-primary" style="background: var(--blue); color: var(--ink);">📤 Unggah & Terapkan Layar</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="tab-template" class="tab-panel">
+            <div class="top-bar">
+                <h2>Kelola Template 🖼️</h2>
+                <p class="tab-desc">Unggah frame (bingkai), atur lubang foto (drag & drop), dan kelompokkan berdasarkan format.</p>
+            </div>
+            
+            <div style="display: flex; gap: 15px; margin-bottom: 25px;">
+                <div id="btn-mode-collage" class="mode-btn active" onclick="gantiModeTemplate('collage')">📸 Collage & Self Studio</div>
+                <div id="btn-mode-news" class="mode-btn inactive" onclick="gantiModeTemplate('newspaper')">📰 Newspaper Booth</div>
+            </div>
+
+            <div class="card" style="margin-bottom: 30px;">
+                <div class="card-header" id="judul-form-upload">📤 Tambah Template: Collage & Self Studio</div>
+                <form id="formTemplateUpload">
+                    
+                    <div class="grid-2" style="margin-bottom:0;">
+                        <div class="form-group">
+                            <label>Format / Jumlah Slot</label>
+                            <select id="formatFoto" onchange="generateVisualEditorAndCoords('upload')" required style="background: var(--yellow); font-weight: bold;">
+                            </select>
+                        </div>
+                        <div style="display: flex; gap: 15px;">
+                            <div class="form-group" style="flex: 1;"><label>Nama Tema</label><input type="text" id="namaFrame" placeholder="Cth: Classic 4" required></div>
+                            <div class="form-group" style="flex: 1;"><label>ID Unik</label><input type="text" id="idFrame" placeholder="Cth: classic-4" required></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>1. Masukkan File Template (JPG/PNG)</label>
+                        <input type="file" id="fileFrameCollage" accept="image/png, image/jpeg, image/jpg" multiple required onchange="inisialisasiVisualEditor('upload')">
+                    </div>
+                
+
+                    <!-- TAMBAHAN: MENU CHROMA KEY -->
+                    <div class="form-group" style="background: rgba(16, 185, 129, 0.1); padding: 15px; border-radius: 10px; border: 2px dashed #10b981;">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: bold; color: var(--ink); margin: 0;">
+                            <input type="checkbox" id="useChromaKey" style="width: 20px; height: 20px;">
+                            Gunakan Chroma Key (Otomatis Lubangi Warna)
+                        </label>
+                        <div id="chromaKeyOptions" style="display: none; margin-top: 15px; gap: 15px; flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 100px;">
+                                <label style="font-size: 0.85rem;">Warna yang dihapus:</label>
+                                <input type="color" id="chromaColor" value="#00ff00" style="height: 40px; padding: 0; width: 100%; cursor: pointer;">
+                            </div>
+                            <div style="flex: 3; min-width: 200px;">
+                                <label style="font-size: 0.85rem;">Toleransi Kemiripan: <span id="valTolerance">30</span>%</label>
+                                <input type="range" id="chromaTolerance" min="0" max="100" value="30" style="width: 100%;" oninput="document.getElementById('valTolerance').innerText = this.value">
+                            </div>
+                        </div>
+                    </div>
+
+                    
+                    
+                    <!-- BUNGKUSAN EDITOR KIRI & KANAN -->
+                    <div class="editor-row">
+                        <!-- BAGIAN KIRI: Visual Editor -->
+                        <div style="background: #f8fafc; padding: 20px; border-radius: 15px; border: 2px dashed #cbd5e1;">
+                            <div id="ve-hint-upload" class="guide-box" style="display:none; margin-bottom:15px; background: #fff;">
+                                <h4>💡 Cara Menyesuaikan Kotak:</h4>
+                                <ul style="padding-left:15px; font-size:0.8rem; color:#666;">
+                                    <li><b>Geser:</b> Klik & tahan bagian tengah kotak merah.</li>
+                                    <li><b>Ubah Ukuran:</b> Tarik ujung kanan-bawah kotak.</li>
+                                </ul>
+                            </div>
+                            <div id="ve-container-upload" class="ve-container-wrapper" style="margin: 0; width: 100%; max-width: 100%;">
+                                <img id="ve-image-upload" class="ve-image-target" src="" alt="Template">
+                                <div id="ve-slots-upload"></div>
+                            </div>
+                        </div>
+
+                        <!-- BAGIAN KANAN: Angka Koordinat -->
+                        <div class="layout-box" style="margin-bottom: 0; height: 100%;">
+                            <label style="color:var(--ink); font-weight:700; display:block; margin-bottom:15px; font-size: 1.1rem;">📐 Angka Koordinat (X, Y, W, H)</label>
+                            <div id="coordContainer-upload"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+    <label>2. Thumbnail UI (JPG/PNG)</label>
+    <input type="file" id="fileThumbCollage" accept="image/jpeg, image/jpg, image/png" multiple required>
+</div>
+<button type="submit" class="btn-primary" style="background: var(--blue); color: var(--ink); margin-top: 15px;">📤 Unggah & Simpan Template</button>
+                </form>
+            </div>
+
+            <div class="card" style="background: transparent; border: none; box-shadow: none; padding: 0;">
+                <div class="card-header" id="judul-list-template" style="background: var(--paper-white); padding: 15px; border-radius: 15px; border: var(--doodle-border); box-shadow: 4px 4px 0px var(--ink);">
+                    🖼️ Daftar Template Tersimpan
+                </div>
+                <div id="listTemplateContainer"></div>
+            </div>
+        </div>
+
+        <div id="tab-subscription" class="tab-panel">
+    <div class="top-bar">
+        <h2>Langganan (Subscription) ⭐</h2>
+        <p class="tab-desc">Kelola masa aktif lisensi software Lacasabooth Anda.</p>
+    </div>
+    
+    <div class="card" style="text-align: center; margin-bottom: 25px; background: var(--ink); color: white;">
+        <h3 style="margin-bottom: 10px; font-weight: 500;">Status Lisensi Anda</h3>
+        <h1 id="status-lisensi-teks" style="font-family: 'Caveat', cursive; font-size: 3.5rem; color: var(--yellow); margin: 0;">Mengecek...</h1>
+        <p id="status-lisensi-tgl" style="margin-top: 5px; opacity: 0.8; font-weight:bold;"></p>
+    </div>
+    <!-- KOTAK REDEEM KODE LISENSI -->
+    <div class="card" style="margin-bottom: 25px; border: 3px dashed var(--ink); background: #f8fafc; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 250px;">
+            <h3 style="margin-bottom: 5px; color: var(--ink);">Punya Kode Lisensi? 🎟️</h3>
+            <p style="font-size: 0.9rem; color: #666;">Masukkan kode aktivasi dari Admin untuk mengaktifkan paket Plus / Prime secara instan.</p>
+        </div>
+        <div style="display: flex; gap: 10px; flex: 1; min-width: 250px;">
+            <input type="text" id="input-license-key" placeholder="Contoh: LACA-PRIME-7D" style="flex: 1; padding: 12px; border: 2px solid var(--ink); border-radius: 10px; font-weight: bold; font-size: 1rem; text-transform: uppercase;">
+            <button class="btn-primary" onclick="window.tukarKodeLisensi()" style="width: auto; background: var(--ink); color: white;">Gunakan</button>
+        </div>
+    </div>
+    <h3 style="margin-bottom: 15px;">Pilih Paket Perpanjangan</h3>
+    <div class="grid-3">
+        <!-- FREE TIER -->
+        <div class="card" style="text-align: center; display: flex; flex-direction: column;">
+            <h3>Free</h3>
+            <p style="font-size: 2rem; font-weight: bold; margin: 10px 0;">Rp 0</p>
+            <ul style="text-align: left; font-size: 0.85rem; color: #666; margin-bottom: 15px; padding-left: 20px; flex: 1;">
+                <li>✔️ Fitur Standar Offline</li>
+                <li>✔️ Template Bawaan</li>
+                <li>❌ Custom Template & Idle Screen</li>
+                <li>❌ G-Drive Online</li>
+                <li>❌ Bot WA & QRIS Kasir</li>
+            </ul>
+            <button class="btn-primary" id="btn-tier-free" disabled style="background: #ccc; color: #666; border-color: #ccc;">Paket Aktif</button>
+        </div>
+        
+        <!-- PLUS TIER -->
+        <div class="card" style="text-align: center; border: 4px solid var(--blue); position: relative; display: flex; flex-direction: column;">
+            <div id="badge-plus" style="background: var(--blue); color: var(--ink); font-weight: bold; font-size: 0.8rem; padding: 5px; border-radius: 10px; position: absolute; top: -15px; left: 50%; transform: translateX(-50%); border: 2px solid var(--ink);">MOST POPULAR</div>
+            <h3>Plus</h3>
+            <select id="sel-dur-plus" onchange="updatePrice('plus')" style="margin: 10px 0; padding: 8px; width: 100%; border-radius: 5px; border: 2px solid var(--ink); font-weight:bold; background:var(--bg-color);">
+                <option value="3d">3 Harian</option>
+                <option value="1w">Mingguan</option>
+                <option value="1m" selected>Bulanan</option>
+                <option value="1y">Tahunan</option>
+            </select>
+            <p style="margin:0; font-size:0.9rem; text-decoration: line-through; color: #ef4444;" id="coret-plus">Rp 299.000</p>
+            <p style="font-size: 2rem; font-weight: bold; margin: 5px 0 10px 0;" id="price-plus">Rp 199.000</p>
+            <ul style="text-align: left; font-size: 0.85rem; color: #666; margin-bottom: 15px; padding-left: 20px; flex: 1;">
+                <li><b>✔️ Semua Fitur Free, ditambah:</b></li>
+                <li>✔️ Custom Template Collage</li>
+                <li>✔️ Live Photo / GIF (High End)</li>
+                <li>✔️ G-Drive Cloud Storage (Online)</li>
+            </ul>
+            <button class="btn-primary" style="background: var(--blue); color: var(--ink);" onclick="bukaPayment('plus')">Pilih Paket Plus</button>
+        </div>
+        
+        <!-- PRIME TIER -->
+        <div class="card" style="text-align: center; border: 4px solid var(--pink); position: relative; display: flex; flex-direction: column;">
+            <div id="badge-prime" style="background: var(--pink); color: var(--ink); font-weight: bold; font-size: 0.8rem; padding: 5px; border-radius: 10px; position: absolute; top: -15px; left: 50%; transform: translateX(-50%); border: 2px solid var(--ink); display: none;">SAVE 2 MONTHS</div>
+            <h3>Prime</h3>
+            <select id="sel-dur-prime" onchange="updatePrice('prime')" style="margin: 10px 0; padding: 8px; width: 100%; border-radius: 5px; border: 2px solid var(--ink); font-weight:bold; background:var(--bg-color);">
+                <option value="3d">3 Harian</option>
+                <option value="1w">Mingguan</option>
+                <option value="1m" selected>Bulanan</option>
+                <option value="1y">Tahunan</option>
+            </select>
+            <p style="margin:0; font-size:0.9rem; text-decoration: line-through; color: #ef4444;" id="coret-prime">Rp 499.000</p>
+            <p style="font-size: 2rem; font-weight: bold; margin: 5px 0 10px 0;" id="price-prime">Rp 349.000</p>
+            <ul style="text-align: left; font-size: 0.85rem; color: #666; margin-bottom: 15px; padding-left: 20px; flex: 1;">
+                <li><b>✔️ Semua Fitur Plus, ditambah:</b></li>
+                <li>✔️ Custom Template Newspaper</li>
+                <li>✔️ Custom UI Layar Utama (Idle)</li>
+                <li>✔️ Bot WhatsApp (Kirim Foto Otomatis)</li>
+                <li>✔️ QRIS Dinamis & Seting Harga Cetak Tambahan</li>
+            </ul>
+            <button class="btn-primary" style="background: var(--pink); color: var(--ink);" onclick="bukaPayment('prime')">Pilih Paket Prime</button>
+        </div>
+    </div>
+    <!-- PANEL KHUSUS ADMIN (Hanya muncul untuk Developer) -->
+    <div class="card" id="admin-panel-keys" style="display: none; margin-top: 40px; border: 4px solid #ef4444; background: #fff1f2;">
+        <h3 style="color: #ef4444; margin-bottom: 15px;">🛠️ Developer Panel: Buat Kode Lisensi Instan</h3>
+        <p style="font-size: 0.85rem; color: #666; margin-bottom: 15px;">Panel ini hanya terlihat oleh Anda. Klien tidak akan melihat kotak ini.</p>
+        
+        <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
+            <input type="text" id="admin-new-code" placeholder="Ketik custom kode (opsional)" style="flex: 1; min-width: 200px; padding: 12px; border: 2px solid #ef4444; border-radius: 10px; font-weight: bold; text-transform: uppercase;">
+            
+            <select id="admin-tier" style="padding: 12px; border: 2px solid #ef4444; border-radius: 10px; font-weight: bold; background: white;">
+                <option value="prime">PRIME</option>
+                <option value="plus">PLUS</option>
+            </select>
+            
+            <input type="number" id="admin-days" placeholder="Hari" value="7" style="width: 90px; padding: 12px; border: 2px solid #ef4444; border-radius: 10px; font-weight: bold; text-align: center;">
+            
+            <button class="btn-primary" onclick="window.buatKodeAdmin()" style="background: #ef4444; color: white; width: auto; box-shadow: 4px 4px 0px #b91c1c;">➕ Generate Kode</button>
+        </div>
+        <div id="admin-code-result" style="margin-top: 15px; font-weight: bold; color: var(--ink); padding: 10px; border-radius: 10px;"></div>
+    </div>
+</div>
+
+        <div id="tab-gdrive" class="tab-panel">
+            <div class="top-bar">
+                <h2>Google Drive ☁️</h2>
+                <p class="tab-desc">Atur pengiriman file hasil foto dan video langsung ke cloud storage pelanggan Anda.</p>
+            </div>
+            <div class="grid-2">
+                <div class="card" style="background: var(--yellow);">
+                    <div class="card-header" style="border-bottom-color: var(--ink);">📡 Mode Penyimpanan Utama</div>
+                    <div class="guide-box" style="background: #fff;">
+                        <h4>Penjelasan Mode:</h4>
+                        <ul style="font-size: 0.8rem;">
+                            <li><b>ONLINE:</b> Hasil foto (GIF/Video/Collage) dikirim ke G-Drive, dapat QR Code (Butuh internet).</li>
+                            <li><b>OFFLINE:</b> Data hanya disimpan di laptop. QR Code mati. Mempercepat proses cetak.</li>
+                        </ul>
+                    </div>
+                    <div class="form-group">
+                        <select id="sys-cloudStorage" style="font-size: 1.1rem; font-weight: bold; padding: 15px;">
+                            <option value="true">🟢 ONLINE (Kirim ke Google Drive)</option>
+                            <option value="false">🔴 OFFLINE MURNI (Simpan di Laptop Saja)</option>
+                        </select>
+                    </div>
+                    <button class="btn-primary" style="background:var(--ink); color:white;" onclick="simpanPengaturan()">💾 Terapkan Mode Penyimpanan</button>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">🔑 Koneksi Akun Google Drive</div>
+                    <div class="guide-box">
+                        <h4>Cara Tepat Menghubungkan Folder G-Drive:</h4>
+                        <ol style="font-size:0.8rem;">
+                            <li>Klik tombol <b>🔑 Login G-Drive</b>, izinkan akses.</li>
+                            <li>Buka situs G-Drive, buat folder (Misal: "Photobooth Sesi").</li>
+                            <li>Share folder menjadi <b>"Siapa saja memiliki link"</b>.</li>
+                            <li>Buka folder, ambil <b>ID Folder</b> dari URL browser. (Kodenya saja!)</li>
+                            <li>Tempel di form bawah, klik Simpan.</li>
+                        </ol>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px; padding: 15px; border-radius: 10px; background: var(--bg-color); border: 2px dashed var(--ink); text-align: center;">
+                        <p id="status-auth" style="font-size: 0.85rem; color: #ef4444; margin-bottom: 10px;">Status: Belum Terhubung</p>
+                        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                            <button type="button" onclick="window.open('/api/auth-google', '_blank', 'width=600,height=700')" class="btn-primary" style="background: #3b82f6; color: white; flex: 1; min-width: 150px;">🔑 Login G-Drive</button>
+                            <button type="button" onclick="disconnectDrive()" class="btn-primary" style="background: #ef4444; color: white; flex: 1; min-width: 150px;">🔌 Putuskan Koneksi</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>ID Folder Utama Drive Anda</label>
+                        <input type="text" id="driveParentFolderId" placeholder="Contoh: 1A2b3C4d5E6f7G8h9I0j">
+                    </div>
+                    <button type="button" onclick="simpanPengaturan()" class="btn-primary" style="background: var(--ink); color: white;">💾 Simpan ID Folder</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-whatsapp" class="tab-panel">
+            <div class="top-bar">
+                <h2>Bot WhatsApp 🤖</h2>
+                <p class="tab-desc">Kirim otomatis soft file ke nomor WhatsApp pelanggan (berfungsi jika mode ONLINE aktif).</p>
+            </div>
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header">📲 Status & Scan QR</div>
+                    <div class="guide-box">
+                        <ol style="font-size: 0.8rem;">
+                            <li>Buka aplikasi WA > Perangkat Tertaut > Tautkan.</li>
+                            <li>Scan QR yang muncul di bawah ini.</li>
+                            <li><b>Penting:</b> Jangan "Logout" dari HP selama event.</li>
+                        </ol>
+                    </div>
+                    <div style="text-align: center;">
+                        <p id="wa-status-text" style="font-weight: 600; margin-bottom: 15px; font-size: 1.1rem;">Status: <b style="color: #666;">Mengecek...</b></p>
+                        <div id="wa-qr-container" style="display: flex; justify-content: center; margin-bottom: 20px; min-height: 200px; align-items: center; background: #fff; border-radius: 10px; border: 3px dashed #cbd5e1;"></div>
+                        <button type="button" onclick="logoutWa()" class="btn-primary" style="background: #ef4444; color: white;">🔌 Logout / Reset Bot WA</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">💬 Teks Pesan Otomatis</div>
+                    <div class="form-group">
+                        <label>Format Pesan (Sertakan <b>{link}</b>)</label>
+                        <textarea id="wa-message-text" rows="7" placeholder="Halo! Ini foto kamu... Link: {link}"></textarea>
+                    </div>
+                    <button class="btn-primary" style="background:var(--blue); color:var(--ink);" onclick="simpanPengaturan()">💾 Simpan Teks Pesan</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAMBAHAN: PENGATURAN HARGA CETAK EXTRA ADA DI SINI -->
+        <!-- TAB QRIS BARU -->
+        <div id="tab-qris" class="tab-panel">
+            <div class="top-bar">
+                <h2>QRIS & Pembayaran 💳</h2>
+                <p class="tab-desc">Atur metode pembayaran QRIS (Statis/Dinamis) dan harga cetak tambahan untuk photobooth berbayar.</p>
+            </div>
+            <div class="grid-2">
+                <!-- KARTU 1: PENGATURAN QRIS -->
+                <div class="card" style="background: var(--blue);">
+                    <div class="card-header" style="border-bottom-color: var(--ink);">💳 Pengaturan QRIS</div>
+                    
+                    <div class="form-group" style="background: rgba(255,255,255,0.5); padding: 15px; border-radius: 10px; border: 2px dashed var(--ink);">
+                        <label>Tipe Pembayaran QRIS:</label>
+                        <!-- TAMBAHKAN ONCHANGE DI SINI -->
+                        <select id="qrisType" style="font-weight: bold;" onchange="toggleDynamicFields(this.value)">
+                            <option value="static">QRIS Statis (Gambar Manual)</option>
+                            <option value="dynamic">QRIS Dinamis (Generate per Transaksi)</option>
+                        </select>
+                    </div>
+
+                    <div id="dynamicSettings" class="form-group" style="display: none; background: rgba(255,255,255,0.5); padding: 15px; border-radius: 10px; border: 2px dashed var(--ink);">
+                        <label>Harga Sesi Photobooth (Rp):</label>
+                        <input type="number" id="qrisPrice" placeholder="Contoh: 35000" style="font-weight: bold; font-size: 1.1rem; margin-bottom: 15px;">
+                        
+                        <label>Midtrans Server Key:</label>
+                        <input type="text" id="midtransServerKey" placeholder="Mulai dengan SB-Mid-server-..." style="font-weight: bold; font-size: 0.9rem; margin-bottom: 10px;">
+                        <label style="font-weight: 600; font-size: 0.9rem; color: var(--ink); margin-top: 15px; display: block;">
+    Midtrans Client Key:
+</label>
+<input type="text" id="midtransClientKey" placeholder="Contoh: Mid-client-XXXXX..." style="width: 100%; padding: 12px; border: 2px solid var(--ink); border-radius: 10px; font-weight: bold;">
+                        <!-- KODE BARU CLOUDFLARE -->
+<hr style="border: 1px dashed var(--ink); margin: 20px 0;">
+<label style="color: #3b82f6; display: flex; align-items: center; gap: 5px;">🌐 Token Cloudflare Tunnel:</label>
+<input type="text" id="input-cf-token" placeholder="eyJh... (Paste token panjang di sini)" style="font-weight: bold; font-size: 0.9rem; font-family: monospace; border: 2px solid #3b82f6;">
+<p style="font-size: 0.8rem; color: #444; margin-top: 8px;">*Wajib diisi agar Midtrans bisa berkomunikasi dengan Mini PC Photobooth ini secara online.</p>
+<!-- AKHIR KODE BARU CLOUDFLARE -->
+  </div>
+                    
+                    <!-- TAMBAHKAN TOMBOL SIMPAN DI SINI -->
+                    <button type="button" class="btn-primary" style="background: var(--ink); color: white; width: 100%;" onclick="saveQrisSettings()">💾 Simpan Setelan QRIS</button>
+                </div>
+                <!-- KARTU 2: UPLOAD QRIS STATIS -->
+                <div class="card">
+                    <div class="card-header">📲 Upload QRIS Toko (Statis)</div>
+                    <p style="font-size: 0.85rem; color: #666; margin-bottom: 15px;">(Hanya digunakan jika Anda memilih Tipe QRIS Statis di samping kiri).</p>
+                    <form id="formQrisUpload">
+                        <div class="form-group">
+                            <label>Gambar QRIS (PNG/JPG)</label>
+                            <input type="file" id="fileQris" accept="image/png, image/jpeg, image/jpg" required>
+                        </div>
+                        <button type="submit" class="btn-primary" style="background:var(--yellow); color:var(--ink);">📤 Simpan Gambar QRIS</button>
+                    </form>
+                </div>
+
+                <!-- KARTU 3: HARGA EXTRA PRINT -->
+                <div class="card" style="grid-column: 1 / -1; background: var(--paper-white);">
+                    <div class="card-header">🏷️ Harga Cetak Tambahan (Extra Print)</div>
+                    <div class="form-group">
+                        <label>Harga Per Lembar Extra (Rp)</label>
+                        <input type="number" id="sys-extraPrintPrice" placeholder="Misal: 15000">
+                    </div>
+                    <button type="button" class="btn-primary" style="background:var(--pink); color:var(--ink); width: auto;" onclick="simpanPengaturan()">💾 Simpan Harga Extra</button>
+                </div>
+            </div>
+        </div>
+        <!-- END TAB QRIS BARU -->
+
+        <div id="tab-analytic" class="tab-panel">
+            <div class="top-bar">
+                <h2>Laporan Analitik 📊</h2>
+                <p class="tab-desc">Pantau jumlah traffic pelanggan per hari berdasarkan sesi sistem.</p>
+            </div>
+            <div class="card">
+                <div class="card-header">Riwayat Sesi Tersimpan</div>
+                <table class="report-table">
+                    <thead><tr><th>Tanggal</th><th>Total Sesi Foto</th></tr></thead>
+                    <tbody id="table-analytic-body"><tr><td colspan="2" style="text-align: center;">Memuat data...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+        <div id="tab-credit" class="tab-panel">
+            <div class="top-bar">
+                <h2>Developer & Bantuan 📞</h2>
+                <p class="tab-desc">Hubungi kami jika Anda mengalami kendala teknis atau membutuhkan kustomisasi fitur tambahan.</p>
+            </div>
+            
+            <div class="card" style="text-align: center; padding: 40px 20px; background: var(--paper-white); margin-bottom: 25px;">
+                <h1 style="font-family: 'Caveat', cursive; font-size: 3rem; margin-bottom: 5px;">Lacasaphoto.id</h1>
+                <p style="font-weight: 500; color: #666; margin-bottom: 25px;">Photography, Photobooth & Software Development</p>
+                
+                <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                    <a href="https://instagram.com/lacasaphoto.id" target="_blank" class="btn-primary" style="width: auto; background: #e1306c; border-color: #e1306c; color: white;">📸 IG: @lacasaphoto.id</a>
+                    <a href="https://instagram.com/lastorywork" target="_blank" class="btn-primary" style="width: auto; background: #e1306c; border-color: #e1306c; color: white;">📸 IG: @lastorywork</a>
+                    <a href="https://instagram.com/c.denverse" target="_blank" class="btn-primary" style="width: auto; background: #333; border-color: #333; color: white;">🧑‍💻 Dev: @c.denverse</a>
+                </div>
+                
+                <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; margin-top: 15px;">
+                    <a href="https://tiktok.com/@lacasaphoto.id" target="_blank" class="btn-primary" style="width: auto; background: #000; border-color: #000; color: white;">🎵 TikTok: @lacasaphoto.id</a>
+                    <a href="https://tiktok.com/@a91denm" target="_blank" class="btn-primary" style="width: auto; background: #000; border-color: #000; color: white;">🎵 TikTok: @a91denm</a>
+                    <a href="https://wa.me/628131080710" target="_blank" class="btn-primary" style="width: auto; background: #25d366; border-color: #128c7e; color: white;">💬 WA: 0813-1080-710</a>
+                </div>
+            </div>
+
+            <div class="card" style="background: var(--pink);">
+                <div class="card-header" style="border-bottom-color: var(--ink);">🐞 Laporkan Masalah (Bug Report)</div>
+                <p style="font-size: 0.9rem; margin-bottom: 15px;">Menemukan error pada sistem? Sertakan foto/screenshot layar kendala dan kirim ke WhatsApp kami.</p>
+                <a href="https://wa.me/628131080710?text=Halo%20Lacasaphoto,%20saya%20ingin%20melaporkan%20kendala%20pada%20sistem%20Lacasabooth..." target="_blank" class="btn-primary" style="background: var(--ink); color: white;">Laporkan via WhatsApp</a>
+            </div>
+        </div>
+
+    </main>
+
+    <div class="modal-overlay" id="editTemplateModal">
+        <div class="modal-content" style="max-width: 900px; width: 95%;"> <!-- Diperlebar agar muat 2 kolom -->
+            <button class="btn-close-modal" onclick="tutupEditModal()">✕</button>
+            <h2 style="font-family: 'Caveat', cursive; font-size: 2.5rem; font-weight: 700; margin: 0 0 15px 0; text-align: center;">Edit Template ✏️</h2>
+            
+            <input type="hidden" id="edit-format"><input type="hidden" id="edit-id">
+            <div class="form-group"><label>Nama Tema</label><input type="text" id="edit-nama" required></div>
+            
+            <div class="editor-row">
+                <div style="background: #f8fafc; padding: 15px; border-radius: 15px; border: 2px dashed #cbd5e1;">
+                    <div id="ve-container-edit" class="ve-container-wrapper" style="display:block; margin: 0; max-width: 100%;">
+                        <img id="ve-image-edit" class="ve-image-target" src="" alt="Template">
+                        <div id="ve-slots-edit"></div>
+                    </div>
+                </div>
+
+                <div class="layout-box" style="margin-bottom: 0; height: 100%;">
+                    <label style="color:var(--ink); font-weight:700; display:block; margin-bottom:15px;">📐 Koordinat Posisi Foto</label>
+                    <div id="coordContainer-edit"></div>
+                </div>
+            </div>
+            
+            <button class="btn-primary" style="background:var(--yellow); color:var(--ink);" onclick="simpanEditTemplate()">💾 Simpan Perubahan</button>
+        </div>
+    </div>
+  <div class="modal-overlay" id="paymentModal">
+    <div class="modal-content" style="max-width: 450px; text-align: center;">
+        <button class="btn-close-modal" onclick="document.getElementById('paymentModal').style.display='none'">✕</button>
+        <h2 style="font-family: 'Caveat', cursive; font-size: 2.5rem; margin-bottom: 5px;">Selesaikan Pembayaran 💳</h2>
+        <p id="payment-desc" style="margin-bottom: 15px; font-weight: 600; color: #444; font-size: 1.1rem;"></p>
+        
+        <div style="background: #f8fafc; border: 2px dashed #cbd5e1; padding: 20px; border-radius: 15px; margin-bottom: 10px;">
+            <p style="font-size: 0.9rem; margin-bottom: 10px; color: var(--ink);"><b>Opsi 1:</b> Scan QR ini menggunakan Google Lens atau Whatsapp Hp Anda (ini bukan QRIS Pembayaran) </p>
+            
+            <!-- Tempat QR Code Muncul -->
+            <div id="wa-qrcode" style="display: flex; justify-content: center; margin-bottom: 15px; background: white; padding: 10px; border-radius: 10px; width: fit-content; margin-left: auto; margin-right: auto; border: 2px solid var(--ink);"></div>
+            
+            <hr style="border: 1px dashed #cbd5e1; margin: 15px 0;">
+            
+            <p style="font-size: 0.9rem; margin-bottom: 10px; color: var(--ink);"><b>Opsi 2:</b> Lanjutkan di Perangkat Ini</p>
+            <button id="btn-lanjut-wa" class="btn-primary" style="background: #25d366; color: white; border-color: #128c7e;">💬 Buka WhatsApp Web / App</button>
+        </div>
+    </div>
+</div>
+    
+
+    <script>
+        
+       // === PERBAIKAN PERMANEN BUG FOCUS (TIDAK BISA KETIK) ===
+        // 1. Ganti Alert bawaan OS dengan Custom Toast UI (Elegan & Bebas Bug)
+        window.alert = function(pesan) {
+            let container = document.getElementById('custom-toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'custom-toast-container';
+                container.style.cssText = 'position:fixed; bottom:40px; left:50%; transform:translateX(-50%); z-index:999999; display:flex; flex-direction:column; gap:10px; pointer-events:none;';
+                document.body.appendChild(container);
+            }
+            
+            const toast = document.createElement('div');
+            let bgColor = 'var(--ink)'; // Warna default
+            
+            // Deteksi otomatis status sukses atau gagal untuk warnanya
+            if (pesan.toLowerCase().includes('gagal') || pesan.toLowerCase().includes('error') || pesan.includes('❌')) {
+                bgColor = '#ef4444'; // Merah
+            } else if (pesan.toLowerCase().includes('berhasil') || pesan.includes('✅') || pesan.includes('YAY')) {
+                bgColor = '#10b981'; // Hijau
+            }
+
+            toast.style.cssText = `background:${bgColor}; color:white; padding:12px 30px; border-radius:50px; font-weight:600; font-size:1rem; box-shadow:0 10px 15px -3px rgba(0,0,0,0.3); border:2px solid #fff; text-align:center; transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55); opacity: 0; transform: translateY(30px); font-family: 'Fredoka', sans-serif;`;
+            toast.innerHTML = pesan.replace(/\n/g, '<br>');
+            
+            container.appendChild(toast);
+            
+            // Animasi pop-up masuk
+            requestAnimationFrame(() => {
+                toast.style.opacity = '1';
+                toast.style.transform = 'translateY(0)';
+            });
+
+            // Animasi hilang dan hapus setelah 3.5 detik
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(20px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        };
+
+        // 2. Perbaiki fungsi Confirm bawaan agar mengembalikan fokus ke window
+        const fungsiConfirmAsli = window.confirm;
+        window.confirm = function(pesan) {
+            const hasil = fungsiConfirmAsli(pesan);
+            // Paksa OS untuk mengembalikan fokus kursor ke halaman aplikasi
+            setTimeout(() => {
+                window.focus();
+                document.body.focus();
+            }, 50);
+            return hasil;
+        };
+      // INISIASI TEMA DARI SERVER
+        fetch('/api/settings').then(res => res.json()).then(data => {
+            if (data.global && data.global.theme) document.body.className = data.global.theme;
+        }).catch(e => console.error("Gagal memuat tema:", e));
+
+        function togglePinInput() {
+    document.getElementById('pin-input-container').style.display = document.getElementById('sys-usePin').checked ? 'block' : 'none';
+}
+        // MENGUBAH TEMA
+        async function ubahTema(namaTema) {
+            const btn = document.getElementById(`btn-${namaTema}`);
+            btn.innerText = "⏳ Menyimpan...";
+            
+            try {
+                // HANYA update tema, jangan timpa yg lain
+                const res = await fetch('/api/settings');
+                const data = await res.json();
+                
+                if (!data.global) data.global = {};
+                data.global.theme = namaTema;
+
+                await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+                document.body.className = namaTema;
+                perbaruiTombolTema(namaTema);
+            } catch (e) {
+                alert("Gagal mengubah tema.");
+                btn.innerText = "Pilih Tema";
+            }
+        }
+
+        function perbaruiTombolTema(temaAktif) {
+            document.querySelectorAll('.theme-card').forEach(card => {
+                card.style.border = 'var(--doodle-border)';
+                card.style.opacity = '0.6';
+            });
+            document.querySelectorAll('.btn-theme').forEach(btn => {
+                btn.innerText = 'Pilih Tema';
+                btn.disabled = false;
+                btn.style.background = 'var(--ink)';
+                btn.style.color = 'white';
+            });
+            const cardAktif = document.getElementById(`card-${temaAktif}`);
+            const btnAktif = document.getElementById(`btn-${temaAktif}`);
+            if (cardAktif && btnAktif) {
+                cardAktif.style.border = '4px solid var(--blue)';
+                cardAktif.style.opacity = '1';
+                btnAktif.innerText = '✅ Sedang Digunakan';
+                btnAktif.disabled = true;
+                btnAktif.style.background = 'var(--blue)';
+                btnAktif.style.color = 'var(--ink)';
+            }
+        }
+
+        // --- RESPONSIVE SIDEBAR ---
+        function toggleSidebar() { document.getElementById('app-sidebar').classList.toggle('show'); }
+        function tutupSidebarMobile() { if (window.innerWidth <= 900) document.getElementById('app-sidebar').classList.remove('show'); }
+        function bukaTab(id, element) {
+            document.querySelectorAll('.tab-panel').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            element.classList.add('active');
+            tutupSidebarMobile();
+            if(id === 'tab-analytic') loadAnalyticData();
+        }
+
+        // --- SISTEM PENGATURAN API ---
+        async function muatPengaturan() {
+            try {
+                const resPrinter = await fetch('/api/get-printers');
+                const dataPrinter = await resPrinter.json();
+                const select4R = document.getElementById('sys-printer4R');
+                const selectA4 = document.getElementById('sys-printerA4');
+                select4R.innerHTML = '<option value="">-- Pilih Printer --</option>';
+                selectA4.innerHTML = '<option value="">-- Pilih Printer --</option>';
+                if (dataPrinter.success && dataPrinter.printers.length > 0) {
+                    dataPrinter.printers.forEach(p => {
+                        select4R.innerHTML += `<option value="${p}">${p}</option>`;
+                        selectA4.innerHTML += `<option value="${p}">${p}</option>`;
+                    });
+                }
+
+                const res = await fetch('/api/settings'); const data = await res.json();
+                
+                document.getElementById('pb-sessionTimer').value = data.photobox?.sessionTimer || "300"; 
+                document.getElementById('clg-timer').value = data.collage?.timer || "5";
+                document.getElementById('clg-sessionTimer').value = data.collage?.sessionTimer || "300"; 
+                document.getElementById('clg-maxRetake').value = data.collage?.maxRetake !== undefined ? data.collage.maxRetake : "3";
+                // Tambahkan ini di dalam muatPengaturan()
+document.getElementById('sys-usePin').checked = data.global?.usePin === true;
+document.getElementById('sys-adminPin').value = data.global?.adminPin || "1234";
+togglePinInput(); // Panggil agar UI menyesuaikan saat dimuat
+
+                document.getElementById('sys-cameraEngine').value = data.global?.cameraEngine || "canon";
+                document.getElementById('sys-cameraPort').value = data.global?.cameraPort || "";
+                document.getElementById('sys-brightness').value = data.global?.liveViewBrightness || "100";
+                document.getElementById('sys-flashWorkaround').value = data.global?.flashWorkaround !== undefined ? data.global.flashWorkaround.toString() : "true";
+                // Tambahkan di bawah document.getElementById('sys-flashWorkaround').value = ...
+                document.getElementById('sys-livePhoto').value = data.global?.livePhotoEnabled ? "true" : "false";
+                document.getElementById('sys-cloudStorage').value = data.global?.cloudStorage !== false ? "true" : "false";
+                document.getElementById('driveParentFolderId').value = data.global?.driveParentFolderId || "";
+                if (document.getElementById('input-cf-token')) document.getElementById('input-cf-token').value = data.global?.cloudflareToken || "";
+                // Load Harga Extra Print
+                document.getElementById('sys-extraPrintPrice').value = data.global?.extraPrintPrice || "15000";
+
+                document.getElementById('wa-message-text').value = data.waMessage || "Halo dari Lacasaphoto! 📸\n\nTerima kasih sudah berfoto ria bersama kami. Berikut link foto kamu:\n\n🔗 {link}";
+
+                if (data.global?.printer4R) select4R.value = data.global.printer4R;
+                if (data.global?.printerA4) selectA4.value = data.global.printerA4;
+                if (data.global?.customIdleScreen) {
+                    document.getElementById('status-idle-screen').innerHTML = `<b style="color: var(--blue);">Terdapat Custom Layar</b>`;
+                }
+                
+                if (data.global && data.global.theme) perbaruiTombolTema(data.global.theme);
+                else perbaruiTombolTema('theme-pop-art');
+            } catch (e) {}
+        }
+
+        // PERBAIKAN LOGIC SIMPAN (KODE LEBIH AMAN / ANTI-CRASH)
+        async function simpanPengaturan() {
+            try {
+                // Tarik data yg ada dulu untuk di-merge
+                const resSettings = await fetch('/api/settings');
+                const currentData = await resSettings.json().catch(() => ({})); 
+                
+                const currentTheme = currentData.global?.theme || 'theme-pop-art';
+                const currentCustomIdle = currentData.global?.customIdleScreen || null;
+
+                // Fungsi bantu agar tidak error jika ada ID HTML yang tidak sengaja terhapus
+                const getVal = (id, def = "") => document.getElementById(id) ? document.getElementById(id).value : def;
+                const getCheck = (id) => document.getElementById(id) ? document.getElementById(id).checked : false;
+                
+                const payload = {
+                    photobox: { sessionTimer: parseInt(getVal('pb-sessionTimer', 300)) || 300 },
+                    collage: { 
+                        timer: parseInt(getVal('clg-timer', 5)) || 5, 
+                        sessionTimer: parseInt(getVal('clg-sessionTimer', 300)) || 300,
+                        maxRetake: parseInt(getVal('clg-maxRetake', 0)) || 0
+                    },
+                    newspaper: {
+                        sessionTimer: parseInt(getVal('clg-sessionTimer', 300)) || 300,
+                        maxRetake: parseInt(getVal('clg-maxRetake', 0)) || 0
+                    },
+                    global: { 
+                        // Konfigurasi PIN Baru
+                        usePin: getCheck('sys-usePin'),
+                        adminPin: getVal('sys-adminPin', '1234'),
+                        
+                        // Konfigurasi Bawaan Tema
+                        theme: currentTheme,
+                        customIdleScreen: currentCustomIdle,
+                        
+                        // Konfigurasi Form Lainnya
+                        extraPrintPrice: parseInt(getVal('sys-extraPrintPrice', 15000)) || 15000,
+                        cameraEngine: getVal('sys-cameraEngine', 'canon'),
+                        cameraPort: getVal('sys-cameraPort', ''),
+                        liveViewBrightness: parseInt(getVal('sys-brightness', 100)) || 100, 
+                        flashWorkaround: getVal('sys-flashWorkaround', 'true') === "true",
+                        
+                        livePhotoEnabled: getVal('sys-livePhoto', 'false') === "true",
+                        cloudStorage: getVal('sys-cloudStorage', 'true') === "true",
+                        driveParentFolderId: getVal('driveParentFolderId', ''),
+                        printer4R: getVal('sys-printer4R', ''),  
+                        printerA4: getVal('sys-printerA4', ''),
+                        cloudflareToken: getVal('input-cf-token', '') 
+                    },
+                    waMessage: getVal('wa-message-text', '')
+                };
+
+                const res = await fetch('/api/settings', { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(payload) 
+                });
+
+                if (!res.ok) throw new Error("Gagal menyimpan ke Server! Status: " + res.status);
+
+                alert("✅ Pengaturan berhasil disimpan!");
+            } catch (e) { 
+                // Sekarang jika gagal, pop-up akan memberitahu ALASAN spesifik error-nya
+                alert("❌ Gagal menyimpan pengaturan.\nDetail: " + e.message); 
+                console.error("Error Simpan Pengaturan:", e);
+            }
+        }
+
+        // --- DASHBOARD STATUS ---
+        async function loadDashboardStats() {
+            try {
+                const res = await fetch('/api/sys-status'); const data = await res.json();
+                document.getElementById('stat-camera').innerHTML = data.cameraConnected ? '✅ Terhubung' : '<span style="color:#ef4444;">❌ Terputus</span>';
+                document.getElementById('stat-sessions').innerHTML = data.totalSessionsToday;
+            } catch (e) {}
+        }
+        setInterval(loadDashboardStats, 5000); loadDashboardStats();
+
+        async function scanKameraUSB() {
+            const btn = document.getElementById('btn-scan-kamera');
+            btn.innerText = "⏳ Mengecek..."; btn.disabled = true;
+            try {
+                const res = await fetch('/api/rescan-camera');
+                const data = await res.json(); alert(data.message); loadDashboardStats();
+            } catch (e) {}
+            btn.innerText = "🔄 Scan Ulang Kamera"; btn.disabled = false;
+        }
+
+        async function loadAnalyticData() {
+            try {
+                const tbody = document.getElementById('table-analytic-body');
+                tbody.innerHTML = '<tr><td colspan="2" style="text-align: center;">Menghitung data...</td></tr>';
+                const res = await fetch('/api/sys-status'); const data = await res.json();
+                if(Object.keys(data.history).length === 0) { tbody.innerHTML = '<tr><td colspan="2" style="text-align: center;">Belum ada sesi tercatat.</td></tr>'; return; }
+                tbody.innerHTML = '';
+                for (const [tanggal, jumlah] of Object.entries(data.history)) {
+                    tbody.innerHTML += `<tr><td><b>${tanggal}</b></td><td><span style="background:var(--blue); padding:5px 15px; border-radius:10px; font-weight:bold;">${jumlah} Sesi</span></td></tr>`;
+                }
+            } catch (e) {}
+        }
+
+        // --- GOOGLE DRIVE & WA BOT ---
+        async function cekStatusDrive() {
+            try {
+                const res = await fetch('/api/check-drive-status'); const data = await res.json();
+                const statusTeks = document.getElementById('status-auth');
+                if (data.hasOauth && data.hasToken) statusTeks.innerHTML = "Status: <b style='color:#10b981;'>✅ Terhubung & Siap</b>";
+                else if (data.hasOauth && !data.hasToken) statusTeks.innerHTML = "Status: <b style='color:#eab308;'>⚠️ Kredensial Ada, Silakan Login</b>";
+                else statusTeks.innerHTML = "Status: <b style='color:#ef4444;'>❌ Upload JSON terlebih dahulu</b>";
+            } catch (e) {}
+        }
+        setInterval(cekStatusDrive, 3000);
+
+        async function disconnectDrive() {
+            if (!confirm("⚠️ Anda yakin ingin memutuskan koneksi Google Drive saat ini?")) return;
+            try {
+                const res = await fetch('/api/disconnect-drive', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) { alert("✅ Koneksi diputus."); cekStatusDrive(); }
+                else alert("Gagal memutuskan koneksi.");
+            } catch (e) { alert("Kesalahan server."); }
+        }
+
+        let lastWaQr = '';
+        async function cekStatusWa() {
+            try {
+                const res = await fetch('/api/wa-status'); const data = await res.json();
+                const statusText = document.getElementById('wa-status-text'); const qrContainer = document.getElementById('wa-qr-container');
+                if (data.status === 'READY' || data.status === 'AUTHENTICATED') {
+                    statusText.innerHTML = "Status: <b style='color:#10b981;'>✅ Bot Terhubung & Siap</b>";
+                    qrContainer.innerHTML = '<div style="font-size: 5rem;">🤖</div>'; qrContainer.style.border = '3px solid #10b981';
+                    lastWaQr = '';
+                } else if (data.status === 'QR_READY') {
+                    statusText.innerHTML = "Status: <b style='color:#eab308;'>⚠️ Siap Scan, Buka WA HP Anda</b>";
+                    qrContainer.style.border = '3px dashed #cbd5e1';
+                    if (data.qr !== lastWaQr) { qrContainer.innerHTML = ''; new QRCode(qrContainer, { text: data.qr, width: 180, height: 180 }); lastWaQr = data.qr; }
+                } else {
+                    statusText.innerHTML = "Status: <b style='color:#6b7280;'>⏳ Memulai Mesin...</b>";
+                    qrContainer.innerHTML = '<div style="font-size: 3rem; color: #cbd5e1;">⏳</div>'; qrContainer.style.border = '3px dashed #cbd5e1';
+                }
+            } catch (e) {}
+        }
+        setInterval(cekStatusWa, 3000);
+        async function logoutWa() { if(!confirm('⚠️ Yakin reset WhatsApp?')) return; await fetch('/api/wa-logout', { method: 'POST' }); alert('Bot direstart. Tunggu 10-20 detik.'); }
+
+        // --- MODE & VISUAL TEMPLATE EDITOR ---
+        let currentTemplateMode = 'collage'; 
+        let dbTemplatesGlobal = {};
+
+        function gantiModeTemplate(mode) {
+            currentTemplateMode = mode;
+            const btnCollage = document.getElementById('btn-mode-collage');
+            const btnNews = document.getElementById('btn-mode-news');
+            const selectFormat = document.getElementById('formatFoto');
+            const judulForm = document.getElementById('judul-form-upload');
+            
+            if (mode === 'collage') {
+                btnCollage.className = 'mode-btn active'; btnCollage.style.background = 'var(--blue)';
+                btnNews.className = 'mode-btn inactive'; btnNews.style.background = 'var(--bg-color)';
+                judulForm.innerText = "📤 Tambah Template: Collage & Self Studio";
+                selectFormat.innerHTML = `<option value="1">1 Foto (Single Shot)</option><option value="2">2 Foto (Double Strip)</option><option value="4" selected>4 Foto (Classic Grid)</option><option value="6">6 Foto (Self Studio)</option>`;
+            } else {
+                btnNews.className = 'mode-btn active'; btnNews.style.background = 'var(--yellow)';
+                btnCollage.className = 'mode-btn inactive'; btnCollage.style.background = 'var(--bg-color)';
+                judulForm.innerText = "📤 Tambah Template: Newspaper";
+                selectFormat.innerHTML = `<option value="news-1">📰 Newspaper - 1 Foto</option><option value="news-2">🗞️ Newspaper - 2 Foto</option><option value="news-3">📸 Newspaper - 3 Foto</option><option value="news-4">🌟 Newspaper - 4 Foto</option>`;
+            }
+            
+            document.getElementById('formTemplateUpload').reset();
+            document.getElementById('ve-container-upload').style.display = 'none';
+            document.getElementById('ve-hint-upload').style.display = 'none';
+            generateVisualEditorAndCoords('upload');
+            renderTemplateListFilter(); 
+        }
+
+        // --- LOGIKA TOGGLE MENU CHROMA KEY ---
+        document.getElementById('useChromaKey').addEventListener('change', function() {
+            document.getElementById('chromaKeyOptions').style.display = this.checked ? 'flex' : 'none';
+        });
+
+        // --- FUNGSI MESIN CHROMA KEY (CANVAS) ---
+        function applyChromaKey(file, targetColorHex, tolerancePercentage) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width; canvas.height = img.height;
+                    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                    ctx.drawImage(img, 0, 0);
+
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const data = imageData.data;
+
+                    const rTarget = parseInt(targetColorHex.substr(1, 2), 16);
+                    const gTarget = parseInt(targetColorHex.substr(3, 2), 16);
+                    const bTarget = parseInt(targetColorHex.substr(5, 2), 16);
+                    const threshold = (tolerancePercentage / 100) * 441.67; 
+
+                    for (let i = 0; i < data.length; i += 4) {
+                        const r = data[i], g = data[i+1], b = data[i+2];
+                        const distance = Math.sqrt(Math.pow(r - rTarget, 2) + Math.pow(g - gTarget, 2) + Math.pow(b - bTarget, 2));
+                        if (distance <= threshold) {
+                            data[i+3] = 0; // Lubangi
+                        }
+                    }
+
+                    ctx.putImageData(imageData, 0, 0);
+                    canvas.toBlob((blob) => {
+                        const newName = file.name.replace(/\.[^/.]+$/, "") + "_cutout.png";
+                        resolve(new File([blob], newName, { type: 'image/png' }));
+                    }, 'image/png');
+                };
+                img.onerror = () => reject(new Error("Gagal memuat gambar untuk Chroma Key"));
+                img.src = URL.createObjectURL(file);
+            });
+        }
+
+        let activeDragSlot = null;
+        let startX, startY, initialLeft, initialTop;
+        let currentPrefix = 'upload'; 
+
+        function getJumlahSlot(formatVal) {
+            if (!formatVal) return 1;
+            if (formatVal.startsWith('news-')) return parseInt(formatVal.split('-')[1]);
+            return parseInt(formatVal);
+        }
+
+        function generateVisualEditorAndCoords(prefix) {
+            let formatSelectVal = prefix === 'upload' ? document.getElementById('formatFoto').value : document.getElementById('edit-format').value;
+            let jumlahSlot = getJumlahSlot(formatSelectVal);
+            
+            const container = document.getElementById(`coordContainer-${prefix}`); container.innerHTML = ''; 
+            for (let i = 1; i <= jumlahSlot; i++) {
+                container.innerHTML += `<div style="display: flex; gap:5px; margin-bottom:5px;">
+                    <span style="background: var(--ink); color:white; padding:10px; border-radius:10px; font-weight:bold;">${i}</span>
+                    <input type="number" id="${prefix}_posX_${i}" placeholder="X (Kiri)" required style="width:20%;" onchange="sinkronInputKeVisual('${prefix}')">
+                    <input type="number" id="${prefix}_posY_${i}" placeholder="Y (Atas)" required style="width:20%;" onchange="sinkronInputKeVisual('${prefix}')">
+                    <input type="number" id="${prefix}_posW_${i}" placeholder="W (Lebar)" required style="width:20%;" onchange="sinkronInputKeVisual('${prefix}')">
+                    <input type="number" id="${prefix}_posH_${i}" placeholder="H (Tinggi)" required style="width:20%;" onchange="sinkronInputKeVisual('${prefix}')">
+                </div>`;
+            }
+            if(prefix === 'upload' && document.getElementById('fileFrameCollage').files.length > 0) { inisialisasiVisualEditor('upload'); }
+        }
+
+        function inisialisasiVisualEditor(prefix, imageUrl = null, existingCoords = null) {
+            currentPrefix = prefix;
+            let sourceUrl = imageUrl;
+            if (prefix === 'upload') {
+                const file = document.getElementById('fileFrameCollage').files[0];
+                if(!file) return;
+                sourceUrl = URL.createObjectURL(file);
+            }
+
+            const img = document.getElementById(`ve-image-${prefix}`);
+            img.src = sourceUrl;
+            img.onload = () => {
+                document.getElementById(`ve-container-${prefix}`).style.display = 'block';
+                if(prefix === 'upload') document.getElementById('ve-hint-upload').style.display = 'block';
+                renderVisualSlots(prefix, existingCoords);
+            };
+        }
+
+        function renderVisualSlots(prefix, existingCoords = null) {
+            const container = document.getElementById(`ve-slots-${prefix}`); container.innerHTML = '';
+            let formatSelectVal = prefix === 'upload' ? document.getElementById('formatFoto').value : document.getElementById('edit-format').value;
+            let jumlah = getJumlahSlot(formatSelectVal);
+            const img = document.getElementById(`ve-image-${prefix}`);
+            const scaleX = img.clientWidth / img.naturalWidth; const scaleY = img.clientHeight / img.naturalHeight;
+            
+            // CEK MEMORI: Apakah ada koordinat yang pernah dipakai sebelumnya untuk format ini?
+            let memoriKoordinat = null;
+            if (prefix === 'upload') {
+                const saved = localStorage.getItem('memori_koordinat_' + formatSelectVal);
+                if (saved) memoriKoordinat = JSON.parse(saved);
+            }
+
+            for(let i=1; i<=jumlah; i++) {
+                const slot = document.createElement('div'); slot.className = 've-slot'; slot.innerHTML = `<span>${i}</span>`;
+                
+                if (existingCoords && existingCoords[i-1]) {
+                    // Jika sedang mode EDIT (pakai data dari database server)
+                    slot.style.left = (existingCoords[i-1].x * scaleX) + 'px'; 
+                    slot.style.top = (existingCoords[i-1].y * scaleY) + 'px';
+                    slot.style.width = (existingCoords[i-1].width * scaleX) + 'px'; 
+                    slot.style.height = (existingCoords[i-1].height * scaleY) + 'px';
+                } else if (memoriKoordinat && memoriKoordinat[i-1]) {
+                    // Jika mode UPLOAD dan ADA MEMORI (Otomatis paskan dengan kordinat terakhir kali)
+                    slot.style.left = (memoriKoordinat[i-1].x * scaleX) + 'px'; 
+                    slot.style.top = (memoriKoordinat[i-1].y * scaleY) + 'px';
+                    slot.style.width = (memoriKoordinat[i-1].width * scaleX) + 'px'; 
+                    slot.style.height = (memoriKoordinat[i-1].height * scaleY) + 'px';
+                } else {
+                    // Jika belum pernah sama sekali (Default)
+                    slot.style.left = '10%'; slot.style.top = (5 + ((i-1) * 15)) + '%'; slot.style.width = '30%'; slot.style.height = '20%';
+                }
+                
+                slot.dataset.prefix = prefix;
+                slot.addEventListener('mousedown', startDrag); slot.addEventListener('touchstart', startDragTouch, {passive: false});
+                slot.addEventListener('mouseup', () => kalkulasiKoordinatKeInput(prefix)); slot.addEventListener('mouseout', () => kalkulasiKoordinatKeInput(prefix));
+                container.appendChild(slot);
+            }
+            kalkulasiKoordinatKeInput(prefix); 
+        }
+
+        function startDrag(e) {
+            if (e.offsetX > e.target.clientWidth - 20 && e.offsetY > e.target.clientHeight - 20) return; 
+            activeDragSlot = e.target; currentPrefix = activeDragSlot.dataset.prefix;
+            startX = e.clientX; startY = e.clientY; initialLeft = activeDragSlot.offsetLeft; initialTop = activeDragSlot.offsetTop;
+            document.onmousemove = doDrag; document.onmouseup = stopDrag;
+        }
+        function doDrag(e) {
+            if(!activeDragSlot) return;
+            let dx = e.clientX - startX; let dy = e.clientY - startY;
+            activeDragSlot.style.left = (initialLeft + dx) + 'px'; activeDragSlot.style.top = (initialTop + dy) + 'px';
+        }
+        function stopDrag() { let pfx = currentPrefix; activeDragSlot = null; document.onmousemove = null; document.onmouseup = null; kalkulasiKoordinatKeInput(pfx); }
+
+        function startDragTouch(e) {
+            const touch = e.touches[0]; const rect = e.target.getBoundingClientRect();
+            if (touch.clientX - rect.left > rect.width - 25 && touch.clientY - rect.top > rect.height - 25) return;
+            e.preventDefault(); activeDragSlot = e.target; currentPrefix = activeDragSlot.dataset.prefix;
+            startX = touch.clientX; startY = touch.clientY; initialLeft = activeDragSlot.offsetLeft; initialTop = activeDragSlot.offsetTop;
+            document.addEventListener('touchmove', doDragTouch, {passive: false}); document.addEventListener('touchend', stopDragTouch);
+        }
+        function doDragTouch(e) {
+            if(!activeDragSlot) return; e.preventDefault(); const touch = e.touches[0];
+            let dx = touch.clientX - startX; let dy = touch.clientY - startY;
+            activeDragSlot.style.left = (initialLeft + dx) + 'px'; activeDragSlot.style.top = (initialTop + dy) + 'px';
+        }
+        function stopDragTouch() { let pfx = currentPrefix; activeDragSlot = null; document.removeEventListener('touchmove', doDragTouch); document.removeEventListener('touchend', stopDragTouch); kalkulasiKoordinatKeInput(pfx); }
+
+        function kalkulasiKoordinatKeInput(prefix) {
+            const img = document.getElementById(`ve-image-${prefix}`);
+            if(!img || !img.naturalWidth) return;
+            const scaleX = img.naturalWidth / img.clientWidth;
+            const scaleY = img.naturalHeight / img.clientHeight;
+            
+            const slots = document.querySelectorAll(`#ve-slots-${prefix} .ve-slot`);
+            slots.forEach((slot, index) => {
+                let i = index + 1;
+                let realX = Math.round(slot.offsetLeft * scaleX); 
+                let realY = Math.round(slot.offsetTop * scaleY);
+                
+                // --- [PERBAIKAN] Gunakan offsetWidth & offsetHeight ---
+                // Agar sistem tidak memotong ukuran border 3px dari kotak
+                let realW = Math.round(slot.offsetWidth * scaleX); 
+                let realH = Math.round(slot.offsetHeight * scaleY);
+                // ------------------------------------------------------
+                
+                if(realX < 0) realX = 0; if(realY < 0) realY = 0;
+                
+                if(document.getElementById(`${prefix}_posX_${i}`)) {
+                    document.getElementById(`${prefix}_posX_${i}`).value = realX;
+                    document.getElementById(`${prefix}_posY_${i}`).value = realY;
+                    document.getElementById(`${prefix}_posW_${i}`).value = realW;
+                    document.getElementById(`${prefix}_posH_${i}`).value = realH;
+                }
+            });
+        }
+        function sinkronInputKeVisual(prefix) {
+            const img = document.getElementById(`ve-image-${prefix}`); if(!img || !img.naturalWidth) return;
+            const scaleX = img.clientWidth / img.naturalWidth; const scaleY = img.clientHeight / img.naturalHeight;
+            const slots = document.querySelectorAll(`#ve-slots-${prefix} .ve-slot`);
+            slots.forEach((slot, index) => {
+                let i = index + 1;
+                const iX = parseInt(document.getElementById(`${prefix}_posX_${i}`).value) || 0; const iY = parseInt(document.getElementById(`${prefix}_posY_${i}`).value) || 0;
+                const iW = parseInt(document.getElementById(`${prefix}_posW_${i}`).value) || 100; const iH = parseInt(document.getElementById(`${prefix}_posH_${i}`).value) || 100;
+                slot.style.left = (iX * scaleX) + 'px'; slot.style.top = (iY * scaleY) + 'px'; slot.style.width = (iW * scaleX) + 'px'; slot.style.height = (iH * scaleY) + 'px';
+            });
+        }
+        
+        window.addEventListener('resize', () => { 
+            if(document.getElementById('ve-container-upload').style.display === 'block') kalkulasiKoordinatKeInput('upload'); 
+            if(document.getElementById('ve-container-edit').style.display === 'block') kalkulasiKoordinatKeInput('edit');
+        });
+
+        // --- FETCH DAFTAR TEMPLATE ---
+        async function fetchTemplateData() {
+            try {
+                const res = await fetch('/api/frames?all=true');
+                if(res.ok) { dbTemplatesGlobal = await res.json(); renderTemplateListFilter(); }
+            } catch(e) {}
+        }
+
+        function renderTemplateListFilter() {
+            const container = document.getElementById('listTemplateContainer'); container.innerHTML = '';
+            for (const format in dbTemplatesGlobal) {
+                const isNews = format.startsWith('news');
+                if (currentTemplateMode === 'collage' && isNews) continue;
+                if (currentTemplateMode === 'newspaper' && !isNews) continue;
+                if (dbTemplatesGlobal[format].length === 0) continue;
+
+                let groupLabel = isNews ? `Format: Newspaper ${format.split('-')[1]} Foto` : `Format: ${format} Foto`;
+                const groupTitle = document.createElement('h3'); groupTitle.className = 'template-group-title'; groupTitle.innerText = groupLabel; container.appendChild(groupTitle);
+
+                const grid = document.createElement('div'); grid.className = 'template-list-grid';
+                dbTemplatesGlobal[format].forEach(t => {
+                    let isHidden = t.isHidden === true; 
+                    let opacity = isHidden ? '0.6' : '1'; let hideBtnText = isHidden ? '👁️ Tampilkan' : '🙈 Sembunyikan';
+                    grid.innerHTML += `
+                        <div style="opacity: ${opacity}; background: var(--paper-white); border: 3px solid var(--ink); border-radius: 15px; padding: 15px; box-shadow: 4px 4px 0px var(--ink); display: flex; flex-direction: column; align-items: center;">
+                            <img src="${t.img}" style="width:100%; aspect-ratio: 2/3; object-fit: cover; border-radius:8px; border: 2px solid var(--ink); background: var(--bg-color); margin-bottom: 12px;">
+                            <p style="font-size:1.1rem; font-weight: 700; margin: 0 0 15px 0;">${t.nama}</p>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%;">
+                                <button onclick="toggleVisibility('${format}', '${t.id}', ${!isHidden})" style="background: #fff; border: 2px solid var(--ink); padding: 5px; border-radius: 10px; grid-column: span 2; font-weight:bold; cursor:pointer;">${hideBtnText}</button>
+                                <button onclick="bukaEditModal('${format}', '${t.id}')" style="background: var(--yellow); border: 2px solid var(--ink); padding: 5px; border-radius: 10px; font-weight:bold; cursor:pointer;">✏️ Edit</button>
+                                <button onclick="hapusTemplate('${format}', '${t.id}')" style="background: var(--pink); border: 2px solid var(--ink); padding: 5px; border-radius: 10px; font-weight:bold; cursor:pointer;">🗑️ Hapus</button>
+                            </div>
+                        </div>`;
+                });
+                container.appendChild(grid);
+            }
+        }
+        
+        async function toggleVisibility(format, idTemplate, isHidden) {
+            await fetch('/api/toggle-template', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ format, idTemplate, isHidden }) });
+            fetchTemplateData();
+        }
+        
+        function hapusTemplate(format, idTemplate) {
+            if (!confirm("⚠️ Hapus template ini secara permanen?")) return;
+            fetch('/api/delete-template', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ format, idTemplate }) }).then(() => fetchTemplateData());
+        }
+
+        function bukaEditModal(format, id) {
+            const template = dbTemplatesGlobal[format].find(t => t.id === id); if(!template) return;
+            document.getElementById('edit-format').value = format; document.getElementById('edit-id').value = id; document.getElementById('edit-nama').value = template.nama;
+            generateVisualEditorAndCoords('edit'); inisialisasiVisualEditor('edit', template.img, template.layout.coords);
+            document.getElementById('editTemplateModal').style.display = 'flex';
+        }
+        function tutupEditModal() { document.getElementById('editTemplateModal').style.display = 'none'; }
+        
+        async function simpanEditTemplate() {
+            const format = document.getElementById('edit-format').value; const id = document.getElementById('edit-id').value;
+            const template = dbTemplatesGlobal[format].find(t => t.id === id); 
+            kalkulasiKoordinatKeInput('edit');
+            let coords = [];
+            for (let i = 1; i <= template.layout.coords.length; i++) {
+                coords.push({ 
+                    x: parseInt(document.getElementById(`edit_posX_${i}`).value) || 0, y: parseInt(document.getElementById(`edit_posY_${i}`).value) || 0, 
+                    width: parseInt(document.getElementById(`edit_posW_${i}`).value) || 0, height: parseInt(document.getElementById(`edit_posH_${i}`).value) || 0 
+                });
+            }
+            await fetch('/api/edit-template', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ format, idTemplate: id, nama: document.getElementById('edit-nama').value, coords }) });
+            tutupEditModal(); fetchTemplateData();
+        }
+
+        async function bukaSetupPrinter(ukuran) {
+            alert(`PANDUAN SETUP:\n\n1. Gambar acuan akan terbuka.\n2. Tekan CTRL + P (Print).\n3. Pilih Printer, setel kertas & Borderless (jika perlu).\n4. Lakukan "Print" 1x agar profil tersimpan ke sistem.\n\nKlik OK untuk membuka jendela.`);
+            await fetch('/api/setup-printer', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ size: ukuran }) });
+        }
+
+        document.getElementById('formVideoPose').addEventListener('submit', async (e) => {
+            e.preventDefault(); const formData = new FormData(); formData.append('poseVideo', document.getElementById('fileVideoPose').files[0]);
+            const res = await fetch('/api/upload-video', { method: 'POST', body: formData }); const result = await res.json(); alert(result.message); e.target.reset();
+        });
+        document.getElementById('formQrisUpload').addEventListener('submit', async (e) => {
+            e.preventDefault(); const formData = new FormData(); formData.append('qrisImage', document.getElementById('fileQris').files[0]);
+            const res = await fetch('/api/upload-qris', { method: 'POST', body: formData }); const result = await res.json(); alert(result.message); e.target.reset();
+        });
+
+        document.getElementById('formTemplateUpload').addEventListener('submit', async (e) => {
+            e.preventDefault(); 
+            const btn = e.target.querySelector('button[type="submit"]'); 
+            btn.innerText = "⏳ Mempersiapkan Data..."; btn.disabled = true;
+            
+            kalkulasiKoordinatKeInput('upload');
+            const formatFoto = document.getElementById('formatFoto').value; 
+            const jumlahSlot = getJumlahSlot(formatFoto); const koordinat = [];
+            for (let i = 1; i <= jumlahSlot; i++) {
+                koordinat.push({ 
+                    x: parseInt(document.getElementById(`upload_posX_${i}`).value) || 0, y: parseInt(document.getElementById(`upload_posY_${i}`).value) || 0, 
+                    width: parseInt(document.getElementById(`upload_posW_${i}`).value) || 0, height: parseInt(document.getElementById(`upload_posH_${i}`).value) || 0 
+                });
+            }
+            localStorage.setItem('memori_koordinat_' + formatFoto, JSON.stringify(koordinat));
+            // -------------------------------------
+            
+            const frameFiles = document.getElementById('fileFrameCollage').files;
+            const thumbFiles = document.getElementById('fileThumbCollage').files;
+            const baseId = document.getElementById('idFrame').value.replace(/\s+/g, '-').toLowerCase();
+            const baseName = document.getElementById('namaFrame').value;
+            
+            const isChromaChecked = document.getElementById('useChromaKey') ? document.getElementById('useChromaKey').checked : false;
+            const hexColor = isChromaChecked ? document.getElementById('chromaColor').value : null;
+            const tolerance = isChromaChecked ? parseInt(document.getElementById('chromaTolerance').value) : null;
+
+            let successCount = 0;
+            let failCount = 0;
+
+            // --- PROSES LOOPING UPLOAD MASSAL ---
+            for (let index = 0; index < frameFiles.length; index++) {
+                let currentFrame = frameFiles[index];
+                
+                // Gunakan thumbnail sesuai urutan. Jika thumbnail cuma 1, pakai thumbnail pertama untuk semua frame.
+                let currentThumb = thumbFiles[index] || thumbFiles[0]; 
+                
+                // Buat ID dan Nama jadi berurutan otomatis jika upload lebih dari 1 file
+                let currentId = frameFiles.length > 1 ? `${baseId}-${index + 1}` : baseId;
+                let currentName = frameFiles.length > 1 ? `${baseName} ${index + 1}` : baseName;
+
+                btn.innerText = `⏳ Memproses File ${index + 1} dari ${frameFiles.length}...`;
+
+                // Eksekusi Chroma Key jika dicentang
+                if (isChromaChecked) {
+                    try {
+                        currentFrame = await applyChromaKey(currentFrame, hexColor, tolerance);
+                    } catch (err) {
+                        console.error("Gagal Chroma Key pada file:", currentFrame.name);
+                        failCount++;
+                        continue; // Lewati file ini jika gagal dipotong, lanjut ke gambar berikutnya
+                    }
+                }
+
+                const formData = new FormData(); 
+                formData.append('formatFoto', formatFoto); 
+                formData.append('namaFrame', currentName);
+                formData.append('idFrame', currentId); 
+                formData.append('layoutData', JSON.stringify({ coords: koordinat }));
+                formData.append('fileFrame', currentFrame); 
+                formData.append('fileThumb', currentThumb);
+                
+                try {
+                    const res = await fetch('/api/upload-frame', { method: 'POST', body: formData });
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.success) successCount++;
+                        else failCount++;
+                    } else { failCount++; }
+                } catch (error) { failCount++; }
+            }
+
+            // --- HASIL AKHIR ---
+            if (successCount > 0) {
+                alert(`✅ YAY! Berhasil mengunggah ${successCount} template!${failCount > 0 ? `\n(Gagal: ${failCount} file)` : ''}`);
+                e.target.reset(); 
+                document.getElementById('ve-container-upload').style.display = 'none'; 
+                document.getElementById('ve-hint-upload').style.display = 'none';
+                if(document.getElementById('chromaKeyOptions')) document.getElementById('chromaKeyOptions').style.display = 'none';
+                generateVisualEditorAndCoords('upload'); 
+                fetchTemplateData(); 
+            } else { 
+                alert("❌ Gagal mengunggah semua template. Cek koneksi atau format file Anda."); 
+            }
+            
+            btn.innerText = "📤 Unggah & Simpan Template"; btn.disabled = false;
+        });
+
+        document.getElementById('formIdleScreen').addEventListener('submit', async (e) => {
+            e.preventDefault(); const btn = e.target.querySelector('button[type="submit"]'); const fileInput = document.getElementById('fileIdleScreen');
+            if (!fileInput.files[0]) return;
+            btn.innerText = "⏳ Sedang Mengunggah..."; btn.disabled = true;
+            const formData = new FormData(); formData.append('idleFile', fileInput.files[0]);
+            try {
+                const res = await fetch('/api/upload-idle', { method: 'POST', body: formData }); const data = await res.json();
+                if (data.success) {
+                    alert("✅ Layar Utama (Idle Screen) berhasil diperbarui!");
+                    document.getElementById('status-idle-screen').innerHTML = `<b style="color: var(--blue);">Custom (${fileInput.files[0].name})</b>`;
+                    e.target.reset();
+                } else { alert("❌ Gagal Mengunggah: " + data.message); }
+            } catch (error) { alert("❌ Terjadi kesalahan saat menghubungi server."); }
+            btn.innerText = "📤 Unggah & Terapkan Layar"; btn.disabled = false;
+        });
+
+        async function resetIdleScreen() {
+            if(!confirm('Yakin ingin menghapus custom idle screen dan kembali ke tampilan bawaan tema?')) return;
+            try {
+                const resSettings = await fetch('/api/settings'); const dataSettings = await resSettings.json();
+                if (dataSettings.global) {
+                    dataSettings.global.customIdleScreen = null; 
+                    await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dataSettings) });
+                    document.getElementById('status-idle-screen').innerHTML = "Bawaan Tema (Default)";
+                    alert("✅ Layar utama dikembalikan ke tema bawaan.");
+                }
+            } catch (error) { alert("Gagal mereset pengaturan."); }
+        }
+        async function resetSistemTotal() {
+            if (!confirm("⚠️ PERINGATAN KERAS: Semua setelan, koneksi bot, Drive, QRIS, dan analitik akan terhapus & direset! (JSON Token aman, Template aman). Anda yakin ingin melanjutkan?")) return;
+            
+            try {
+                // 1. Putuskan WA & Gdrive
+                await fetch('/api/wa-logout', { method: 'POST' }).catch(e=>console.log(e));
+                await fetch('/api/disconnect-drive', { method: 'POST' }).catch(e=>console.log(e));
+                
+                // 2. Panggil API backend untuk factory reset
+                // CATATAN PENTING: Anda harus membuat route app.post('/api/factory-reset') di server.js Anda!
+                const res = await fetch('/api/factory-reset', { method: 'POST' });
+                const data = await res.json();
+                
+                if (data.success) {
+                    alert("✅ Sistem berhasil dikembalikan ke pengaturan awal (Default)!");
+                    window.location.reload();
+                } else {
+                    alert("❌ Gagal mereset sistem: " + data.message);
+                }
+            } catch (error) {
+                alert("Terjadi kesalahan jaringan saat mencoba reset.");
+            }
+        }
+        // Fetch pengaturan saat halaman dimuat
+// --- FUNGSI MENGATUR TAMPILAN KOTAK MIDTRANS ---
+function toggleDynamicFields(type) {
+    const dynBox = document.getElementById('dynamicSettings');
+    if (type === 'dynamic') {
+        dynBox.style.display = 'block'; // Tampilkan jika Dinamis
+    } else {
+        dynBox.style.display = 'none';  // Sembunyikan jika Statis
+    }
+}
+        async function loadQrisSettings() {
+    const res = await fetch('/api/settings/qris');
+    const data = await res.json();
+    
+    document.getElementById('qrisType').value = data.type;
+    document.getElementById('qrisPrice').value = data.dynamicPrice || 35000;
+    
+    // Tarik kunci yang tersimpan
+    if (document.getElementById('midtransServerKey')) document.getElementById('midtransServerKey').value = data.midtransServerKey || "";
+    if (document.getElementById('midtransClientKey')) document.getElementById('midtransClientKey').value = data.midtransClientKey || "";
+    
+    toggleDynamicFields(data.type);
+}
+
+async function saveQrisSettings() {
+    try {
+        const type = document.getElementById('qrisType').value;
+        const price = document.getElementById('qrisPrice').value;
+        const serverKey = document.getElementById('midtransServerKey').value;
+        const clientKey = document.getElementById('midtransClientKey').value;
+
+        const res = await fetch('/api/settings/qris', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                type: type, 
+                dynamicPrice: parseInt(price),
+                midtransServerKey: serverKey,
+                midtransClientKey: clientKey
+            })
+        });
+        
+        if (!res.ok) throw new Error("API /api/settings/qris tidak ditemukan (404).");
+
+        const result = await res.json();
+        if (result.success) {
+            alert('✅ Pengaturan QRIS & Midtrans berhasil disimpan!');
+        }
+    } catch (e) {
+        alert('❌ GAGAL: ' + e.message);
+    }
+}
+const pricing = {
+    plus: {
+        '3d': { price: 'Rp 79.000', coret: '', badge: '' },
+        '1w': { price: 'Rp 119.000', coret: '', badge: '' },
+        '1m': { price: 'Rp 199.000', coret: 'Rp 299.000', badge: 'MOST POPULAR' },
+        '1y': { price: 'Rp 1.990.000', coret: '', badge: 'SAVE 2 MONTHS' }
+    },
+    prime: {
+        '3d': { price: 'Rp 129.000', coret: '', badge: '' },
+        '1w': { price: 'Rp 199.000', coret: '', badge: '' },
+        '1m': { price: 'Rp 349.000', coret: 'Rp 499.000', badge: '' },
+        '1y': { price: 'Rp 3.490.000', coret: '', badge: 'SAVE 2 MONTHS' }
+    }
+};
+
+function updatePrice(tier) {
+    const dur = document.getElementById(`sel-dur-${tier}`).value;
+    const data = pricing[tier][dur];
+    
+    document.getElementById(`price-${tier}`).innerText = data.price;
+    const coret = document.getElementById(`coret-${tier}`);
+    if(data.coret) { coret.style.display = 'block'; coret.innerText = data.coret; } else { coret.style.display = 'none'; }
+    const badge = document.getElementById(`badge-${tier}`);
+    if(data.badge) { badge.style.display = 'block'; badge.innerText = data.badge; } else { badge.style.display = 'none'; }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    updatePrice('plus');
+    updatePrice('prime');
+});
+
+let selectedTier = '';
+let selectedDuration = '';
+
+// --- LOGIKA PEMBAYARAN MVP (VIA WHATSAPP & QR) ---
+        const NOMOR_WA_ADMIN = "628131080710"; 
+
+        window.bukaPayment = function(tier) {
+            const user = window.auth ? window.auth.currentUser : null;
+            if(!user) return alert("⚠️ Silakan login terlebih dahulu!");
+
+            let durasiTeks = "1 Bulan"; 
+            const selDur = document.getElementById(`sel-dur-${tier}`);
+            let priceText = "";
+
+            if(selDur) {
+                const dur = selDur.value;
+                durasiTeks = (dur === '3d') ? '3 Hari' : (dur === '1w') ? '7 Hari' : (dur === '1m') ? '1 Bulan' : '1 Tahun';
+                priceText = pricing[tier][dur].price; 
+            }
+
+            const pesan = `Halo Admin Lacasabooth! 👋\n\nSaya ingin berlangganan/upgrade software dengan detail berikut:\n\n* Akun Email: ${user.email}\n* Paket: ${tier.toUpperCase()}\n* Durasi: ${durasiTeks}\n* Total Harga: ${priceText}\n\nMohon instruksi pembayarannya ya. Terima kasih!`;
+            
+            // Link WhatsApp yang sudah berisi format pesan
+            const waLink = `https://wa.me/${NOMOR_WA_ADMIN}?text=${encodeURIComponent(pesan)}`;
+
+            // 1. Tulis deskripsi paket di Modal
+            document.getElementById('payment-desc').innerHTML = `Anda memilih paket:<br><b style="color:var(--ink); font-size:1.3rem;">${tier.toUpperCase()} - ${durasiTeks}</b><br><span style="color:var(--blue); font-size:1.5rem;">${priceText}</span>`;
+
+            // 2. Generate QR Code ke dalam Modal
+            const qrContainer = document.getElementById('wa-qrcode');
+            qrContainer.innerHTML = ''; // Bersihkan QR lama jika ada
+            new QRCode(qrContainer, {
+                text: waLink,
+                width: 160,
+                height: 160,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+            });
+
+            // 3. Setel tombol "Buka WhatsApp" untuk opsi 2
+            document.getElementById('btn-lanjut-wa').onclick = function() {
+                window.open(waLink, '_blank');
+            };
+
+            // 4. Tampilkan Modal ke layar
+            document.getElementById('paymentModal').style.display = 'flex';
+        };
+function prosesSimulasiBayar() {
+    let daysToAdd = 0;
+    if(selectedDuration === '3d') daysToAdd = 3;
+    if(selectedDuration === '1w') daysToAdd = 7;
+    if(selectedDuration === '1m') daysToAdd = 30;
+    if(selectedDuration === '1y') daysToAdd = 365;
+    
+    const expiredDate = new Date();
+    expiredDate.setDate(expiredDate.getDate() + daysToAdd);
+    
+    if(window.updateLicenseToFirebase) {
+        window.updateLicenseToFirebase(selectedTier, expiredDate);
+    } else {
+        alert("Kesalahan: Modul Firebase belum siap.");
+    }
+}
+
+// Panggil saat dashboard selesai render
+document.addEventListener('DOMContentLoaded', loadQrisSettings);
+
+        muatPengaturan(); gantiModeTemplate('collage'); fetchTemplateData();
+    </script>
+    <!-- MESIN FIREBASE SAAS & PENGUNCI VISUAL -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyC7cyROoGuHT0xcPJWzgtbPjMIJtvC774A",
+            authDomain: "lacasabooth-saas.firebaseapp.com",
+            projectId: "lacasabooth-saas",
+            storageBucket: "lacasabooth-saas.firebasestorage.app",
+            messagingSenderId: "319166536270",
+            appId: "1:319166536270:web:cb1ae38feb971e8565411f"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        window.auth = auth;
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        const loginOverlay = document.getElementById('saas-login-overlay');
+        const btnLogin = document.getElementById('btn-saas-login');
+        const statusText = document.getElementById('saas-login-status');
+
+       onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                // Tampilkan email user yang login di sidebar
+                const emailAdmin = document.getElementById('teks-email-admin');
+                if(emailAdmin) emailAdmin.innerText = user.email;
+
+                statusText.innerText = "⏳ Mengecek Lisensi Langganan...";
+                await checkUserLicense(user);
+                loginOverlay.style.display = 'none';
+            } else {
+                loginOverlay.style.display = 'flex';
+            }
+        });
+
+        btnLogin.addEventListener('click', async () => {
+            try {
+                btnLogin.disabled = true;
+                btnLogin.innerHTML = "⏳ Memproses...";
+                await signInWithPopup(auth, provider);
+            } catch (error) {
+                statusText.innerText = "❌ Gagal login. Silakan coba lagi.";
+                statusText.style.color = "#ef4444";
+                btnLogin.disabled = false;
+                btnLogin.innerHTML = `<img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" style="width: 25px; margin-right: 10px;"> Lanjutkan dengan Google`;
+            }
+        });
+
+        window.updateLicenseToFirebase = async function(newTier, expireDate) {
+            try {
+                const user = auth.currentUser;
+                if(!user) return alert('Silakan login terlebih dahulu!');
+                
+                document.getElementById('paymentModal').style.display = 'none';
+                
+                const userRef = doc(db, "users", user.uid);
+                await updateDoc(userRef, {
+                    tier: newTier,
+                    expiredAt: expireDate
+                });
+                
+                alert('✅ Pembayaran Berhasil! Lisensi Anda telah aktif.');
+                window.location.reload(); 
+            } catch(e) {
+                alert('Gagal mengupdate lisensi: ' + e.message);
+            }
+        };
+
+        // === MASUKKAN FUNGSI TUKAR KODE DI SINI ===
+        window.tukarKodeLisensi = async function() {
+            try {
+                const inputElement = document.getElementById('input-license-key');
+                if (!inputElement) return alert("Error HTML: Kotak input tidak ditemukan!");
+
+                const codeInput = inputElement.value.trim().toUpperCase();
+                if(!codeInput) return alert("⚠️ Harap masukkan kode lisensi terlebih dahulu!");
+
+                const user = auth.currentUser;
+                if(!user) return alert("⚠️ Silakan login terlebih dahulu!");
+                
+                const keyRef = doc(db, "license_keys", codeInput);
+                const keySnap = await getDoc(keyRef);
+
+                if(!keySnap.exists()) {
+                    return alert("❌ Kode tidak valid atau tidak ditemukan.");
+                }
+
+                const keyData = keySnap.data();
+
+                if(keyData.isUsed === true) {
+                    return alert(`❌ Kode ini sudah pernah digunakan oleh: ${keyData.usedBy}`);
+                }
+
+                const tierBonus = keyData.tier || "prime";
+                const durasiHari = keyData.days || 7; 
+                
+                const newExpiredAt = new Date();
+                newExpiredAt.setDate(newExpiredAt.getDate() + durasiHari);
+                
+                const userRef = doc(db, "users", user.uid);
+                await updateDoc(userRef, {
+                    tier: tierBonus,
+                    expiredAt: newExpiredAt
+                });
+                
+                await updateDoc(keyRef, {
+                    isUsed: true,
+                    usedBy: user.email,
+                    usedAt: new Date()
+                });
+
+                alert(`✅ SELAMAT! Kode berhasil ditukar.\nAnda mendapatkan akses ${tierBonus.toUpperCase()} selama ${durasiHari} hari.`);
+                window.location.reload();
+
+            } catch (e) {
+                console.error("Terjadi error sistem:", e);
+                alert("Terjadi kesalahan sistem: " + e.message);
+            }
+        };
+        
+        const ADMIN_EMAIL = "adenakbar455@gmail.com"; 
+
+        window.buatKodeAdmin = async function() {
+            // Karena sekarang satu rumah, variabel 'auth' dan 'db' pasti terbaca
+            const user = auth.currentUser;
+            
+            if(!user || user.email !== ADMIN_EMAIL) {
+                return alert("⛔ Akses Ditolak! Anda bukan Admin.");
+            }
+
+            let inputCode = document.getElementById('admin-new-code').value.trim().toUpperCase();
+            
+            if(!inputCode) {
+                const randomStr = Math.random().toString(36).substring(2, 7).toUpperCase();
+                inputCode = `LACA-${randomStr}`; 
+            }
+
+            const tierVal = document.getElementById('admin-tier').value;
+            const daysVal = parseInt(document.getElementById('admin-days').value) || 7;
+
+            try {
+                const keyRef = doc(db, "license_keys", inputCode);
+                const keySnap = await getDoc(keyRef);
+                if(keySnap.exists()) {
+                    return alert("❌ Kode tersebut sudah ada di database. Silakan ganti teks kodenya.");
+                }
+
+                await setDoc(keyRef, {
+                    isUsed: false,
+                    tier: tierVal,
+                    days: daysVal,
+                    createdBy: user.email,
+                    createdAt: new Date()
+                });
+
+                const resultBox = document.getElementById('admin-code-result');
+                resultBox.style.background = "#dcfce7";
+                resultBox.style.border = "2px dashed #16a34a";
+                resultBox.innerHTML = `✅ Sukses! Kode: <span style="color:#ef4444; font-size:1.5rem; letter-spacing: 2px;">${inputCode}</span> <br><span style="font-size:0.85rem; color:#666;">(Berlaku untuk paket ${tierVal.toUpperCase()} selama ${daysVal} hari)</span>`;
+                
+                document.getElementById('admin-new-code').value = ''; 
+            } catch(e) {
+                alert("Gagal membuat kode: " + e.message);
+            }
+        };
+
+        async function checkUserLicense(user) {
+            const userRef = doc(db, "users", user.uid);
+            const userSnap = await getDoc(userRef);
+            let tier = "free"; 
+            let expiredAt = null;
+
+            if (!userSnap.exists()) {
+                await setDoc(userRef, {
+                    email: user.email, name: user.displayName, tier: "free", createdAt: new Date()
+                });
+            } else {
+                const data = userSnap.data();
+                tier = data.tier || "free";
+                
+                if(data.expiredAt) {
+                    expiredAt = data.expiredAt.toDate(); 
+                    if(new Date() > expiredAt) {
+                        tier = "free";
+                        await updateDoc(userRef, { tier: "free", expiredAt: null });
+                        expiredAt = null;
+                        alert("⚠️ Masa langganan Anda telah habis, akun dialihkan ke paket Free.");
+                    }
+                }
+            }
+            
+            const statusTextUI = document.getElementById('status-lisensi-teks');
+            const statusTglUI = document.getElementById('status-lisensi-tgl');
+            
+            if(tier === 'free') {
+                statusTextUI.innerText = "FREE (Gratis)";
+                statusTextUI.style.color = "white";
+                statusTglUI.innerText = "Berlaku selamanya";
+                document.getElementById('btn-tier-free').innerText = "Paket Saat Ini Aktif";
+            } else {
+                statusTextUI.innerText = "Aktif (" + tier.toUpperCase() + ")";
+                statusTextUI.style.color = "var(--yellow)";
+                
+                if(expiredAt) {
+                    const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+                    
+                    // --- PERHITUNGAN SISA HARI ---
+                    const hariIni = new Date();
+                    const selisihWaktu = expiredAt.getTime() - hariIni.getTime();
+                    const sisaHari = Math.ceil(selisihWaktu / (1000 * 3600 * 24)); 
+                    
+                    if(sisaHari > 0) {
+                        statusTglUI.innerText = `Berlaku hingga: ${expiredAt.toLocaleDateString('id-ID', options)} (Sisa ${sisaHari} hari)`;
+                    } else {
+                        statusTglUI.innerText = `Berlaku hingga: ${expiredAt.toLocaleDateString('id-ID', options)} (Berakhir hari ini)`;
+                    }
+                }
+                document.getElementById('btn-tier-free').innerText = "Paket Dasar (Free)";
+           
+            }
+            // ... kode checkUserLicense sebelumnya ...
+
+        // --- BUKA PANEL RAHASIA JIKA YANG LOGIN ADALAH ADMIN ---
+        if (user.email === ADMIN_EMAIL) {
+            const adminPanel = document.getElementById('admin-panel-keys');
+            if(adminPanel) adminPanel.style.display = 'block'; // Tampilkan panelnya
+        } else {
+            const adminPanel = document.getElementById('admin-panel-keys');
+            if(adminPanel) adminPanel.style.display = 'none'; // Sembunyikan untuk orang lain
+        }
+        
+        terapkanFiturBerdasarkanLisensi(tier); // (Ini baris terakhir Anda yang sudah ada)
+}
+
+        // === FUNGSI BANTUAN: VISUAL GEMBOK UI ===
+        // (Biarkan kode pasangGembok persis seperti yang Anda miliki)
+        // === FUNGSI BANTUAN: VISUAL GEMBOK UI ===
+        function pasangGembok(elemenId, pesan, targetParent = false) {
+            let el = document.getElementById(elemenId);
+            if (!el) return;
+            if (targetParent) el = el.parentElement; // Kunci kontainer pembungkusnya
+            
+            el.style.position = 'relative';
+            el.style.overflow = 'hidden'; // Agar blur tidak tumpah
+            
+            // Cegah duplikasi overlay
+            if (!el.querySelector('.locked-overlay')) {
+                el.insertAdjacentHTML('beforeend', `
+                    <div class="locked-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(253, 251, 247, 0.9); backdrop-filter: blur(4px); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 50; border-radius: inherit; text-align: center; padding: 20px; border: 2px dashed var(--ink);">
+                        <div style="font-size: 2.5rem; margin-bottom: 5px;">🔒</div>
+                        <h3 style="color: var(--ink); margin-bottom: 5px; font-size: 1.1rem;">Fitur Terkunci</h3>
+                        <p style="color: #444; font-size: 0.85rem; margin-bottom: 15px; font-weight: 500; line-height: 1.3;">${pesan}</p>
+                        <button type="button" onclick="bukaTab('tab-subscription', document.querySelector('a[onclick*=\\'tab-subscription\\']'))" class="btn-primary" style="background: var(--blue); color: var(--ink); padding: 8px 15px; font-size: 0.85rem; width: auto; box-shadow: 3px 3px 0px var(--ink);">⭐ Upgrade Lisensi</button>
+                    </div>
+                `);
+            }
+        }
+
+        function terapkanFiturBerdasarkanLisensi(tier) {
+            window.userTier = tier;
+            console.log("Lisensi Terdeteksi:", tier);
+
+            // ==========================================
+            // 🛑 TIER 1: FREE
+            // ==========================================
+            if (tier === 'free') {
+                // 1. Pasang Gembok di Elemen Spesifik
+                pasangGembok('sys-livePhoto', 'Live Photo khusus paket Plus & Prime.', true);
+                pasangGembok('formTemplateUpload', 'Upload Custom Template khusus paket Plus & Prime.');
+                pasangGembok('formIdleScreen', 'Custom Layar Utama khusus paket Plus & Prime.');
+                pasangGembok('sys-cloudStorage', 'Pengiriman Online G-Drive khusus paket Plus & Prime.', true);
+                
+                // Sembunyikan tombol fitur yang tak terpakai
+                if(document.getElementById('btn-mode-collage')) document.getElementById('btn-mode-collage').style.display = 'none';
+                if(document.getElementById('btn-mode-news')) document.getElementById('btn-mode-news').style.display = 'none';
+                if(document.querySelector('button[onclick="resetIdleScreen()"]')) document.querySelector('button[onclick="resetIdleScreen()"]').style.display = 'none';
+
+                // 2. Gembok Total Tab WhatsApp
+                const tabWa = document.getElementById('tab-whatsapp');
+                if(tabWa) {
+                    tabWa.innerHTML = `
+                        <div style="padding: 50px; text-align: center; margin-top: 40px; background: rgba(253, 251, 247, 0.9); border: 3px dashed var(--ink); border-radius: 20px;">
+                            <div style="font-size: 5rem; margin-bottom: 15px;">🔒</div>
+                            <h2 style="margin-bottom: 15px; color: var(--ink);">Fitur Bot WA Terkunci</h2>
+                            <p style="margin-bottom: 25px; color: #444; font-size: 1.1rem; font-weight: 500;">Tingkatkan ke paket Prime untuk mengaktifkan pengiriman otomatis foto/video ke WhatsApp pelanggan Anda.</p>
+                            <button onclick="bukaTab('tab-subscription', document.querySelector('a[onclick*=\\'tab-subscription\\']'))" class="btn-primary" style="width:auto; margin: 0 auto; background: var(--blue); color: var(--ink);">⭐ Lihat Paket Langganan</button>
+                        </div>
+                    `;
+                }
+
+                // 3. Gembok Total Tab QRIS
+                const tabQris = document.getElementById('tab-qris');
+                if(tabQris) {
+                    tabQris.innerHTML = `
+                        <div style="padding: 50px; text-align: center; margin-top: 40px; background: rgba(253, 251, 247, 0.9); border: 3px dashed var(--ink); border-radius: 20px;">
+                            <div style="font-size: 5rem; margin-bottom: 15px;">💳</div>
+                            <h2 style="margin-bottom: 15px; color: var(--ink);">Fitur Pembayaran Terkunci</h2>
+                            <p style="margin-bottom: 25px; color: #444; font-size: 1.1rem; font-weight: 500;">Aktifkan sistem kasir pintar, QRIS dinamis, dan penetapan harga cetak tambahan dengan upgrade paket.</p>
+                            <button onclick="bukaTab('tab-subscription', document.querySelector('a[onclick*=\\'tab-subscription\\']'))" class="btn-primary" style="width:auto; margin: 0 auto; background: var(--blue); color: var(--ink);">⭐ Lihat Paket Langganan</button>
+                        </div>
+                    `;
+                }
+
+                // --- SILENT KILLER (PAKSA MATIKAN MESIN BACKEND & BERSIHKAN FITUR) ---
+                try {
+                    fetch('/api/settings').then(res => res.json()).then(data => {
+                        let butuhUpdate = false;
+                        if (data.global && data.global.cloudStorage !== false) { data.global.cloudStorage = false; butuhUpdate = true; }
+                        if (data.global && data.global.livePhotoEnabled !== false) { data.global.livePhotoEnabled = false; butuhUpdate = true; }
+                        if (data.global && data.global.customIdleScreen !== null) {
+                            data.global.customIdleScreen = null; butuhUpdate = true;
+                            const statusIdle = document.getElementById('status-idle-screen');
+                            if (statusIdle) statusIdle.innerHTML = "Bawaan Tema (Default)";
+                        }
+                        if (butuhUpdate) {
+                            fetch('/api/settings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+                        }
+                    }).catch(e => console.log(e));
+                    
+                    fetch('/api/wa-logout', { method: 'POST' }).catch(e => console.log(e));
+
+                    fetch('/api/frames?all=true').then(res => res.json()).then(framesData => {
+                        for (const format in framesData) {
+                            framesData[format].forEach(template => {
+                                const isBawaan = template.id.toLowerCase().includes('default') || template.id.toLowerCase().includes('bawaan');
+                                if (!isBawaan && template.isHidden !== true) {
+                                    fetch('/api/toggle-template', { 
+                                        method: 'POST', headers: {'Content-Type': 'application/json'}, 
+                                        body: JSON.stringify({ format: format, idTemplate: template.id, isHidden: true }) 
+                                    }).then(() => {
+                                        if (typeof fetchTemplateData === "function") fetchTemplateData();
+                                    });
+                                }
+                            });
+                        }
+                    }).catch(e => console.log(e));
+                } catch(e) {}
+                
+                // CEGAH KEBOCORAN TOMBOL
+                window.toggleVisibility = async function(format, idTemplate, isHiddenTarget) {
+                    const isBawaan = idTemplate.toLowerCase().includes('default') || idTemplate.toLowerCase().includes('bawaan');
+                    if (!isBawaan && isHiddenTarget === false) {
+                        alert("🔒 Template Custom Terkunci!\nUpgrade ke paket Plus/Prime untuk mengaktifkan template ini.");
+                        return;
+                    }
+                    await fetch('/api/toggle-template', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ format, idTemplate, isHidden: isHiddenTarget }) });
+                    if (typeof fetchTemplateData === "function") fetchTemplateData();
+                };
+
+                window.bukaEditModal = function(format, id) {
+                    const isBawaan = id.toLowerCase().includes('default') || id.toLowerCase().includes('bawaan');
+                    if (!isBawaan) {
+                        alert("🔒 Fitur Terkunci!\nAnda tidak dapat mengedit template custom di paket Free.");
+                        return;
+                    }
+                    const template = dbTemplatesGlobal[format].find(t => t.id === id); if(!template) return;
+                    document.getElementById('edit-format').value = format; document.getElementById('edit-id').value = id; document.getElementById('edit-nama').value = template.nama;
+                    generateVisualEditorAndCoords('edit'); inisialisasiVisualEditor('edit', template.img, template.layout.coords);
+                    document.getElementById('editTemplateModal').style.display = 'flex';
+                };
+            }
+
+            // ==========================================
+            // 🚀 TIER 2: PLUS
+            // ==========================================
+            else if (tier === 'plus' || tier === 'basic') {
+                if(document.getElementById('btn-mode-news')) {
+                    document.getElementById('btn-mode-news').style.display = 'none';
+                }
+
+                // Pasang Gembok di Custom Layar
+                pasangGembok('formIdleScreen', 'Custom Layar Utama khusus paket Prime.');
+                if(document.querySelector('button[onclick="resetIdleScreen()"]')) document.querySelector('button[onclick="resetIdleScreen()"]').style.display = 'none';
+
+                // Gembok Tab WA
+                const tabWa = document.getElementById('tab-whatsapp');
+                if(tabWa) {
+                    tabWa.innerHTML = `
+                        <div style="padding: 50px; text-align: center; margin-top: 40px; background: rgba(253, 251, 247, 0.9); border: 3px dashed var(--ink); border-radius: 20px;">
+                            <div style="font-size: 5rem; margin-bottom: 15px;">🔒</div>
+                            <h2 style="margin-bottom: 15px; color: var(--ink);">Fitur Bot WA Terkunci</h2>
+                            <p style="margin-bottom: 25px; color: #444; font-size: 1.1rem; font-weight: 500;">Tingkatkan ke paket Prime untuk mengaktifkan pengiriman otomatis ke WhatsApp pelanggan.</p>
+                            <button onclick="bukaTab('tab-subscription', document.querySelector('a[onclick*=\\'tab-subscription\\']'))" class="btn-primary" style="width:auto; margin: 0 auto; background: var(--blue); color: var(--ink);">⭐ Lihat Paket Langganan</button>
+                        </div>
+                    `;
+                }
+
+                const qrisSelect = document.getElementById('qrisType');
+                if (qrisSelect) {
+                    Array.from(qrisSelect.options).forEach(opt => {
+                        if (opt.value === 'dynamic') opt.remove();
+                    });
+                    const dynBox = document.getElementById('dynamicSettings');
+                    if(dynBox) dynBox.style.display = 'none';
+                }
+
+                // --- SILENT KILLER & RESTORER HIBRIDA UNTUK TIER 2 ---
+                try {
+                    fetch('/api/settings').then(res => res.json()).then(data => {
+                        if (data.global && data.global.customIdleScreen !== null) {
+                            data.global.customIdleScreen = null;
+                            fetch('/api/settings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+                            const statusIdle = document.getElementById('status-idle-screen');
+                            if (statusIdle) statusIdle.innerHTML = "Bawaan Tema (Default)";
+                        }
+                    }).catch(e => console.log(e));
+                    
+                    fetch('/api/wa-logout', { method: 'POST' }).catch(e => console.log(e));
+
+                    fetch('/api/frames?all=true').then(res => res.json()).then(framesData => {
+                        let butuhRefreshUI = false;
+                        const prosesTemplate = [];
+
+                        for (const format in framesData) {
+                            const isNewsFormat = format.startsWith('news');
+                            framesData[format].forEach(template => {
+                                const isBawaan = template.id.toLowerCase().includes('default') || template.id.toLowerCase().includes('bawaan');
+                                
+                                if (isNewsFormat) {
+                                    if (!isBawaan && template.isHidden !== true) {
+                                        butuhRefreshUI = true;
+                                        prosesTemplate.push(fetch('/api/toggle-template', { 
+                                            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ format: format, idTemplate: template.id, isHidden: true }) 
+                                        }));
+                                    }
+                                } else {
+                                    if (template.isHidden === true) {
+                                        butuhRefreshUI = true;
+                                        prosesTemplate.push(fetch('/api/toggle-template', { 
+                                            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ format: format, idTemplate: template.id, isHidden: false }) 
+                                        }));
+                                    }
+                                }
+                            });
+                        }
+
+                        if (butuhRefreshUI) {
+                            Promise.all(prosesTemplate).then(() => {
+                                if (typeof fetchTemplateData === "function") fetchTemplateData();
+                            });
+                        }
+                    }).catch(e => console.log(e));
+                } catch(e) {}
+                
+                window.toggleVisibility = async function(format, idTemplate, isHiddenTarget) {
+                    const isBawaan = idTemplate.toLowerCase().includes('default') || idTemplate.toLowerCase().includes('bawaan');
+                    const isNewsFormat = format.startsWith('news');
+                    
+                    if (isNewsFormat && !isBawaan && isHiddenTarget === false) {
+                        alert("🔒 Template Newspaper Custom Terkunci!\nUpgrade ke paket Prime untuk menggunakan fitur ini.");
+                        return;
+                    }
+                    
+                    await fetch('/api/toggle-template', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ format, idTemplate, isHidden: isHiddenTarget }) });
+                    if (typeof fetchTemplateData === "function") fetchTemplateData();
+                };
+
+                window.bukaEditModal = function(format, id) {
+                    const isBawaan = id.toLowerCase().includes('default') || id.toLowerCase().includes('bawaan');
+                    const isNewsFormat = format.startsWith('news');
+                    
+                    if (isNewsFormat && !isBawaan) {
+                        alert("🔒 Fitur Terkunci!\nAnda tidak dapat mengedit template Newspaper custom di paket Plus.");
+                        return;
+                    }
+                    
+                    const template = dbTemplatesGlobal[format].find(t => t.id === id); if(!template) return;
+                    document.getElementById('edit-format').value = format; document.getElementById('edit-id').value = id; document.getElementById('edit-nama').value = template.nama;
+                    generateVisualEditorAndCoords('edit'); inisialisasiVisualEditor('edit', template.img, template.layout.coords);
+                    document.getElementById('editTemplateModal').style.display = 'flex';
+                };
+            }
+
+            // ==========================================
+            // 👑 TIER 3: PRIME
+            // ==========================================
+            else if (tier === 'prime' || tier === 'premium') {
+                console.log("Akses Penuh (Prime) Diaktifkan!");
+            }
+
+            // --- SILENT RESTORER UTAMA (BANGKITKAN TEMPLATE OTOMATIS SAAT TIER 3) ---
+            if (tier === 'prime' || tier === 'premium') {
+                try {
+                    fetch('/api/frames?all=true').then(res => res.json()).then(framesData => {
+                        let butuhRefreshUI = false;
+                        const prosesUnHide = [];
+
+                        for (const format in framesData) {
+                            framesData[format].forEach(template => {
+                                if (template.isHidden === true) {
+                                    butuhRefreshUI = true;
+                                    prosesUnHide.push(fetch('/api/toggle-template', { 
+                                        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ format: format, idTemplate: template.id, isHidden: false }) 
+                                    }));
+                                }
+                            });
+                        }
+
+                        if (butuhRefreshUI) {
+                            Promise.all(prosesUnHide).then(() => {
+                                if (typeof fetchTemplateData === "function") fetchTemplateData();
+                            });
+                        }
+                    }).catch(e => console.log(e));
+                } catch(e) {}
+            }
+        }
+    </script>
+</body>
+</html>

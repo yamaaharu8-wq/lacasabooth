@@ -1,0 +1,88 @@
+/* ========================================================
+   COMPONENT: MENU CARD
+   ======================================================== */
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-32);
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: var(--space-40);
+    z-index: 10;
+    position: relative;
+}
+
+.card {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    padding: var(--space-40) var(--space-24);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--duration-350) var(--ease-out-expo),
+                box-shadow var(--duration-350) var(--ease-out-expo),
+                border-color var(--duration-350) var(--ease-out-expo);
+    position: relative;
+    overflow: hidden;
+}
+
+.card:hover:not(.card--disabled) {
+    transform: translateY(-8px);
+    box-shadow: var(--shadow-floating);
+    border-color: var(--color-primary);
+}
+
+.card:active:not(.card--disabled) {
+    transform: translateY(2px) scale(0.98);
+}
+
+.card--disabled {
+    background-color: var(--color-disabled-bg);
+    border-color: transparent;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.card__doodle {
+    height: 180px; /* Area untuk SVG Doodle */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: var(--space-24);
+}
+
+.card__badge {
+    background-color: var(--color-primary);
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.1rem;
+    padding: var(--space-8) var(--space-24);
+    border-radius: var(--radius-round);
+    margin-bottom: var(--space-16);
+    display: inline-block;
+    /* Hand-drawn asymmetric shape effect */
+    border-radius: 255px 15px 225px 15px/15px 225px 15px 255px; 
+}
+
+.card--disabled .card__badge {
+    background-color: var(--color-muted);
+}
+
+.card__title {
+    font: var(--text-title);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: var(--space-12);
+    color: var(--color-primary);
+}
+
+.card__desc {
+    font: var(--text-small);
+    color: var(--color-secondary);
+    max-width: 80%;
+}

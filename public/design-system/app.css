@@ -1,0 +1,9 @@
+/* Transisi Halaman Animasi */
+.fade-in-out {
+    animation: fadeIn var(--duration-250) var(--ease-out-modern);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}

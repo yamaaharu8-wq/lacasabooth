@@ -1,0 +1,77 @@
+{
+  "name": "lacasabooth.id",
+  "version": "1.0.0",
+  "description": "Aplikasi Photobooth by Lacasaphoto",
+  "main": "start.js",
+  "scripts": {
+    "start": "electron .",
+    "desktop": "electron .",
+    "build": "electron-builder --win --x64"
+  },
+  "build": {
+    "compression": "normal",
+    "appId": "com.lacasabooth.id",
+    "productName": "Lacasabooth",
+    "extraResources": [
+      "oauth_credentials.json"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!index.js",
+      "!token.json",
+      "!.wwebjs_auth/**/*",
+      "!.wwebjs_cache/**/*",
+      "!**/*.log",
+      "!uploads/**/*",
+      "!temp_uploads/**/*",
+      "!UI/uploads/**/*"
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "sdk/**/*",
+      "IrfanView/**/*",
+      "cloudflared.exe",
+      "ffmpeg.exe"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Lacasabooth.id",
+      "artifactName": "Lacasabooth-Setup.exe",
+      "installerIcon": "UI/assets/setup-icon.ico",
+      "uninstallerIcon": "UI/assets/setup-icon.ico",
+      "installerHeaderIcon": "UI/assets/setup-icon.ico",
+      "installerSidebar": "UI/assets/sidebar.bmp",
+      "uninstallerSidebar": "UI/assets/sidebar.bmp",
+      "installerHeader": "UI/assets/header.bmp"
+    }
+  },
+  "dependencies": {
+    "bytenode": "^1.6.0",
+    "electron-updater": "^6.8.9",
+    "express": "^4.18.2",
+    "googleapis": "^178.0.0",
+    "koffi": "^2.8.0",
+    "midtrans-client": "^1.4.3",
+    "multer": "^1.4.5-lts.1",
+    "node-webcam": "^0.8.2",
+    "qrcode": "^1.5.4",
+    "qrcode-terminal": "^0.12.0",
+    "sharp": "^0.32.6",
+    "socket.io": "^4.7.4",
+    "whatsapp-web.js": "^1.23.0"
+  },
+  "devDependencies": {
+    "electron": "^28.2.0",
+    "electron-builder": "^24.9.1"
+  }
+}

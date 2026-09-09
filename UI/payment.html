@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lacasaphoto - Payment</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/theme.css">
+    
+    <style>
+        /* KUNCI TOTAL HTML */
+        html, body {
+            margin: 0; padding: 0; width: 100vw; height: 100vh;
+            overflow: hidden; background-color: var(--bg-color); color: var(--ink);
+            font-family: 'Poppins', sans-serif; user-select: none;
+            background-image: radial-gradient(var(--dot-color) 2px, transparent 2px);
+            background-size: 40px 40px;
+        }
+
+        /* HEADER NAV */
+        .nav-bar {
+            position: absolute; top: 30px; left: 40px; right: 40px;
+            display: flex; justify-content: space-between; align-items: center; z-index: 50;
+        }
+        .btn-back {
+            background: var(--paper-white); color: var(--ink); border: 3px solid var(--ink);
+            padding: 10px 25px; border-radius: 15px; font-weight: 700; cursor: pointer;
+            transition: 0.2s; box-shadow: 4px 4px 0px var(--ink); font-family: 'Poppins', sans-serif;
+            font-size: 1rem;
+        }
+        .btn-back:hover { background: var(--yellow); transform: translate(-2px, -2px); box-shadow: 6px 6px 0px var(--ink); }
+        .btn-back:active { transform: translate(2px, 2px); box-shadow: 0px 0px 0px var(--ink); }
+
+        /* KONTEN UTAMA */
+        .main-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10;
+            padding: 20px; box-sizing: border-box; overflow-y: auto;
+        }
+
+        .header-title { font-size: 3rem; margin: 0 0 5px 0; font-weight: 700; color: var(--ink); line-height: 1.1; text-align: center; }
+        .sub-judul { font-size: 1.1rem; color: var(--ink); margin-bottom: 30px; text-align: center; opacity: 0.9; font-weight: 500; }
+
+        /* DUA KOLOM: KIRI (PILIH METODE), KANAN (PROSES/QRIS) */
+        .payment-wrapper { 
+            display: flex; gap: 30px; background: var(--paper-white); padding: 30px; 
+            border-radius: 20px; border: 4px solid var(--ink); box-shadow: 10px 10px 0px var(--ink); 
+            width: 100%; max-width: 900px; box-sizing: border-box; align-items: stretch;
+        }
+        
+        .col-metode { flex: 1; display: flex; flex-direction: column; gap: 15px; }
+        .col-proses { 
+            flex: 1; background: var(--bg-color); border-radius: 15px; padding: 25px; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            border: 3px dashed var(--ink); text-align: center; position: relative; 
+        }
+
+        /* KARTU METODE */
+        .metode-card {
+            background: var(--paper-white); border: 3px solid var(--ink); border-radius: 15px; 
+            padding: 20px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 20px;
+            box-shadow: 4px 4px 0px var(--ink);
+        }
+        .metode-card:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0px var(--ink); }
+        .metode-card.active { background: var(--yellow); border-color: var(--ink); box-shadow: 0px 0px 0px var(--ink); transform: translate(4px, 4px); }
+        
+        .metode-icon { font-size: 2.5rem; background: var(--paper-white); width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 3px solid var(--ink); }
+        .metode-card.active .metode-icon { background: var(--ink); }
+        .metode-text { text-align: left; }
+        .metode-text h3 { margin: 0 0 5px 0; font-size: 1.2rem; color: var(--ink); font-weight: 700; }
+        .metode-text p { margin: 0; font-size: 0.9rem; color: var(--ink); opacity: 0.8; font-weight: 500; }
+
+        /* QRIS & CASH AREA */
+        .qris-placeholder { 
+            width: 200px; height: 200px; background: var(--paper-white); border: 3px solid var(--ink); 
+            border-radius: 15px; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: 4px 4px 0px var(--ink);
+        }
+        .qris-placeholder img { width: 100%; height: 100%; object-fit: contain; }
+        
+        .btn-confirm { 
+            background: var(--green); color: var(--ink); border: 3px solid var(--ink); 
+            padding: 12px 25px; border-radius: 12px; font-weight: 700; font-size: 1.1rem; 
+            cursor: pointer; transition: 0.2s; width: 100%; margin-top: 15px; box-shadow: 4px 4px 0px var(--ink); font-family: 'Poppins', sans-serif;
+        }
+        .btn-confirm:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0px var(--ink); background: var(--yellow); }
+        .btn-confirm:active { transform: translate(4px, 4px); box-shadow: 0px 0px 0px var(--ink); }
+        
+        .loading-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--paper-white); border-radius: 10px; flex-direction: column; align-items: center; justify-content: center; z-index: 10; border: 3px solid var(--ink); }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .nav-bar { top: 15px; left: 15px; right: 15px; }
+            .header-title { font-size: 2.2rem; margin-top: 60px; }
+            .payment-wrapper { flex-direction: column; padding: 20px; box-shadow: 6px 6px 0px var(--ink); gap: 20px;}
+            .metode-card { padding: 15px; }
+            html, body { overflow-y: auto; }
+            .main-container { position: relative; height: auto; min-height: 100vh; padding-bottom: 40px;}
+        }
+    </style>
+    <!-- Letakkan di dalam <head> atau tepat di atas <script> utama -->
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+
+    <div class="nav-bar">
+        <button class="btn-back" onclick="window.location.href='/idle.html'">‹ Batal & Kembali</button>
+    </div>
+
+    <div class="main-container">
+        <h1 class="header-title">Pilih Pembayaran</h1>
+        <p class="sub-judul">Selesaikan pembayaran untuk memulai sesi <strong id="lbl-mode" style="color: var(--ink); background: var(--yellow); padding: 2px 8px; border: 2px solid var(--ink); border-radius: 8px;">Photobooth</strong>.</p>
+
+        <div class="payment-wrapper">
+            <!-- KOLOM KIRI (PILIH METODE) -->
+            <div class="col-metode">
+                <div class="metode-card active" id="card-qris" onclick="pilihMetode('qris')">
+                    <div class="metode-icon">📱</div>
+                    <div class="metode-text">
+                        <h3>QRIS / E-Wallet</h3>
+                        <p>Bayar instan via M-Banking, Gopay, Dana, dll.</p>
+                    </div>
+                </div>
+                
+                <div class="metode-card" id="card-cash" onclick="pilihMetode('cash')">
+                    <div class="metode-icon">💵</div>
+                    <div class="metode-text">
+                        <h3>Uang Tunai (Cash)</h3>
+                        <p>Bayar langsung ke kasir atau asisten booth.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KOLOM KANAN (TAMPILAN PROSES) -->
+            <div class="col-proses">
+                
+                <!-- TAMPILAN QRIS -->
+                <div id="view-qris" style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+                    <h3 style="margin-top: 0; margin-bottom: 5px; color: var(--ink); font-weight: 700;">Scan QRIS di Bawah</h3>
+                    <h2 id="qris-price-display" style="display: none; margin-top: 0; margin-bottom: 15px; color: var(--ink); font-weight: 700; background: var(--yellow); padding: 5px 15px; border-radius: 10px; border: 2px solid var(--ink);"></h2>
+
+                    <div class="qris-placeholder">
+                        <img id="img-qris-display" src="" alt="Loading QRIS..." style="display: none;">
+                        <div id="qris-loading-text" style="font-size: 1rem; color: var(--ink); font-weight: 600;">Memuat QRIS...</div>
+                    </div>
+                    
+                    <p style="font-size: 0.9rem; color: var(--ink); margin: 0 0 10px 0; font-weight: 500;">Tunjukkan bukti transfer ke asisten.</p>
+                    
+                    <button class="btn-confirm" onclick="prosesPembayaran('qris')">(Asisten) Konfirmasi Bayar</button>
+                </div>
+                
+                <!-- TAMPILAN CASH -->
+                <div id="view-cash" style="display: none; flex-direction: column; align-items: center; width: 100%;">
+                    <div style="font-size: 4rem; margin-bottom: 5px;">👋</div>
+                    <h3 style="margin-top: 0; color: var(--ink); font-weight: 700;">Silakan Panggil Asisten</h3>
+                    <p style="font-size: 0.9rem; color: var(--ink); margin-bottom: 20px; font-weight: 500;">Serahkan uang tunai ke kasir. Asisten akan membuka sesi kamera Anda dari sistem.</p>
+                    
+                    <button class="btn-confirm" onclick="prosesPembayaran('cash')" style="background: var(--blue);">Buka Kamera Sekarang ›</button>
+                </div>
+
+                <!-- LOADING OVERLAY -->
+                <div class="loading-overlay" id="loading-overlay">
+                    <div style="font-size: 3rem; margin-bottom: 10px;">✨</div>
+                    <h3 style="margin: 0; color: var(--ink); font-size: 1.5rem; font-weight: 700;">Pembayaran Berhasil!</h3>
+                    <p style="color: var(--ink); font-size: 1rem; margin-top: 5px; font-weight: 500;">Membuka mesin kamera...</p>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        fetch('/api/settings').then(res => res.json()).then(data => {
+            if (data.global && data.global.theme) document.body.className = data.global.theme;
+        }).catch(e => console.error("Gagal memuat tema:", e));
+        
+        let eventMode = '';
+
+        window.onload = async function() {
+            try {
+                const res = await fetch('/api/current-event');
+                const data = await res.json();
+                
+                if (data.success) {
+                    eventMode = data.event.mode; 
+                    let modeTeks = "Photobooth";
+                    if (eventMode === 'collage') modeTeks = "Photo Collage";
+                    if (eventMode === 'photobox') modeTeks = "Self Studio";
+                    if (eventMode === 'newspaper') modeTeks = "Newspaper";
+                    document.getElementById('lbl-mode').innerText = modeTeks;
+                } else {
+                    window.location.href = '/event-manager.html';
+                }
+            } catch (err) { alert("Gagal memuat data event."); }
+            
+            // VARIABEL UNTUK AUTO-CHECK STATUS MIDTRANS
+            let autoCheckInterval = null;
+            let currentOrderId = null;
+
+            // --- TAMBAHAN: MENDENGARKAN SINYAL SOCKET DARI BACKEND ---
+            const socket = io();
+            socket.on('payment-success', (data) => {
+                // Pastikan sinyal ini untuk order ID yang sedang aktif di layar
+                if (data.orderId === currentOrderId) {
+                    console.log("⚡ Pembayaran masuk seketika dari Webhook!", data);
+                    
+                    // Matikan pengecekan berulang (polling) karena sudah sukses
+                    if (autoCheckInterval) clearInterval(autoCheckInterval);
+                    
+                    // Ubah UI menjadi Sukses
+                    const btnConfirm = document.querySelector('#view-qris .btn-confirm');
+                    btnConfirm.innerText = "✅ Pembayaran Berhasil!";
+                    btnConfirm.style.background = "var(--green)";
+                    
+                    // Pindah layar ke kamera
+                    prosesPembayaran('qris');
+                }
+            });
+            // FETCH PENGATURAN QRIS & GAMBAR
+            try {
+                const resSettings = await fetch('/api/settings/qris');
+                if (!resSettings.ok) throw new Error("Backend API QRIS belum berjalan (404)");
+                
+                const qrisSettings = await resSettings.json();
+                
+                const imgDisplay = document.getElementById('img-qris-display');
+                const loadingText = document.getElementById('qris-loading-text');
+                const priceDisplay = document.getElementById('qris-price-display');
+
+                if (qrisSettings.type === 'static') {
+                    imgDisplay.src = qrisSettings.staticImageUrl;
+                    imgDisplay.style.display = 'block';
+                    loadingText.style.display = 'none';
+                    // Kalau statis, harus asisten yang klik konfirmasi
+                } 
+                else if (qrisSettings.type === 'dynamic') {
+                    const resDynamic = await fetch('/api/payment/qris-dynamic');
+                    if (!resDynamic.ok) throw new Error("API Generate QRIS gagal diakses");
+                    
+                    const dataDynamic = await resDynamic.json();
+                    
+                    if (dataDynamic.success) {
+                        imgDisplay.src = dataDynamic.qrImage;
+                        imgDisplay.style.display = 'block';
+                        loadingText.style.display = 'none';
+                        
+                        priceDisplay.innerText = `Rp ${dataDynamic.amount.toLocaleString('id-ID')}`;
+                        priceDisplay.style.display = 'block';
+
+                        // SIMPAN ORDER ID DARI MIDTRANS
+                        currentOrderId = dataDynamic.orderId;
+
+                        // UBAH TEKS TOMBOL KARENA SEKARANG OTOMATIS
+                        document.querySelector('#view-qris .btn-confirm').innerText = "⏳ Menunggu Pembayaran (Otomatis)...";
+                        document.querySelector('#view-qris .btn-confirm').style.background = "var(--bg-color)";
+                        document.querySelector('#view-qris .btn-confirm').style.pointerEvents = "none"; // Disable klik manual
+                        
+                        // MULAI MENGECEK KE SERVER SETIAP 3 DETIK
+                        autoCheckInterval = setInterval(checkMidtransStatus, 3000);
+
+                    } else {
+                        loadingText.innerText = "❌ Gagal Generate QR";
+                    }
+                }
+            } catch (err) {
+                console.error("Error Fetch QRIS:", err);
+                document.getElementById('qris-loading-text').innerHTML = `<span style='color:red;'>❌ Gagal Koneksi</span><br><br><span style='font-size:0.8rem;'>${err.message}</span>`;
+            }
+
+            // FUNGSI PENGECEKAN STATUS KE MIDTRANS
+            async function checkMidtransStatus() {
+                if (!currentOrderId) return;
+                try {
+                    const res = await fetch(`/api/payment/check-status/${currentOrderId}`);
+                    const data = await res.json();
+                    
+                    // JIKA DIBAYAR (SETTLEMENT)
+                    if (data.success && data.status === 'settlement') {
+                        clearInterval(autoCheckInterval); // Hentikan pengecekan
+                        
+                        // Efek visual sukses
+                        document.querySelector('#view-qris .btn-confirm').innerText = "✅ Pembayaran Berhasil!";
+                        document.querySelector('#view-qris .btn-confirm').style.background = "var(--green)";
+                        
+                        // Lanjutkan ke kamera secara otomatis (memanggil fungsi prosesPembayaran bawaan Anda)
+                        prosesPembayaran('qris');
+                    }
+                    // Jika expire / batal
+                    else if (data.success && (data.status === 'expire' || data.status === 'cancel')) {
+                        clearInterval(autoCheckInterval);
+                        alert("⚠️ Waktu pembayaran QRIS telah habis atau dibatalkan.");
+                        window.location.href = '/idle.html'; // Kembalikan ke layar awal
+                    }
+                } catch (e) {
+                    console.log("Polling error:", e);
+                }
+            }
+        };
+        
+        function pilihMetode(metode) {
+            document.getElementById('card-qris').classList.remove('active');
+            document.getElementById('card-cash').classList.remove('active');
+            document.getElementById('view-qris').style.display = 'none';
+            document.getElementById('view-cash').style.display = 'none';
+
+            if (metode === 'qris') {
+                document.getElementById('card-qris').classList.add('active');
+                document.getElementById('view-qris').style.display = 'flex';
+            } else {
+                document.getElementById('card-cash').classList.add('active');
+                document.getElementById('view-cash').style.display = 'flex';
+            }
+        }
+
+        function prosesPembayaran(metode) {
+            if (!eventMode) return alert("Error: Mode event tidak terdeteksi!");
+            document.getElementById('loading-overlay').style.display = 'flex';
+            setTimeout(() => {
+                window.location.href = `/${eventMode}.html`;
+            }, 1500);
+        }
+    </script>
+</body>
+</html>

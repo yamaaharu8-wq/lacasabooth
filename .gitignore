@@ -1,0 +1,10 @@
+node_modules/
+dist/
+uploads/
+temp_uploads/
+*.exe
+*.dll
+app.asar
+oauth_credentials.json
+drive_credentials.json
+token.json

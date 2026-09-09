@@ -1,0 +1,29 @@
+{
+  "photobox": {
+    "sessionTimer": 300
+  },
+  "collage": {
+    "timer": 5,
+    "sessionTimer": 300,
+    "maxRetake": 3
+  },
+  "newspaper": {
+    "sessionTimer": 300,
+    "maxRetake": 0
+  },
+  "global": {
+    "theme": "theme-pop-art",
+    "customIdleScreen": null,
+    "extraPrintPrice": 15000,
+    "cameraEngine": "canon",
+    "cameraPort": "",
+    "liveViewBrightness": 100,
+    "flashWorkaround": true,
+    "livePhotoEnabled": false,
+    "cloudStorage": true,
+    "driveParentFolderId": "",
+    "printer4R": "",
+    "printerA4": ""
+  },
+  "waMessage": "Halo dari Lacasaphoto! 📸\n\nTerima kasih sudah berfoto ria bersama kami. Berikut link foto kamu:\n\n🔗 {link}"
+}
