@@ -1700,28 +1700,77 @@ const qrcodeImg = require('qrcode');
 const midtransClient = require('midtrans-client');
 
 // --- 1. Database Sederhana QRIS (Ditambah Kunci Midtrans) ---
+const qrisDataPath = path.join(userDataPath, 'qris_data.json'); // Membuat file penyimpanan permanen
+
 let qrisSettings = {
     type: 'static', 
     staticImageUrl: '/assets/qris_static.png',
     dynamicPrice: 35000,
-    midtransServerKey: '', // Disiapkan kosong untuk diisi klien
+    midtransServerKey: '', 
     midtransClientKey: '' 
 };
 
+// Mencegah data hilang saat restart dengan membaca file permanen
+if (fs.existsSync(qrisDataPath)) {
+    try {
+        const savedData = JSON.parse(fs.readFileSync(qrisDataPath, 'utf8'));
+        qrisSettings = { ...qrisSettings, ...savedData };
+    } catch(e) { console.error("Gagal membaca qris_data.json"); }
+}
+
 // --- 2. API Pengaturan ---
 expressApp.get('/api/settings/qris', (req, res) => {
-    res.json(qrisSettings);
+    let currentToken = "";
+    try {
+        // Ambil token dari settings.json agar tampil di kolom saat dashboard dibuka
+        if (fs.existsSync(settingsPath)) {
+            const dbSet = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+            if (dbSet.global && dbSet.global.cloudflareToken) {
+                currentToken = dbSet.global.cloudflareToken;
+            }
+        }
+    } catch(e) {}
+    res.json({ ...qrisSettings, cloudflareToken: currentToken });
 });
 
 expressApp.post('/api/settings/qris', express.json(), (req, res) => {
-    const { type, dynamicPrice, midtransServerKey, midtransClientKey } = req.body;
+    // Menangkap token cloudflare dari kiriman frontend
+    const { type, dynamicPrice, midtransServerKey, midtransClientKey, cloudflareToken } = req.body;
+    
     if (type) qrisSettings.type = type;
     if (dynamicPrice) qrisSettings.dynamicPrice = dynamicPrice;
     if (midtransServerKey !== undefined) qrisSettings.midtransServerKey = midtransServerKey;
     if (midtransClientKey !== undefined) qrisSettings.midtransClientKey = midtransClientKey;
-    res.json({ success: true, message: 'Pengaturan QRIS berhasil disimpan', data: qrisSettings });
-});
+    
+    // Tulis pengaturan QRIS ke file permanen
+    fs.writeFileSync(qrisDataPath, JSON.stringify(qrisSettings, null, 2));
 
+    // Masukkan Cloudflare Token ke settings.json agar dibaca oleh fungsi startCloudflareTunnel
+    if (cloudflareToken !== undefined) {
+        try {
+            if (fs.existsSync(settingsPath)) {
+                let dbSet = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+                if (!dbSet.global) dbSet.global = {};
+                
+                // Deteksi apakah ada perubahan token
+                const isTokenChanged = dbSet.global.cloudflareToken !== cloudflareToken;
+                
+                dbSet.global.cloudflareToken = cloudflareToken;
+                fs.writeFileSync(settingsPath, JSON.stringify(dbSet, null, 2));
+                
+                // [TWEAK BARU] Langsung sambungkan ke Cloudflare tanpa perlu restart aplikasi
+                if (isTokenChanged && cloudflareToken.trim() !== "") {
+                    console.log("🔄 Token baru terdeteksi! Menyambungkan ulang Cloudflare Tunnel...");
+                    startCloudflareTunnel();
+                }
+            }
+        } catch(e) {
+            console.error("Gagal menyimpan token Cloudflare:", e);
+        }
+    }
+    
+    res.json({ success: true, message: 'Pengaturan QRIS disimpan & Tunnel aktif!', data: qrisSettings });
+});
 // --- 3. API Generate QRIS Midtrans (Bisa untuk Sesi Utama & Cetak Extra) ---
 expressApp.get('/api/payment/qris-dynamic', async (req, res) => {
     try {
