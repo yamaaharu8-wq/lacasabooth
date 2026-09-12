@@ -1,12 +1,12 @@
 {
   "name": "lacasabooth.id",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Aplikasi Photobooth by Lacasaphoto",
   "main": "start.js",
   "scripts": {
     "start": "electron .",
     "desktop": "electron .",
-    "build": "electron-builder --win --x64"
+    "build": "electron-builder --win --x64 -p always"
   },
   "build": {
     "compression": "normal",

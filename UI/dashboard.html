@@ -1832,47 +1832,37 @@ function prosesSimulasiBayar() {
         alert("Kesalahan: Modul Firebase belum siap.");
     }
 }
-// === LOGIC PENGECEKAN PEMBARUAN (UPDATE) ===
+// === LOGIC PENGECEKAN PEMBARUAN KE GITHUB (VIA ELECTRON) ===
 
-// Fungsi ini bisa dipanggil saat tombol pemicu ditekan, atau dipanggil pakai setInterval
-async function cekPembaruanSistem() {
-    const btn = document.getElementById('btn-cek-update');
-    if(btn) btn.innerText = "⏳ Sedang mengecek...";
+function cekPembaruanSistem() {
+    const btn = document.getElementById('btn-cek-update'); // Sesuaikan ID dengan tombol Anda
+    if(btn) btn.innerText = "⏳ Sedang mengecek ke GitHub...";
 
     try {
-        // CONTOH: Request ke server/API Anda untuk cek update
-        // Ganti '/api/check-update' dengan URL endpoint asli Anda
-        const res = await fetch('/api/check-update'); 
-        const data = await res.json();
-
-        // Misal respon server mengembalikan { "adaUpdate": true, "versi": "2.1" }
-        if (data.adaUpdate) {
-            // Tampilkan badge di Menu Sidebar
-            const badgeMenu = document.getElementById('badge-menu-update');
-            if(badgeMenu) badgeMenu.style.display = 'inline-block';
-
-            // Tampilkan badge di Tombol Pemicu
-            const badgeBtn = document.getElementById('badge-btn-update');
-            if(badgeBtn) badgeBtn.style.display = 'inline-block';
-
-            // Notifikasi Toast bawaan sistem Anda
-            alert(`✅ Pembaruan v${data.versi} tersedia! Silakan perbarui sistem.`);
-        } else {
-            alert("Sistem Anda sudah berada di versi terbaru.");
-            // Sembunyikan jika tidak ada update
-            if(document.getElementById('badge-menu-update')) document.getElementById('badge-menu-update').style.display = 'none';
-        }
-    } catch (e) {
-        // Fallback Simulasi (Jika API belum jadi, kita paksa muncul untuk test)
-        console.log("Cek update lokal / API belum siap, simulasi update ditemukan.");
+        const { ipcRenderer } = require('electron');
         
+        // Mengirim perintah ke main.js untuk mengecek rilis terbaru di GitHub
+        ipcRenderer.send('cek-update-manual');
+        
+        window.alert("Mencari pembaruan di server...\nJika ada versi baru, layar pop-up unduhan akan otomatis muncul.");
+        
+        // Sembunyikan badge notifikasi merah karena pengecekan sudah dilakukan
         const badgeMenu = document.getElementById('badge-menu-update');
-        if(badgeMenu) badgeMenu.style.display = 'inline-block';
+        if(badgeMenu) badgeMenu.style.display = 'none';
         
-        alert("✨ Simulasi: Pembaruan terdeteksi!");
-    }
+        const badgeBtn = document.getElementById('badge-btn-update');
+        if(badgeBtn) badgeBtn.style.display = 'none';
 
-    if(btn) btn.innerHTML = `🔄 Cek Pembaruan Software <span class="badge-notif" id="badge-btn-update" style="display: inline-block;">1</span>`;
+        // Kembalikan teks tombol seperti semula setelah 3 detik
+        setTimeout(() => {
+            if(btn) btn.innerHTML = `🔄 Cek Pembaruan Software`;
+        }, 3000);
+
+    } catch (error) {
+        console.error(error);
+        window.alert("❌ Gagal terhubung ke mesin utama. Pastikan dibuka melalui aplikasi (bukan browser).");
+        if(btn) btn.innerHTML = `🔄 Cek Pembaruan Software`;
+    }
 }
 
 // Opsional: Cek secara otomatis setiap 5 menit (300.000 ms) di background

@@ -76,13 +76,9 @@ let uploadToDrive = null;
 try {
     const driveModule = require('./drive_service'); 
     uploadToDrive = driveModule.uploadToDrive;
-    
-    const frameLoader = require('./src/services/frameLoader');
-    const collageRoutes = require('./src/routes/collageRoutes');
 } catch (e) {
-    console.log("Info: Modul eksternal (Drive/Collage) diabaikan sementara.");
+    console.log("Info: Modul Google Drive belum tersedia.");
 }
-
 // =======================================================
 // 1. INISIASI EXPRESS SERVER & FOLDER
 // =======================================================
@@ -435,9 +431,12 @@ function createWindow () {
       win.show();
   });
 }
+// --- TAMBAHKAN DUA BARIS INI (Matikan unduh otomatis) ---
+autoUpdater.autoDownload = false; 
+autoUpdater.autoInstallOnAppQuit = true;
 
 electronApp.whenReady().then(() => {
-    // --- BYPASS IZIN WEBCAM ELECTRON ---
+    // --- BYPASS IZIN WEBCAM ELECTRON (TETAP DIPERTAHANKAN) ---
     session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
         if (permission === 'media') {
             callback(true); // Otomatis izinkan akses Kamera
@@ -453,24 +452,57 @@ electronApp.whenReady().then(() => {
     // ------------------------------------
 
     createWindow(); // Baru buat window setelah izin di-bypass
-if (electronApp.isPackaged) {
+
+    if (electronApp.isPackaged) {
         setTimeout(() => {
             console.log("🔍 Mengecek pembaruan aplikasi utama dari GitHub Releases...");
-            autoUpdater.checkForUpdatesAndNotify();
+            // (DIUBAH) Pakai checkForUpdates biasa, jangan AndNotify
+            autoUpdater.checkForUpdates(); 
         }, 5000); // Beri jeda 5 detik setelah aplikasi nyala agar tidak berat
     }
 });
 
-// Event Listener jika update sedang diunduh di belakang layar
-autoUpdater.on('update-available', () => {
-    console.log('🔄 Pembaruan sistem ditemukan! Sedang mengunduh di latar belakang...');
+// =======================================================
+// EVENT LISTENER AUTO-UPDATER (BAGIAN INI YANG DIUBAH TOTAL)
+// =======================================================
+
+// 1. Deteksi jika ada update
+autoUpdater.on('update-available', (info) => {
+    console.log(`🔄 Update versi ${info.version} ditemukan! Mengirim sinyal ke UI...`);
+    BrowserWindow.getAllWindows().forEach(win => {
+        win.webContents.send('update-available-alert', info.version);
+    });
 });
 
-// Otomatis restart aplikasi jika unduhan selesai
+// 2. Menerima perintah dari UI untuk mengunduh
+ipcMain.on('start-download-update', () => {
+    console.log("Mulai mengunduh update...");
+    autoUpdater.downloadUpdate();
+});
+
+
+// 3. Mengirim progress bar ke UI
+autoUpdater.on('download-progress', (progressObj) => {
+    let percent = progressObj.percent;
+    BrowserWindow.getAllWindows().forEach(win => {
+        win.webContents.send('update-progress', percent);
+    });
+});
+
+// 4. Otomatis restart jika unduhan selesai (ada jeda 3 detik)
 autoUpdater.on('update-downloaded', () => {
     console.log('✅ Update selesai diunduh. Memulai ulang aplikasi untuk memasang pembaruan...');
-    autoUpdater.quitAndInstall(); 
+    BrowserWindow.getAllWindows().forEach(win => {
+        win.webContents.send('update-ready');
+    });
+    setTimeout(() => {
+        autoUpdater.quitAndInstall(); 
+    }, 3000); 
 });
+
+// =======================================================
+// FUNGSI JENDELA APLIKASI (TETAP DIPERTAHANKAN)
+// =======================================================
 electronApp.on('window-all-closed', () => { if (process.platform !== 'darwin') electronApp.quit(); });
 
 ipcMain.on('minimize-window', () => { BrowserWindow.getFocusedWindow().minimize(); });
@@ -478,6 +510,11 @@ ipcMain.on('tutup-aplikasi', () => { console.log("🛑 Mematikan mesin..."); ele
 ipcMain.on('app-quit', () => {
     console.log("🛑 Tombol Matikan Sistem ditekan. Menutup aplikasi...");
     electronApp.quit();
+});
+// Menerima perintah cek update manual dari tombol Dashboard
+ipcMain.on('cek-update-manual', () => {
+    console.log("Mengecek pembaruan manual dari Dashboard...");
+    autoUpdater.checkForUpdates();
 });
 // =======================================================
 // [BARU] FITUR SINKRONISASI TEMPLATE DARI GITHUB
@@ -1109,7 +1146,7 @@ expressApp.post('/api/upload-webcam', (req, res) => {
         const newFileName = `foto_${9999999999999 - Date.now()}_mentah.jpg`;
         
         // --- LOGIKA PENYIMPANAN FRAME VIDEO BOOMERANG WEBCAM ---
-        if (liveFramesBase64 && liveFramesBase64.length > 0) {
+       if (liveFramesBase64 && liveFramesBase64?.length > 0) {
             if (!global.liveFramesByPhoto) global.liveFramesByPhoto = {};
             // Konversi semua base64 dari browser menjadi buffer gambar utuh
             const framesBuffer = liveFramesBase64.map(b64 => 
