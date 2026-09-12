@@ -53,7 +53,7 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Lacasabooth.id",
-      "artifactName": "Lacasabooth-Setup.exe",
+      "artifactName": "Lacasabooth-Setup V1.0.4.exe",
       "installerIcon": "UI/assets/setup-icon.ico",
       "uninstallerIcon": "UI/assets/setup-icon.ico",
       "installerHeaderIcon": "UI/assets/setup-icon.ico",
