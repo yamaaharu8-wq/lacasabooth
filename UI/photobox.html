@@ -870,7 +870,7 @@ tempCanvas.height = (video.videoHeight / video.videoWidth) * 640;
     selectedPhotos: fotoTerpilih, 
     sessionId: currentSessionId, 
     effect: efekTerpilihServer,
-    livePhoto: document.getElementById('chk-livePhoto-self')?.checked || false // <-- SUDAH DIGANTI MENJADI 'self'
+    livePhoto: document.getElementById('chk-livePhoto-self')?.checked || true // <-- SUDAH DIGANTI MENJADI 'self'
 })
                 })).json();
                 

@@ -93,6 +93,9 @@ const tempDir = path.join(userDataPath, 'temp_uploads');
 const frameDir = path.join(userDataPath, 'frames'); 
 const settingsPath = path.join(userDataPath, 'settings.json');
 const eventsPath = path.join(userDataPath, 'events.json');
+const customAssetsDir = path.join(userDataPath, 'custom_assets');
+if (!fs.existsSync(customAssetsDir)) fs.mkdirSync(customAssetsDir, { recursive: true });
+// ---------------------------------------------------------
 // ---------------------------------------------------------
 // AUTO-COPY DATABASE FRAME KE APPDATA KLIEN
 // ---------------------------------------------------------
@@ -199,6 +202,7 @@ expressApp.use(express.urlencoded({ limit: '50mb', extended: true }));
 expressApp.use(express.static(uiDir)); // Membuka akses folder UI
 expressApp.use('/uploads', express.static(uploadDir));
 expressApp.use('/frames', express.static(frameDir));
+expressApp.use('/assets', express.static(customAssetsDir));
 expressApp.use('/assets', express.static(assetsDir));
 
 const upload = multer({ dest: tempDir });
@@ -668,18 +672,17 @@ expressApp.post('/api/start-session', (req, res) => {
 // =======================================================
 const storageIdle = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, assetsDir); // Simpan di folder UI/assets agar mudah dibaca browser
+        cb(null, customAssetsDir); // [DIUBAH] Simpan di folder AppData / custom_assets
     },
     filename: (req, file, cb) => {
         const ext = path.extname(file.originalname);
-        // Selalu gunakan nama unik agar browser tidak memuat cache gambar lama
         cb(null, `custom-idle-${Date.now()}${ext}`);
     }
 });
 
 const uploadIdle = multer({ 
     storage: storageIdle,
-    limits: { fileSize: 25 * 1024 * 1024 } // Batas 25MB (untuk mengakomodasi video mp4 pendek)
+    limits: { fileSize: 25 * 1024 * 1024 } 
 });
 
 expressApp.post('/api/upload-idle', uploadIdle.single('idleFile'), (req, res) => {
@@ -690,21 +693,19 @@ expressApp.post('/api/upload-idle', uploadIdle.single('idleFile'), (req, res) =>
 
         const fileUrl = `/assets/${req.file.filename}`;
         
-        // Baca file settings.json
         let settings = {};
         if (fs.existsSync(settingsPath)) {
             settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
         }
         if (!settings.global) settings.global = {};
 
-        // Hapus file custom lama (jika ada) agar hardisk tidak cepat penuh
+        // [DIUBAH] Hapus file custom lama (jika ada) di customAssetsDir
         if (settings.global.customIdleScreen) {
             const oldFileName = path.basename(settings.global.customIdleScreen);
-            const oldFilePath = path.join(assetsDir, oldFileName);
+            const oldFilePath = path.join(customAssetsDir, oldFileName);
             if (fs.existsSync(oldFilePath)) fs.unlinkSync(oldFilePath);
         }
 
-        // Tulis ulang dengan jalur file yang baru
         settings.global.customIdleScreen = fileUrl;
         fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
 
@@ -774,7 +775,8 @@ expressApp.post('/api/upload-frame', uploadFrame.fields([
 expressApp.post('/api/upload-video', upload.single('poseVideo'), (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ success: false, message: 'Tidak ada file video' });
-        const videoPath = path.join(assetsDir, 'pose.mp4');
+        // [DIUBAH] Pindah file temp ke customAssetsDir
+        const videoPath = path.join(customAssetsDir, 'pose.mp4');
         fs.renameSync(req.file.path, videoPath);
         res.json({ success: true, message: 'Video pose berhasil diperbarui!' });
     } catch (err) {
@@ -823,20 +825,20 @@ expressApp.post('/api/factory-reset', (req, res) => {
     try {
         console.log("🧨 Memulai proses Reset Sistem ke Default...");
 
-        // 1. Hapus Gambar QRIS Toko
-        const qrisPath = path.join(assetsDir, 'qris_static.png');
+        // 1. Hapus Gambar QRIS Toko [DIUBAH KE customAssetsDir]
+        const qrisPath = path.join(customAssetsDir, 'qris_static.png');
         if (fs.existsSync(qrisPath)) fs.unlinkSync(qrisPath);
 
-        // 2. Hapus Video Panduan Pose
-        const posePath = path.join(assetsDir, 'pose.mp4');
+        // 2. Hapus Video Panduan Pose [DIUBAH KE customAssetsDir]
+        const posePath = path.join(customAssetsDir, 'pose.mp4');
         if (fs.existsSync(posePath)) fs.unlinkSync(posePath);
 
-        // 3. Hapus Custom Idle Screen (Tampilan Layar Utama Custom)
-        if (fs.existsSync(assetsDir)) {
-            const assetsFiles = fs.readdirSync(assetsDir);
+        // 3. Hapus Custom Idle Screen (Tampilan Layar Utama Custom) [DIUBAH KE customAssetsDir]
+        if (fs.existsSync(customAssetsDir)) {
+            const assetsFiles = fs.readdirSync(customAssetsDir);
             assetsFiles.forEach(file => {
                 if (file.startsWith('custom-idle-')) {
-                    fs.unlinkSync(path.join(assetsDir, file));
+                    fs.unlinkSync(path.join(customAssetsDir, file));
                 }
             });
         }
@@ -1074,7 +1076,8 @@ expressApp.post('/api/edit-template', (req, res) => {
 expressApp.post('/api/upload-qris', upload.single('qrisImage'), (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ success: false, message: 'Tidak ada file gambar' });
-        const qrisPath = path.join(assetsDir, 'qris_static.png');
+        // [DIUBAH] Pindah file temp ke customAssetsDir
+        const qrisPath = path.join(customAssetsDir, 'qris_static.png');
         fs.renameSync(req.file.path, qrisPath);
         res.json({ success: true, message: 'QRIS berhasil diperbarui!' });
     } catch (err) {
@@ -1083,8 +1086,11 @@ expressApp.post('/api/upload-qris', upload.single('qrisImage'), (req, res) => {
 });
 
 expressApp.get('/api/get-qris', (req, res) => {
-    const qrisPath = path.join(assetsDir, 'qris_static.png');
-    if (fs.existsSync(qrisPath)) {
+    // [DIUBAH] Cek dari customAssetsDir dulu, lalu ke assetsDir bawaan
+    const qrisCustomPath = path.join(customAssetsDir, 'qris_static.png');
+    const qrisDefaultPath = path.join(assetsDir, 'qris_static.png');
+
+    if (fs.existsSync(qrisCustomPath) || fs.existsSync(qrisDefaultPath)) {
         res.json({ success: true, url: `/assets/qris_static.png?t=${Date.now()}` });
     } else {
         res.json({ success: false, message: "QRIS belum diatur" });
@@ -1302,10 +1308,16 @@ expressApp.post('/api/generate-photobox',
             const dbSet = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
             if (dbSet.global && dbSet.global.livePhotoEnabled === true) isLivePhotoOn = true;
         } catch(e) {}
-        
+        // --- PASANG RADAR DEBUG DI SINI ---
+        console.log("=========================================");
+        console.log(`[DEBUG GIF] 1. Sinyal Frontend (req.body.livePhoto):`, req.body.livePhoto);
+        console.log(`[DEBUG GIF] 2. Sinyal Dashboard (isLivePhotoOn):`, isLivePhotoOn);
+        console.log(`[DEBUG GIF] 3. Jumlah Foto (req.body.selectedPhotos):`, req.body.selectedPhotos ? req.body.selectedPhotos.length : 0);
+        console.log("=========================================");
         // Syarat berlapis: Cek dari frontend (req.body.livePhoto) DAN dari Dashboard (isLivePhotoOn)
-        if (req.body.livePhoto && isLivePhotoOn && req.body.selectedPhotos && req.body.selectedPhotos.length > 0) {
-            console.log(`[FFMPEG] Merakit Live Photo Multi-Grid untuk sesi: ${activeSessionId}...`);
+        // KODE BARU (Cukup cek Dashboard dan foto yang dipilih)
+if (isLivePhotoOn && req.body.selectedPhotos && req.body.selectedPhotos.length > 0) {
+         console.log(`[FFMPEG] Merakit Live Photo Multi-Grid untuk sesi: ${activeSessionId}...`);
             const namaGif = `live_${activeSessionId}.gif`;
             pathGif = path.join(sessionDir, namaGif);
             
