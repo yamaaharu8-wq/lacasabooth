@@ -6,7 +6,7 @@
   "scripts": {
     "start": "electron .",
     "desktop": "electron .",
-    "build": "electron-builder --win --x64 -p always"
+    "build": "electron-builder --win --x64 -p never"
   },
   "build": {
     "compression": "normal",
