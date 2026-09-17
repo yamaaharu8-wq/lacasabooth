@@ -1,6 +1,7 @@
 const { google } = require('googleapis');
 const fs = require('fs');
 const path = require('path');
+const { app } = require('electron'); // <-- [BARU] Tambahkan modul electron
 
 async function uploadToDrive(filePath, folderName, parentId) {
     console.log(`\n[DRIVE-DEBUG] Memulai proses upload...`);
@@ -13,8 +14,12 @@ async function uploadToDrive(filePath, folderName, parentId) {
         throw new Error("ID Folder Utama tidak valid atau hanya berisi titik.");
     }
     parentId = parentId.split('?')[0];
-    const credPath = path.join(__dirname, 'oauth_credentials.json');
-    const tokenPath = path.join(__dirname, 'token.json');
+    
+    // --- [DIUBAH] Arahkan ke folder AppData (userData) sama seperti index.js ---
+    const userDataPath = app.getPath('userData');
+    const credPath = path.join(userDataPath, 'oauth_credentials.json');
+    const tokenPath = path.join(userDataPath, 'token.json');
+    // -------------------------------------------------------------------------
 
     if (!fs.existsSync(credPath) || !fs.existsSync(tokenPath)) {
         throw new Error("File Kredensial (oauth_credentials.json) atau Token (token.json) tidak ditemukan di folder.");

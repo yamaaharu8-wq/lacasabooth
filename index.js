@@ -1524,6 +1524,50 @@ expressApp.get('/api/get-printers', (req, res) => {
     });
 });
 
+// -------------------------------------------------------
+// [BARU] API UNTUK MEMBUAT DUPLIKAT PROFIL PRINTER
+// -------------------------------------------------------
+expressApp.post('/api/duplicate-printer', (req, res) => {
+    const { originalPrinterName, newPrinterName } = req.body;
+
+    if (!originalPrinterName || !newPrinterName) {
+        return res.status(400).json({ success: false, message: 'Nama printer asal dan nama baru wajib diisi.' });
+    }
+
+    // [PERBAIKAN]: Tambahkan $ErrorActionPreference = 'Stop' agar jika gagal, PS langsung melempar error keras
+    const psScript = `
+        $ErrorActionPreference = 'Stop';
+        $printer = Get-Printer -Name "${originalPrinterName}";
+        Add-Printer -Name "${newPrinterName}" -DriverName $printer.DriverName -PortName $printer.PortName;
+    `;
+
+    exec(`powershell.exe -Command "${psScript}"`, (error, stdout, stderr) => {
+        // [PERBAIKAN]: Cek apakah ada error dari sistem ATAU ada tulisan merah di terminal (stderr)
+        if (error || stderr) {
+            const errMsg = (error ? error.message : stderr).toLowerCase();
+            console.error('[PRINTER ERROR]', errMsg);
+            
+            // Deteksi penolakan akses (Bahasa Inggris & Indonesia)
+            if (errMsg.includes('access is denied') || errMsg.includes('access denied') || errMsg.includes('akses ditolak')) {
+                return res.status(500).json({ 
+                    success: false, 
+                    needsAdmin: true, 
+                    message: 'Akses ditolak! Aplikasi belum dijalankan sebagai Administrator.' 
+                });
+            }
+            
+            // Error lain (misal: printernya sudah ada)
+            return res.status(500).json({ 
+                success: false, 
+                message: 'Gagal menduplikasi printer. Pastikan printer asal benar atau printer baru belum ada.' 
+            });
+        }
+        
+        // Jika benar-benar sukses dan tidak ada error
+        res.json({ success: true, message: `Profil printer baru "${newPrinterName}" berhasil dibuat!` });
+    });
+});
+
 function processPrintQueue() {
     if (isPrinting || printQueue.length === 0) return;
     isPrinting = true;
@@ -1705,9 +1749,25 @@ expressApp.post('/api/send-wa', async (req, res) => {
         
         const contactId = await waClient.getNumberId(nomorFormat);
         const chatId = contactId._serialized; 
-        const pesan = `Halo dari Lacasaphoto! 📸\n\nTerima kasih sudah berfoto ria bersama kami. Berikut adalah link untuk mengunduh soft file foto estetikmu:\n\n🔗 ${linkFoto}\n\nSegera download foto kamu yaa!\nJangan lupa tag kami! ✨`;
         
-        await waClient.sendMessage(chatId, pesan);
+        // --- LOGIKA BARU: BACA PESAN DARI SETTINGS.JSON ---
+        let customPesan = "Halo dari Lacasaphoto! 📸\n\nTerima kasih sudah berfoto ria bersama kami. Berikut link foto kamu:\n\n🔗 {link}"; // Pesan cadangan
+        
+        try {
+            if (fs.existsSync(settingsPath)) {
+                const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+                if (settings.waMessage) {
+                    customPesan = settings.waMessage;
+                }
+            }
+        } catch (e) {
+            console.error("Gagal membaca pesan WA dari pengaturan:", e);
+        }
+
+        // Ganti teks {link} dengan URL asli dari parameter
+        const pesanAkhir = customPesan.replace('{link}', linkFoto);
+        
+        await waClient.sendMessage(chatId, pesanAkhir);
         return res.json({ success: true, message: 'Pesan WhatsApp berhasil dikirim!' });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Gagal mengirim pesan WhatsApp.' });
