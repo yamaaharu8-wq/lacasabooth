@@ -35,9 +35,9 @@
         .card h3 { margin: 15px 0 5px 0; font-size: 1.2rem; color: var(--ink); font-weight: 700; }
 
         #kamera-container { padding: 0; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg-color); overflow: hidden; z-index: 50; display: none; flex-direction: column; align-items: center; justify-content: center; }
-        #liveView { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1; transform: scaleX(1); transition: filter 0.3s; }
-        #previewImage { display: none; width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 2; }
-        .mirrored { transform: scaleX(-1) !important; }
+       #liveView { object-fit: cover; position: absolute; top: 50%; left: 50%; z-index: 1; transition: filter 0.3s; }
+#previewImage { display: none; object-fit: cover; position: absolute; top: 50%; left: 50%; z-index: 2; }
+.mirrored { transform: scaleX(-1) !important; }
         
         .pose-card-container { position: absolute; top: 50%; left: 20px; transform: translateY(-50%); display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 20; background: var(--paper-white); padding: 10px; width: 130px; border-radius: 15px; border: 3px solid var(--ink); box-shadow: 5px 5px 0px var(--ink); }
         .pose-card-container h3 { font-size: 0.95rem; margin: 0 0 5px 0; color: var(--ink); font-weight: 700; text-align: center; line-height: 1.2;}
@@ -166,9 +166,9 @@
     </div>
 
     <div id="kamera-container">
-        <img id="liveView" src="" class="mirrored" alt="Live View Kamera"> 
-        <video id="webcam-view" autoplay playsinline class="mirrored" style="display: none; width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1;"></video>
-<canvas id="webcam-canvas" style="display: none;"></canvas>
+        <img id="liveView" src="" alt="Live View Kamera"> 
+        <video id="webcam-view" autoplay playsinline style="display: none; object-fit: cover; position: absolute; top: 50%; left: 50%; z-index: 1;"></video>
+        <canvas id="webcam-canvas" style="display: none;"></canvas>
         <img id="previewImage" src="" alt="Preview Retake">
         <div id="jepretCountdown"></div>
         <div id="loadingTeks">✨ Tunggu sebentar ya...</div>
@@ -311,7 +311,7 @@
         fetch('/api/settings').then(res => res.json()).then(data => { if (data.global && data.global.theme) document.body.className = data.global.theme; }).catch(e => console.error("Gagal memuat tema:", e));
         
         let linkGoogleDriveUnik = ""; let targetJepretan = 1; let templateTerpilih = ""; let databaseTemplate = {}; 
-        let isMirror = true; let settingKecerahanLV = 100; let settingCountdownCollage = 5; let indexFotoSaatIni = 1; let fotoTerpilih = []; 
+        let isMirror = true; let isPortrait = false; let settingKecerahanLV = 100; let settingCountdownCollage = 5; let indexFotoSaatIni = 1; let fotoTerpilih = []; 
         let tempFotoMentahBaru = {}; let namaFileTerbaruToCetak = ""; let efekTerpilihServer = "none"; let settingFlashWorkaround = true; 
         let settingMaxRetake = 3; let retakeCounts = []; let isEventBerbayar = false; let hargaExtraCetakPerLembar = 15000; 
         let jumlahCetakDipilih = 1; let isLiveViewRunning = false; let sisaWaktuSesi = 300; let intervalTimerSesi = null; let timeoutIdleAkhir = null; 
@@ -364,7 +364,9 @@
                 if (dataSet.global?.flashWorkaround !== undefined) settingFlashWorkaround = dataSet.global.flashWorkaround;
                 if (dataSet.collage?.sessionTimer) sisaWaktuSesi = dataSet.collage.sessionTimer;
                 if (dataSet.collage?.maxRetake !== undefined) settingMaxRetake = parseInt(dataSet.collage.maxRetake);
-                
+                if (dataSet.global?.mirrorCamera !== undefined) isMirror = dataSet.global.mirrorCamera;
+                if (dataSet.global?.cameraOrientation === 'portrait') isPortrait = true; else isPortrait = false;
+                terapkanVisualKamera();
                 // --- PENENTUAN HARGA EXTRA (STATIS / DINAMIS) ---
                 let qrisType = dataQris.type || 'static';
                 if (qrisType === 'dynamic') {
@@ -401,9 +403,49 @@
         function kembaliKeFormat() { document.getElementById('panel-template').classList.remove('active-panel'); document.getElementById('panel-sub-mode').classList.add('active-panel'); }
         function toggleMirror() { 
             isMirror = !isMirror; 
-            document.getElementById('liveView').classList.toggle('mirrored', isMirror); 
-            document.querySelectorAll('.btn-mirror').forEach(btn => btn.innerText = isMirror ? "🪞 Cermin: ON" : "🪞 Cermin: OFF"); 
-            document.getElementById('webcam-view').classList.toggle('mirrored', isMirror); 
+            terapkanVisualKamera();
+        }
+
+       function terapkanVisualKamera() {
+            // Kita gunakan satuan ukuran layar mutlak
+            let w = "100vw";
+            let h = "100vh";
+            
+            // Selalu kunci titik pusat di tengah layar
+            let transformCSS = "translate(-50%, -50%) "; 
+            
+            // 1. Jika mode potret, putar 90 derajat dan silangkan ukurannya
+            if (isPortrait) {
+                transformCSS += "rotate(90deg) ";
+                w = "100vh"; 
+                h = "100vw"; 
+            }
+            
+            // 2. Jika cermin aktif, balikkan layarnya
+            if (isMirror) {
+                transformCSS += isPortrait ? "scaleY(-1) " : "scaleX(-1) "; 
+            }
+
+            // 3. Terapkan gaya ini ke LiveView, Webcam, dan Preview Sesaat sekaligus!
+            ['liveView', 'webcam-view', 'previewImage'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.style.position = "absolute";
+                    el.style.top = "50%";          // Paksa ke tengah
+                    el.style.left = "50%";         // Paksa ke tengah
+                    el.style.width = w;            // Paksa ukuran dinamis
+                    el.style.height = h;           // Paksa ukuran dinamis
+                    el.style.objectFit = "cover";  // Pastikan menutupi area tanpa gepeng
+                    
+                    // 👇 INI KUNCI ANTI-MIRING: Matikan EXIF auto-rotate bawaan browser
+                    el.style.imageOrientation = "none"; 
+                    
+                    el.style.transform = transformCSS;
+                }
+            });
+
+            // Perbarui tulisan pada tombol
+            document.querySelectorAll('.btn-mirror').forEach(btn => btn.innerText = isMirror ? "🪞 Cermin: ON" : "🪞 Cermin: OFF");
         }
         
         async function kembaliKeTemplate() { 
@@ -420,7 +462,7 @@
             templateTerpilih = idTemplate; fotoTerpilih = []; indexFotoSaatIni = 1; retakeCounts = new Array(targetJepretan).fill(settingMaxRetake);
             document.getElementById('panel-template').classList.remove('active-panel'); document.getElementById('kamera-container').style.display = 'flex';
             siapkanMiniGallery(); document.getElementById('mode-jepret').style.display = 'flex'; document.getElementById('mode-retake').style.display = 'none'; document.getElementById('previewImage').style.display = 'none'; document.getElementById('liveView').style.display = 'block';
-            document.getElementById('liveView').classList.toggle('mirrored', isMirror); document.getElementById('liveView').style.filter = `brightness(${settingKecerahanLV}%)`;
+            terapkanVisualKamera(); document.getElementById('liveView').style.filter = `brightness(${settingKecerahanLV}%)`;
             if (activeCameraMode === 'webcam') {
                 jalankanWebcam();
             } else {
@@ -542,7 +584,7 @@
         }
 
         function lanjutKeLiveView() {
-            document.getElementById('mode-jepret').style.display = 'flex'; document.getElementById('previewImage').style.display = 'none'; document.getElementById('liveView').style.display = 'block'; document.getElementById('liveView').classList.toggle('mirrored', isMirror); document.getElementById('liveView').style.filter = `brightness(${settingKecerahanLV}%)`; setTimeout(() => { fetch('/toggle-liveview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: true }) }).then(() => { if (activeCameraMode === 'webcam') {
+            document.getElementById('mode-jepret').style.display = 'flex'; document.getElementById('previewImage').style.display = 'none'; document.getElementById('liveView').style.display = 'block'; terapkanVisualKamera(); document.getElementById('liveView').style.filter = `brightness(${settingKecerahanLV}%)`; setTimeout(() => { fetch('/toggle-liveview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: true }) }).then(() => { if (activeCameraMode === 'webcam') {
                 jalankanWebcam();
             } else {
                 fetch('/toggle-liveview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: true }) });

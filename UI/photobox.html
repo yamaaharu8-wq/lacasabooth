@@ -235,8 +235,8 @@
 
     <!-- PANEL 2: KAMERA LIVE -->
     <div id="panel-kamera" class="panel">
-        <img id="liveView" src="" class="mirrored"> 
-        <video id="webcam-view" autoplay playsinline class="mirrored" style="display: none; width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1;"></video>
+       <img id="liveView" src="" style="z-index: 1;"> 
+        <video id="webcam-view" autoplay playsinline style="display: none; z-index: 1;"></video>
 <canvas id="webcam-canvas" style="display: none;"></canvas>
         <img id="previewImageOverlay" src=""> 
 
@@ -436,6 +436,7 @@
         let settingFlashWorkaround = true; 
         let settingWaktuIdleMilih = 300; 
         let activeCameraMode = 'canon'; // Default ke Canon
+        let orientasiKamera = 'lanskap';
         let webcamStream = null;
         // Sistem Pembayaran & Extra Cetak
         let isEventBerbayar = false; 
@@ -493,7 +494,28 @@
             const lpWrapper = document.getElementById('livePhotoWrapper');
             if(lpWrapper) lpWrapper.style.display = 'none';
         }
-        // -----------------------------------------------------
+       /// --- [BARU] BACA PENGATURAN ORIENTASI KAMERA DARI DASHBOARD ---
+       if (data.global) {
+           // Gunakan fallback nama variabel agar tidak gagal baca
+           let orCam = data.global.cameraOrientation || data.global.kameraOrientasi || 'landscape';
+           if (orCam === 'portrait' || orCam === 'potret') {
+               orientasiKamera = 'potret';
+           } else {
+               orientasiKamera = 'lanskap';
+           }
+
+           // 👇 TAMPILKAN LOGIKA BACA MIRROR DARI DASHBOARD DI SINI 👇
+           if (data.global.mirrorCamera !== undefined) {
+               isMirror = data.global.mirrorCamera; // Ambil status true/false dari server
+               
+               // Sesuaikan tulisan tombol di layar dengan status dari dashboard
+               const btnMirrorElem = document.getElementById('btn-mirror');
+               if (btnMirrorElem) {
+                   btnMirrorElem.innerText = isMirror ? "🪞 Cermin: ON" : "🪞 Cermin: OFF";
+               }
+           }
+       }
+        setTimeout(updateTransformKamera, 500);
         if (data.photobox?.sessionTimer) settingWaktuIdleMilih = parseInt(data.photobox.sessionTimer);
 
         if (data.global?.extraPrintPrice) hargaExtraCetakPerLembar = parseInt(data.global.extraPrintPrice);
@@ -599,12 +621,43 @@
             }
             activePanelId = idPanel;
         }
+        // === [BARU] FUNGSI MENGATUR ROTASI LAYAR KAMERA ===
+function updateTransformKamera() {
+    const liveView = document.getElementById('liveView');
+    const webcamView = document.getElementById('webcam-view');
+    
+    // Pastikan class bawaan benar-benar terhapus
+    liveView.classList.remove('mirrored');
+    webcamView.classList.remove('mirrored');
+    
+    let transformValue = '';
+    
+    if (orientasiKamera === 'potret') {
+        // scaleY(-1) digunakan untuk cermin kiri-kanan setelah layar diputar -90 derajat
+        if (isMirror) { 
+            transformValue = 'translate(-50%, -50%) rotate(-90deg) scaleY(-1)'; 
+        } else { 
+            transformValue = 'translate(-50%, -50%) rotate(-90deg)'; 
+        }
+        
+        const stylePotret = `width: 100vh; height: 100vw; object-fit: cover; position: absolute; top: 50%; left: 50%; transform: ${transformValue}; z-index: 1;`;
+        liveView.style.cssText = stylePotret;
+        webcamView.style.cssText = stylePotret;
+    } else {
+        if (isMirror) { transformValue = 'scaleX(-1)'; } 
+        else { transformValue = 'none'; }
+        
+        const styleLanskap = `width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; transform: ${transformValue}; z-index: 1;`;
+        liveView.style.cssText = styleLanskap;
+        webcamView.style.cssText = styleLanskap;
+    }
+}
 
         function toggleMirror() {
-            isMirror = !isMirror; 
-            document.getElementById('liveView').classList.toggle('mirrored', isMirror); document.getElementById('btn-mirror').innerText = isMirror ? "🪞 Cermin: ON" : "🪞 Cermin: OFF";
-            document.getElementById('webcam-view').classList.toggle('mirrored', isMirror);
-        }
+    isMirror = !isMirror; 
+    document.getElementById('btn-mirror').innerText = isMirror ? "🪞 Cermin: ON" : "🪞 Cermin: OFF";
+    updateTransformKamera(); // Panggil fungsi rotasi yang baru
+}
 
         // ==========================================
         // BUG FIX: LOGIC JEPRET KAMERA (LIVE VIEW)
@@ -621,23 +674,34 @@
     if (activeCameraMode === 'webcam') {
         const video = document.getElementById('webcam-view');
         const tempCanvas = document.createElement('canvas');
-        // Resolusi dikecilkan sedikit agar upload cepat dan jaringan aman
-        tempCanvas.width = 480; 
-        tempCanvas.height = 360;// Otomatis menghitung rasio aspek asli dari Webcam (Anti-Gepeng)
-tempCanvas.width = 640; 
-tempCanvas.height = (video.videoHeight / video.videoWidth) * 640; 
         const tCtx = tempCanvas.getContext('2d');
         
+        // Kunci dimensi GIF agar tidak berubah walau isMirror ditekan
+        let gifW = orientasiKamera === 'potret' ? 480 : 640;
+        let gifH = orientasiKamera === 'potret' ? (video.videoWidth / video.videoHeight) * 480 : (video.videoHeight / video.videoWidth) * 640;
+        
+        tempCanvas.width = gifW;
+        tempCanvas.height = gifH;
+        
         recordInterval = setInterval(() => {
-            if(isMirror) { tCtx.save(); tCtx.translate(tempCanvas.width, 0); tCtx.scale(-1, 1); }
-            tCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
-            if(isMirror) { tCtx.restore(); }
-            // Simpan frame jepretan ringan setiap 100ms
+            tCtx.save();
+            tCtx.translate(tempCanvas.width / 2, tempCanvas.height / 2);
+            
+            if (orientasiKamera === 'potret') {
+                if (isMirror) { tCtx.scale(-1, 1); } // Cermin dulu
+                tCtx.rotate(-90 * Math.PI / 180);    // Baru putar
+                // Gunakan dimensi kanvas yang ditukar untuk menggambar
+                tCtx.drawImage(video, -tempCanvas.height / 2, -tempCanvas.width / 2, tempCanvas.height, tempCanvas.width);
+            } else {
+                if (isMirror) { tCtx.scale(-1, 1); }
+                tCtx.drawImage(video, -tempCanvas.width / 2, -tempCanvas.height / 2, tempCanvas.width, tempCanvas.height);
+            }
+            
+            tCtx.restore();
             webcamFrames.push(tempCanvas.toDataURL('image/jpeg', 0.6));
-        }, 100); // 10 FPS (Akan dapat ~30 frame selama 3 detik)
+        }, 100);
     }
     // ------------------------------------------
-
     countdownLayar.style.display = 'flex';
     for (let i = timerPilihan; i > 0; i--) { countdownLayar.innerHTML = `<div class="ikon-atas">Smile!</div><div class="angka-kamera">${i}</div>`; await new Promise(r => setTimeout(r, 1000)); }
     countdownLayar.style.display = 'none';
@@ -662,29 +726,46 @@ tempCanvas.height = (video.videoHeight / video.videoWidth) * 640;
 
     teksLoading.style.display = 'block'; 
 
-    // JIKA MENGGUNAKAN WEBCAM
+   // JIKA MENGGUNAKAN WEBCAM
     if (activeCameraMode === 'webcam') {
         const video = document.getElementById('webcam-view');
         const canvas = document.getElementById('webcam-canvas');
-        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
         const ctx = canvas.getContext('2d');
         
-        if (isMirror) { ctx.translate(canvas.width, 0); ctx.scale(-1, 1); }
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        // Kunci resolusi foto di awal agar tidak mungkin jadi lanskap saat mode potret
+        let resWidth = orientasiKamera === 'potret' ? video.videoHeight : video.videoWidth;
+        let resHeight = orientasiKamera === 'potret' ? video.videoWidth : video.videoHeight;
+        canvas.width = resWidth;
+        canvas.height = resHeight;
+        
+        ctx.save();
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        
+        if (orientasiKamera === 'potret') {
+            if (isMirror) { ctx.scale(-1, 1); } // Cermin dulu
+            ctx.rotate(-90 * Math.PI / 180);    // Baru putar
+            // Gambar video menggunakan dimensi yang sudah ditukar
+            ctx.drawImage(video, -canvas.height / 2, -canvas.width / 2, canvas.height, canvas.width);
+        } else {
+            if (isMirror) { ctx.scale(-1, 1); }
+            ctx.drawImage(video, -canvas.width / 2, -canvas.height / 2, canvas.width, canvas.height);
+        }
+        ctx.restore();
+        
         const base64Image = canvas.toDataURL('image/jpeg', 0.9);
         
         await fetch('/api/upload-webcam', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 imageBase64: base64Image, 
-                isMirrored: false, // Diset false karena canvas di atas sudah membaliknya secara visual
-                liveFramesBase64: webcamFrames // KASIH DATA VIDEO KE BACKEND
+                isMirrored: false, // Sudah ditangani mutlak oleh canvas di atas
+                liveFramesBase64: webcamFrames 
             }) 
         });
     } 
     // JIKA MENGGUNAKAN CANON
     else {
-        await fetch('/capture', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'photobox', mirror: isMirror, lvActive: settingFlashWorkaround }) });
+       await fetch('/capture', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'photobox', mirror: isMirror, lvActive: settingFlashWorkaround, orientation: orientasiKamera }) });
     }
     
     let fotoBaruDitemukan = false; let waktuTunggu = 0; let namaFotoBaru = ""; let urlFotoBaru = "";
@@ -709,9 +790,19 @@ tempCanvas.height = (video.videoHeight / video.videoWidth) * 640;
         const imgHasil = new Image();
         imgHasil.onload = function() { 
             teksLoading.style.display = 'none'; 
-            document.getElementById('liveView').classList.remove('mirrored');
-            document.getElementById('liveView').style.filter = "brightness(100%)";
-            document.getElementById('liveView').src = imgHasil.src; 
+            
+            const lv = document.getElementById('liveView');
+            lv.classList.remove('mirrored');
+            lv.style.filter = "brightness(100%)";
+            
+            // 👇 [PERBAIKAN] Reset posisi CSS agar foto matang tidak ikut terotasi
+            lv.style.transform = 'none';
+            lv.style.width = '100%';
+            lv.style.height = '100%';
+            lv.style.top = '0';
+            lv.style.left = '0';
+            
+            lv.src = imgHasil.src; 
         };
         imgHasil.onerror = function() { teksLoading.style.display = 'none'; };
         imgHasil.src = `${urlFotoBaru}?t=${Date.now()}`;
@@ -719,10 +810,11 @@ tempCanvas.height = (video.videoHeight / video.videoWidth) * 640;
 
     await new Promise(r => setTimeout(r, 1500)); 
 
-    if (activePanelId === 'panel-kamera') {
-        document.getElementById('liveView').classList.toggle('mirrored', isMirror); 
+   if (activePanelId === 'panel-kamera') {
+        // Hapus paksa class mirrored agar tidak merusak rotasi potret kita
+        document.getElementById('liveView').classList.remove('mirrored'); 
         document.getElementById('liveView').style.filter = `brightness(${settingKecerahanLV}%)`;
-        
+        updateTransformKamera(); // Panggil ulang rotasi yang benar
         if (activeCameraMode === 'webcam') {
             jalankanWebcam();
         } else {
@@ -870,7 +962,7 @@ tempCanvas.height = (video.videoHeight / video.videoWidth) * 640;
     selectedPhotos: fotoTerpilih, 
     sessionId: currentSessionId, 
     effect: efekTerpilihServer,
-    livePhoto: document.getElementById('chk-livePhoto-self')?.checked || true // <-- SUDAH DIGANTI MENJADI 'self'
+   livePhoto: document.getElementById('chk-livePhoto-studio')?.checked ?? true
 })
                 })).json();
                 
@@ -1098,7 +1190,7 @@ function jalankanWebcam() {
     const vid = document.getElementById('webcam-view');
     vid.style.display = 'block'; // Tampilkan Webcam
     
-    navigator.mediaDevices.getUserMedia({ video: { width: 1920, height: 1080 } })
+    navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1920 }, height: { ideal: 1080 } } })
         .then(stream => { webcamStream = stream; vid.srcObject = stream; })
         .catch(err => { alert("Webcam gagal diakses atau tidak diizinkan browser!"); });
 }

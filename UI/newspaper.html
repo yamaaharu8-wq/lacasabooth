@@ -219,9 +219,9 @@
     </div>
 
     <div id="kamera-container">
-        <img id="liveView" src="" class="mirrored" alt="Live View Kamera"> 
-        <video id="webcam-view" autoplay playsinline class="mirrored" style="display: none; width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1;"></video>
-<canvas id="webcam-canvas" style="display: none;"></canvas>
+        <img id="liveView" src="" alt="Live View Kamera"> 
+        <video id="webcam-view" autoplay playsinline style="display: none; z-index: 1;"></video>
+        <canvas id="webcam-canvas" style="display: none;"></canvas>
         <img id="previewImage" src="" alt="Preview Retake">
         <div id="jepretCountdown"></div>
         <div id="loadingTeks">✨ Tunggu sebentar ya...</div>
@@ -389,7 +389,7 @@
         }).catch(e => console.error("Gagal memuat tema:", e));
 
         let targetJepretan = 1; let kodeFormat = ""; let templateTerpilih = ""; let databaseTemplate = {}; 
-        let isMirror = true; let settingKecerahanLV = 100; let settingCountdown = 5;
+        let isMirror = true; let isPortrait = false; let settingKecerahanLV = 100; let settingCountdown = 5;
         let settingMaxRetake = 3; let retakeCounts = []; 
         let linkGoogleDriveUnik = "https://drive.google.com/"; 
         let indexFotoSaatIni = 1; let fotoTerpilih = []; let tempFotoMentahBaru = {}; let namaFileTerbaruToCetak = ""; 
@@ -448,7 +448,9 @@
                 if (dataSet.newspaper?.sessionTimer) sisaWaktuSesi = dataSet.newspaper.sessionTimer; else if (dataSet.collage?.sessionTimer) sisaWaktuSesi = dataSet.collage.sessionTimer;
                 
                 if (dataSet.newspaper?.maxRetake !== undefined) { settingMaxRetake = parseInt(dataSet.newspaper.maxRetake); } else if (dataSet.collage?.maxRetake !== undefined) { settingMaxRetake = parseInt(dataSet.collage.maxRetake); }
-                
+                if (dataSet.global?.mirrorCamera !== undefined) isMirror = dataSet.global.mirrorCamera;
+                if (dataSet.global?.cameraOrientation === 'portrait') isPortrait = true; else isPortrait = false;
+                terapkanVisualKamera();
                 // --- PENENTUAN HARGA EXTRA (STATIS / DINAMIS) ---
                 let qrisType = dataQris.type || 'static';
                 if (qrisType === 'dynamic') {
@@ -492,9 +494,40 @@
         function kembaliKeFormat() { document.getElementById('panel-template').classList.remove('active-panel'); document.getElementById('panel-sub-mode').classList.add('active-panel'); }
        function toggleMirror() { 
             isMirror = !isMirror; 
-            document.getElementById('liveView').classList.toggle('mirrored', isMirror); 
-            document.getElementById('btn-mirror').innerText = isMirror ? "🪞 Cermin: ON" : "🪞 Cermin: OFF"; 
-            document.getElementById('webcam-view').classList.toggle('mirrored', isMirror); 
+            terapkanVisualKamera();
+        }
+
+        function terapkanVisualKamera() {
+            let w = "100vw";
+            let h = "100vh";
+            let transformCSS = "translate(-50%, -50%) "; 
+            
+            if (isPortrait) {
+                transformCSS += "rotate(90deg) ";
+                w = "100vh"; 
+                h = "100vw"; 
+            }
+            
+            if (isMirror) {
+                transformCSS += isPortrait ? "scaleY(-1) " : "scaleX(-1) "; 
+            }
+
+            ['liveView', 'webcam-view', 'previewImage'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.style.position = "absolute";
+                    el.style.top = "50%";
+                    el.style.left = "50%";
+                    el.style.width = w;
+                    el.style.height = h;
+                    el.style.objectFit = "cover";
+                    el.style.imageOrientation = "none"; // Anti-miring (Matikan Exif Rotate)
+                    el.style.transform = transformCSS;
+                }
+            });
+
+            const btnMirror = document.getElementById('btn-mirror');
+            if(btnMirror) btnMirror.innerText = isMirror ? "🪞 Cermin: ON" : "🪞 Cermin: OFF";
         }
         
          async function kembaliKeTemplate() { 

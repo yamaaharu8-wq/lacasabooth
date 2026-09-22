@@ -347,6 +347,24 @@
                         </select>
                     </div>
                     <div class="form-group">
+    <label>Orientasi Tampilan Kamera</label>
+    <select id="sys-cameraOrientation" onchange="cekPeringatanPotret(this.value, true)">
+        <option value="landscape">Lanskap (Normal - Horizontal)</option>
+        <option value="portrait">Potret (Miring 90° - Vertikal)</option>
+    </select>
+    <div id="warning-portrait" style="display: none; color: #ef4444; font-size: 0.85rem; font-weight: 600; margin-top: 8px; background: #fee2e2; padding: 8px; border-radius: 6px; border: 1px solid #fca5a5;">
+        ⚠️ <b>Perhatian:</b> Mode Potret dipilih. Fitur Cermin (Mirror) telah dimatikan otomatis (OFF) agar hasil tidak terbalik.
+    </div>
+</div>
+
+<div class="form-group">
+    <label>Efek Cermin (Mirror) Layar Kamera</label>
+    <select id="sys-mirrorCamera">
+        <option value="false">OFF (Normal)</option>
+        <option value="true">ON (Cermin / Flipped)</option>
+    </select>
+</div>
+<div class="form-group">
                         <label>Port Kamera / IP (Opsional)</label>
                         <input type="text" id="sys-cameraPort" placeholder="Contoh: COM3, /dev/video0, atau Kosongkan">
                     </div>
@@ -1027,6 +1045,27 @@
             tutupSidebarMobile();
             if(id === 'tab-analytic') loadAnalyticData();
         }
+        // === FUNGSI PERINGATAN MODE POTRET ===
+        function cekPeringatanPotret(nilai, isManualChange = false) {
+            const warningBox = document.getElementById('warning-portrait');
+            const mirrorSelect = document.getElementById('sys-mirrorCamera');
+            
+            if (nilai === 'portrait') {
+                // Tampilkan kotak merah peringatan
+                if (warningBox) warningBox.style.display = 'block';
+                
+                // Jika user yang mengklik ganti (bukan saat awal load), munculkan pop-up & matikan cermin
+                if (isManualChange) {
+                    alert("⚠️ Mode Potret Diaktifkan!\n\nSistem otomatis mengubah efek cermin (Mirror) menjadi OFF agar hasil foto tidak terbalik.");
+                    if (mirrorSelect) {
+                        mirrorSelect.value = "false"; // Otomatis ubah cermin jadi OFF
+                    }
+                }
+            } else {
+                // Sembunyikan peringatan jika kembali ke lanskap
+                if (warningBox) warningBox.style.display = 'none';
+            }
+        }
 
         // --- SISTEM PENGATURAN API ---
         async function muatPengaturan() {
@@ -1056,6 +1095,15 @@ document.getElementById('sys-adminPin').value = data.global?.adminPin || "1234";
 togglePinInput(); // Panggil agar UI menyesuaikan saat dimuat
 
                 document.getElementById('sys-cameraEngine').value = data.global?.cameraEngine || "canon";
+               // Load status cermin dari server
+               if (document.getElementById('sys-cameraOrientation')) {
+            const orientasi = data.global?.cameraOrientation || "landscape";
+            document.getElementById('sys-cameraOrientation').value = orientasi;
+            cekPeringatanPotret(orientasi, false); // <-- Cek status saat halaman dimuat
+        }
+                if (document.getElementById('sys-mirrorCamera')) {
+                    document.getElementById('sys-mirrorCamera').value = data.global?.mirrorCamera ? "true" : "false";
+                }
                 document.getElementById('sys-cameraPort').value = data.global?.cameraPort || "";
                 document.getElementById('sys-brightness').value = data.global?.liveViewBrightness || "100";
                 document.getElementById('sys-flashWorkaround').value = data.global?.flashWorkaround !== undefined ? data.global.flashWorkaround.toString() : "true";
@@ -1109,6 +1157,8 @@ togglePinInput(); // Panggil agar UI menyesuaikan saat dimuat
                         maxRetake: parseInt(getVal('clg-maxRetake', 0)) || 0
                     },
                     global: { 
+                        cameraOrientation: getVal('sys-cameraOrientation', 'landscape'),
+                        mirrorCamera: getVal('sys-mirrorCamera', 'false') === "true", // Baris tambahan untuk simpan cermin
                         // Konfigurasi PIN Baru
                         usePin: getCheck('sys-usePin'),
                         adminPin: getVal('sys-adminPin', '1234'),
@@ -1130,6 +1180,7 @@ togglePinInput(); // Panggil agar UI menyesuaikan saat dimuat
                         printer4R: getVal('sys-printer4R', ''),  
                         printerA4: getVal('sys-printerA4', ''),
                         cloudflareToken: getVal('input-cf-token', '') 
+                        
                     },
                     waMessage: getVal('wa-message-text', '')
                 };
