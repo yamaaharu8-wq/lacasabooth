@@ -1,3 +1,4 @@
+const chokidar = require('chokidar'); // <-- Tambahkan ini
 const { app: electronApp, BrowserWindow, ipcMain, session } = require('electron');
 const path = require('path');
 const koffi = require('koffi');
@@ -9,11 +10,11 @@ const fs = require('fs');
 const { google } = require('googleapis');
 const { autoUpdater } = require('electron-updater');
 
-// Atur agar auto-update berjalan diam-diam tanpa mengganggu klien
-autoUpdater.autoDownload = true;
-autoUpdater.autoInstallOnAppQuit = true;
+
 // 1. DEKLARASIKAN FOLDER AMAN UNTUK MENULIS DATA (AppData)
 const userDataPath = electronApp.getPath('userData');
+const watchFolder = path.join(userDataPath, 'hot_folder');
+if (!fs.existsSync(watchFolder)) fs.mkdirSync(watchFolder, { recursive: true });
 
 // 2. UBAH PATH DINAMIS MENGGUNAKAN userDataPath
 const TOKEN_PATH = path.join(userDataPath, 'token.json');
@@ -234,13 +235,18 @@ function getBrowserPath() {
     return null; // Biarkan Puppeteer mencoba mencari sendiri jika semua path gagal
 }
 // =======================================================
-// 2. 🤖 SISTEM WHATSAPP BOT LOKAL
+// 2. 🤖 SISTEM WHATSAPP BOT LOKAL (SESI PERMANEN & ANTI BUG)
 // =======================================================
+const waSessionPath = path.join(userDataPath, 'wa_session');
 const waClient = new Client({
-    authStrategy: new LocalAuth({ dataPath: path.join(userDataPath, 'wa_session') }), 
+    // Menambahkan clientId agar sesi terikat kuat dan permanen
+    authStrategy: new LocalAuth({ 
+        clientId: "lacasabooth-bot",
+        dataPath: waSessionPath 
+    }), 
     puppeteer: {
         headless: true,
-       executablePath: getBrowserPath(),
+        executablePath: getBrowserPath(),
         args: [
             '--no-sandbox', 
             '--disable-setuid-sandbox', 
@@ -262,7 +268,7 @@ waClient.on('qr', (qr) => {
 });
 
 waClient.on('ready', () => {
-    console.log('[WA] ✅ Bot WhatsApp Siap Digunakan!');
+    console.log('[WA] ✅ Bot WhatsApp Siap Digunakan (Sesi Permanen Aktif)!');
     waBotStatus = 'READY';
     waBotQr = '';
 });
@@ -285,16 +291,28 @@ expressApp.get('/api/wa-status', (req, res) => {
     res.json({ status: waBotStatus, qr: waBotQr });
 });
 
+// [PERBAIKAN] Logika Logout WA yang menghapus folder sesi hingga bersih
 expressApp.post('/api/wa-logout', async (req, res) => {
     try {
-        await waClient.logout();
-        waBotStatus = 'STARTING';
-        waBotQr = '';
-        waClient.initialize();
-        res.json({ success: true });
-    } catch (e) {
-        res.json({ success: false });
+        console.log("Memproses Logout WA...");
+        await waClient.logout().catch(e => {});
+        await waClient.destroy().catch(e => {});
+    } catch (e) {}
+
+    // Hapus paksa folder token lama agar WA tidak mendeteksi sebagai spam
+    if (fs.existsSync(waSessionPath)) {
+        try {
+            fs.rmSync(waSessionPath, { recursive: true, force: true });
+            console.log("✅ Folder sesi WA lama berhasil dihapus.");
+        } catch (err) {
+            console.error("Gagal menghapus folder sesi WA:", err.message);
+        }
     }
+
+    waBotStatus = 'STARTING';
+    waBotQr = '';
+    waClient.initialize();
+    res.json({ success: true });
 });
 
 // =======================================================
@@ -313,6 +331,7 @@ const EdsGetChildAtIndex = edsdk.func('EdsError EdsGetChildAtIndex(EdsBaseRef in
 const EdsOpenSession = edsdk.func('EdsError EdsOpenSession(EdsBaseRef inCameraRef)');
 const EdsSendCommand = edsdk.func('EdsError EdsSendCommand(EdsBaseRef inCameraRef, uint32 inCommand, int32 inParam)');
 const EdsSetPropertyData = edsdk.func('EdsError EdsSetPropertyData(EdsBaseRef inRef, uint32 inPropertyID, int32 inParam, uint32 inPropertySize, const void* inPropertyData)');
+const EdsSendStatusCommand = edsdk.func('EdsError EdsSendStatusCommand(EdsBaseRef inCameraRef, uint32 inStatusCommand, int32 inParam)');
 const EdsSetCapacity = edsdk.func('EdsError EdsSetCapacity(EdsBaseRef inCameraRef, EdsCapacity inCapacity)'); 
 const EdsCreateFileStream = edsdk.func('EdsError EdsCreateFileStream(const char* inFileName, int32 inCreateDisposition, int32 inDesiredAccess, _Out_ EdsBaseRef* outStream)');
 const EdsDownload = edsdk.func('EdsError EdsDownload(EdsBaseRef inDirItemRef, uint32 inReadSize, EdsBaseRef inStream)');
@@ -353,10 +372,19 @@ function hubungkanKamera() {
 
     if (EdsOpenSession(activeCamera) === 0) {
         console.log("✅ BERHASIL MASUK! Kamera Canon siap dikendalikan.");
+        
+        // 1. Set kamera menyimpan foto ke PC
         const saveTo = Buffer.alloc(4); saveTo.writeUInt32LE(2); 
         EdsSetPropertyData(activeCamera, 0x000B, 0, 4, saveTo);
+        
+        // 2. Set kapasitas HDD PC agar kamera mau menjepret
         const kapasitasPC = { numberOfFreeClusters: 0x7FFFFFFF, bytesPerSector: 512, reset: 1 };
         EdsSetCapacity(activeCamera, kapasitasPC);
+        
+        // 3. [BARU] Buka Kunci Tombol Bodi Kamera (UI Unlock = 1)
+        EdsSendStatusCommand(activeCamera, 1, 0); 
+        
+        // 4. Pasang pendengar jepretan
         EdsSetObjectEventHandler(activeCamera, 0x0200, callbackPenarikFoto, null);
     } else {
         console.log("❌ Gagal membuka sesi kamera. Coba cabut-colok USB.");
@@ -369,7 +397,7 @@ const MAX_LIVE_FRAMES = 50; // Menyimpan ~2 detik terakhir dari Live View
 
 function startLiveView() {
     if (lvInterval || !activeCamera) return;
-    const devicePC = Buffer.alloc(4); devicePC.writeUInt32LE(2);
+    const devicePC = Buffer.alloc(4); devicePC.writeUInt32LE(3);
     EdsSetPropertyData(activeCamera, 0x00000500, 0, 4, devicePC);
 
     lvInterval = setInterval(() => {
@@ -467,10 +495,32 @@ electronApp.whenReady().then(() => {
 });
 
 // =======================================================
-// EVENT LISTENER AUTO-UPDATER (BAGIAN INI YANG DIUBAH TOTAL)
+// EVENT LISTENER AUTO-UPDATER & SINGLE INSTANCE LOCK
 // =======================================================
 
-// 1. Deteksi jika ada update
+// 1. Mencegah aplikasi dibuka 2 kali secara bersamaan (Mencegah Port 3000 Error)
+const gotTheLock = electronApp.requestSingleInstanceLock();
+if (!gotTheLock) {
+    electronApp.quit();
+} else {
+    electronApp.on('second-instance', () => {
+        const windows = BrowserWindow.getAllWindows();
+        if (windows.length) {
+            if (windows[0].isMinimized()) windows[0].restore();
+            windows[0].focus();
+        }
+    });
+}
+
+// 2. Tangkap error jika gagal mengunduh (Ini yang menyebabkan stuck 0% sebelumnya)
+autoUpdater.on('error', (err) => {
+    console.error("❌ Auto-updater error:", err);
+    BrowserWindow.getAllWindows().forEach(win => {
+        win.webContents.send('update-error', err.message || "Gagal mengunduh pembaruan. Pastikan internet stabil.");
+    });
+});
+
+// 3. Deteksi jika ada update
 autoUpdater.on('update-available', (info) => {
     console.log(`🔄 Update versi ${info.version} ditemukan! Mengirim sinyal ke UI...`);
     BrowserWindow.getAllWindows().forEach(win => {
@@ -478,22 +528,23 @@ autoUpdater.on('update-available', (info) => {
     });
 });
 
-// 2. Menerima perintah dari UI untuk mengunduh
+// 4. Menerima perintah dari UI untuk mengunduh
 ipcMain.on('start-download-update', () => {
     console.log("Mulai mengunduh update...");
-    autoUpdater.downloadUpdate();
+    // Gunakan catch untuk menangkap kegagalan awal
+    autoUpdater.downloadUpdate().catch(err => console.error("Gagal memulai unduhan:", err));
 });
 
-
-// 3. Mengirim progress bar ke UI
+// 5. Mengirim progress bar ke UI
 autoUpdater.on('download-progress', (progressObj) => {
     let percent = progressObj.percent;
+    console.log(`Progress Update: ${percent.toFixed(2)}%`);
     BrowserWindow.getAllWindows().forEach(win => {
         win.webContents.send('update-progress', percent);
     });
 });
 
-// 4. Otomatis restart jika unduhan selesai (ada jeda 3 detik)
+// 6. Otomatis restart jika unduhan selesai (ada jeda 3 detik)
 autoUpdater.on('update-downloaded', () => {
     console.log('✅ Update selesai diunduh. Memulai ulang aplikasi untuk memasang pembaruan...');
     BrowserWindow.getAllWindows().forEach(win => {
@@ -521,13 +572,13 @@ ipcMain.on('cek-update-manual', () => {
     autoUpdater.checkForUpdates();
 });
 // =======================================================
-// [BARU] FITUR SINKRONISASI TEMPLATE DARI GITHUB
+// [BARU] FITUR SINKRONISASI TEMPLATE DARI GITHUB (FIXED ASYNC)
 // =======================================================
 ipcMain.handle('sync-templates', async (event, githubBaseUrl) => {
     return new Promise((resolve, reject) => {
-        const dbPath = path.join(userDataPath, 'database_frame.json');
-        const frameDir = path.join(userDataPath, 'frames');
-        if (!fs.existsSync(frameDir)) fs.mkdirSync(frameDir, { recursive: true });
+        const dbPathSync = path.join(userDataPath, 'database_frame.json');
+        const frameDirSync = path.join(userDataPath, 'frames');
+        if (!fs.existsSync(frameDirSync)) fs.mkdirSync(frameDirSync, { recursive: true });
 
         // 1. Unduh file database_frame.json dari GitHub
         const dbUrl = `${githubBaseUrl}/database_frame.json`;
@@ -537,41 +588,50 @@ ipcMain.handle('sync-templates', async (event, githubBaseUrl) => {
             
             let data = '';
             res.on('data', chunk => data += chunk);
-            res.on('end', () => {
+            res.on('end', async () => {
                 try {
                     const dbBaru = JSON.parse(data);
                     
                     // 2. Timpa file database di PC Klien
-                    fs.writeFileSync(dbPath, JSON.stringify(dbBaru, null, 4));
+                    fs.writeFileSync(dbPathSync, JSON.stringify(dbBaru, null, 4));
 
                     // 3. Cari daftar nama gambar yang perlu diunduh
                     let filesToDownload = [];
                     for (let format in dbBaru) {
                         dbBaru[format].forEach(template => {
-                            filesToDownload.push(`${template.id}.png`); // Gambar Frame Asli
+                            filesToDownload.push(`${template.id}.png`); 
                             if (template.img) {
                                 const thumbName = template.img.replace('/frames/', '');
-                                filesToDownload.push(thumbName); // Gambar Thumbnail
+                                filesToDownload.push(thumbName); 
                             }
                         });
                     }
 
-                    // 4. Unduh gambar satu per satu dari folder /frames/ di GitHub
-                    let downloadedCount = 0;
-                    filesToDownload.forEach(fileName => {
-                        const fileUrl = `${githubBaseUrl}/frames/${fileName}`;
-                        const filePath = path.join(frameDir, fileName);
-                        
-                        const fileStream = fs.createWriteStream(filePath);
-                        https.get(fileUrl, (imgRes) => {
-                            if(imgRes.statusCode === 200) {
-                                imgRes.pipe(fileStream);
-                                fileStream.on('finish', () => fileStream.close());
-                            }
-                        }).on('error', () => { /* Abaikan jika ada 1 gambar gagal agar tidak crash */ });
+                    // 4. Proses Unduh Gambar Paralel dan TUNGGU sampai semuanya selesai
+                    const downloadPromises = filesToDownload.map(fileName => {
+                        return new Promise((resolveDl) => {
+                            const fileUrl = `${githubBaseUrl}/frames/${fileName}`;
+                            const filePath = path.join(frameDirSync, fileName);
+                            
+                            const fileStream = fs.createWriteStream(filePath);
+                            https.get(fileUrl, (imgRes) => {
+                                if(imgRes.statusCode === 200) {
+                                    imgRes.pipe(fileStream);
+                                    fileStream.on('finish', () => {
+                                        fileStream.close();
+                                        resolveDl(); // Selesai 1 gambar
+                                    });
+                                } else {
+                                    resolveDl(); // Lanjut jika gambar 404 agar tidak error total
+                                }
+                            }).on('error', () => resolveDl());
+                        });
                     });
 
+                    // Tunggu semua gambar beres didownload
+                    await Promise.all(downloadPromises);
                     resolve({ success: true, message: "Sinkronisasi berhasil! Refresh halaman ini." });
+
                 } catch (err) {
                     reject({ error: "Format JSON di GitHub salah." });
                 }
@@ -1116,7 +1176,9 @@ expressApp.post('/capture', async (req, res) => {
     let isLivePhotoOn = false;
     try {
         const dbSet = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
-        if (dbSet.global && dbSet.global.livePhotoEnabled === true) isLivePhotoOn = true;
+        if (dbSet.global && (dbSet.global.livePhotoEnabled === true || dbSet.global.livePhotoEnabled === "true")) {
+    isLivePhotoOn = true;
+}
     } catch(e) {}
 
     // Kunci rekaman HANYA jika fitur Live Photo diaktifkan di Dashboard
@@ -1189,12 +1251,55 @@ expressApp.post('/api/upload-webcam', (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
+// =======================================================
+// [BARU] HOT FOLDER WATCHER (Pendeteksi Jepretan Otomatis)
+// =======================================================
+const watcher = chokidar.watch(watchFolder, {
+    ignored: /(^|[\/\\])\../,
+    persistent: true,
+    awaitWriteFinish: {
+        stabilityThreshold: 500, // Tunggu 500ms hingga file selesai ditulis oleh kamera
+        pollInterval: 100
+    }
+});
+
+watcher.on('add', (filePath) => {
+    if (filePath.toLowerCase().endsWith('.jpg') || filePath.toLowerCase().endsWith('.png')) {
+        const newFileName = `foto_${9999999999999 - Date.now()}_mentah.jpg`;
+        const sessionDir = path.join(uploadDir, activeSessionId);
+        if (!fs.existsSync(sessionDir)) fs.mkdirSync(sessionDir, { recursive: true });
+        
+        const finalFilePath = path.join(sessionDir, newFileName);
+
+        try {
+            // Salin file dari Hot Folder ke folder Sesi Aktif
+            fs.copyFileSync(filePath, finalFilePath);
+            // Hapus file asli di hot folder agar tidak menumpuk
+            fs.unlinkSync(filePath); 
+            
+            console.log(`📸 [HOT FOLDER] Shutter Fisik Ditekan! Foto masuk: ${newFileName}`);
+            
+            // 1. Pancarkan sinyal WebSocket ke UI
+            io.emit('foto-baru', { namaFile: newFileName });
+
+            // 2. Kirim sinyal IPC langsung ke Jendela Electron (Frontend HTML)
+            BrowserWindow.getAllWindows().forEach(win => {
+                win.webContents.send('shutter-fisik-ditekan', { 
+                    namaFile: newFileName, 
+                    url: `/uploads/${activeSessionId}/${newFileName}` 
+                });
+            });
+        } catch (err) {
+            console.error("❌ Gagal memproses file dari Hot Folder:", err);
+        }
+    }
+});
 
 // =======================================================
 // 8. MESIN PENGURUS FILE FOTO (EVENT CALLBACK NATIVE)
 // =======================================================
 const callbackPenarikFoto = koffi.register((inEvent, inRef, inContext) => {
-    if (inEvent === 0x0208) {
+    if (inEvent === 0x0208) { // 0x0208 = Event file foto baru dibuat dari Kamera Canon
         const itemInfo = Buffer.alloc(512);
         EdsGetDirectoryItemInfo(inRef, itemInfo);
         const fileSize = itemInfo.readUInt32LE(0); 
@@ -1204,7 +1309,7 @@ const callbackPenarikFoto = koffi.register((inEvent, inRef, inContext) => {
         if (!global.liveFramesByPhoto) global.liveFramesByPhoto = {};
         global.liveFramesByPhoto[newFileName] = {
             buffer: global.lastCapturedLiveFrames || [],
-            isMirrored: global.currentMirrorStatus // Ingat apakah foto ini pakai cermin atau tidak
+            isMirrored: global.currentMirrorStatus
         };
         const sessionDir = path.join(uploadDir, activeSessionId);
         if (!fs.existsSync(sessionDir)) fs.mkdirSync(sessionDir, { recursive: true });
@@ -1221,19 +1326,32 @@ const callbackPenarikFoto = koffi.register((inEvent, inRef, inContext) => {
 
         console.log(`📥 MENGUNDUH DARI KAMERA: ${newFileName} (Menuju sesi: ${activeSessionId})`);
         
+        // Fungsi pembantu untuk mengirim sinyal ke UI
+        const notifyUI = () => {
+            io.emit('foto-baru', { namaFile: newFileName });
+            
+            // Send sinyal ke frontend bahwa shutter fisik telah menjepret
+            BrowserWindow.getAllWindows().forEach(win => {
+                win.webContents.send('shutter-fisik-ditekan', { 
+                    namaFile: newFileName, 
+                    url: `/uploads/${activeSessionId}/${newFileName}` 
+                });
+            });
+        };
+
         if (global.currentMirrorStatus === true) {
             sharp(tempFilePath).flop().toBuffer().then(buf => {
                 fs.writeFileSync(finalFilePath, buf);
                 if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
                 console.log(`✅ FOTO BERHASIL DI-MIRROR: ${newFileName}`);
-                io.emit('foto-baru', { namaFile: newFileName });
+                notifyUI();
             }).catch(err => {
                 console.error("❌ Gagal melakukan mirror:", err);
             });
         } else {
             fs.renameSync(tempFilePath, finalFilePath);
             console.log(`✅ FOTO MASUK NORMAL: ${newFileName}`);
-            io.emit('foto-baru', { namaFile: newFileName });
+            notifyUI();
         }
     }
     return 0; 
@@ -1255,8 +1373,7 @@ expressApp.get('/api/photobox-raws', (req, res) => {
     } catch (err) { res.json({ success: false, message: err.message }); }
 });
 
-expressApp.post('/api/generate-photobox', 
-    async (req, res) => {
+expressApp.post('/api/generate-photobox', async (req, res) => {
     try {
         let db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
         let templateData = null;
@@ -1267,13 +1384,56 @@ expressApp.post('/api/generate-photobox',
         if (!templateData) return res.status(400).json({ success: false, message: "Template tidak ditemukan!" });
         
         const sessionDir = path.join(uploadDir, activeSessionId);
+        let statusRotasiFoto = []; // Menyimpan status apakah video GIF nanti perlu ikut diputar
         
         const prosesFotoPromises = req.body.selectedPhotos.map(async (fotoName, i) => {
             const coord = templateData.layout.coords[i];
             const w = coord.width || templateData.layout.width;
             const h = coord.height || templateData.layout.height;
             
-            let imgPipeline = sharp(path.join(sessionDir, fotoName)).resize({ width: w, height: h, fit: 'cover' });
+            const rawPhotoPath = path.join(sessionDir, fotoName);
+            let imgPipeline = sharp(rawPhotoPath);
+            const meta = await imgPipeline.metadata();
+            
+            let imgW = meta.width;
+            let imgH = meta.height;
+            let needsRot = false;
+            
+            // 1. LOGIKA ROTASI 
+            if (req.body.orientation === 'potret' && imgW > imgH) {
+                imgPipeline = imgPipeline.rotate(90); // <--- UBAH JADI 90
+                needsRot = true;
+                // Balik dimensi untuk perhitungan crop
+                imgW = meta.height;
+                imgH = meta.width; 
+            }
+            statusRotasiFoto[i] = needsRot;
+
+            // 2. LOGIKA PERGESERAN DRAG & DROP (CUSTOM OFFSETS SHARP)
+            const scale = Math.max(w / imgW, h / imgH);
+            const scaledW = Math.round(imgW * scale);
+            const scaledH = Math.round(imgH * scale);
+
+            // Baca koordinat (Default 50 = Center)
+            let offX = 50, offY = 50;
+            if (req.body.customOffsets && req.body.customOffsets[i]) {
+                offX = parseFloat(req.body.customOffsets[i].x);
+                offY = parseFloat(req.body.customOffsets[i].y);
+                if (isNaN(offX)) offX = 50;
+                if (isNaN(offY)) offY = 50;
+            }
+
+            // Hitung crop berdasarkan nilai persentase area yang dibuang (scaledW - w)
+            let cropX = Math.round((scaledW - w) * (offX / 100));
+            let cropY = Math.round((scaledH - h) * (offY / 100));
+
+            // Kunci agar tidak keluar batas error
+            cropX = Math.max(0, Math.min(cropX, scaledW - w));
+            cropY = Math.max(0, Math.min(cropY, scaledH - h));
+
+            imgPipeline = imgPipeline
+                .resize(scaledW, scaledH) 
+                .extract({ left: cropX, top: cropY, width: w, height: h });
 
             if (req.body.effect) {
                 if (req.body.effect === 'monochrome') imgPipeline = imgPipeline.grayscale().linear(1.2, -10); 
@@ -1290,130 +1450,131 @@ expressApp.post('/api/generate-photobox',
         const outputName = `foto_${activeSessionId}_hasil.jpg`;
         const outputPath = path.join(sessionDir, outputName);
 
-        // 🖼️ RENDER GAMBAR
+        // 🖼️ RENDER GAMBAR FOTO
         await sharp({ create: { width: frameMeta.width || 1200, height: frameMeta.height || 1800, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } } })
         .composite(komposisi)
         .jpeg({ quality: 90, mozjpeg: true })
         .toFile(outputPath);
 
-       // ==========================================
-        // 🎬 [BARU] FFMPEG: GIF LIVE PHOTO MULTI-GRID
+        // ==========================================
+        // 🎬 FFMPEG: GIF LIVE PHOTO MULTI-GRID
         // ==========================================
         let urlLivePhoto = null;
         let pathGif = null;
         
-       // [HUBUNGKAN KE DASHBOARD] Cek apakah fitur ini ON atau OFF
         let isLivePhotoOn = false;
         try {
             const dbSet = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
-            if (dbSet.global && dbSet.global.livePhotoEnabled === true) isLivePhotoOn = true;
+            if (dbSet.global && (dbSet.global.livePhotoEnabled === true || dbSet.global.livePhotoEnabled === "true")) {
+    isLivePhotoOn = true;
+}
         } catch(e) {}
-        // --- PASANG RADAR DEBUG DI SINI ---
-        console.log("=========================================");
-        console.log(`[DEBUG GIF] 1. Sinyal Frontend (req.body.livePhoto):`, req.body.livePhoto);
-        console.log(`[DEBUG GIF] 2. Sinyal Dashboard (isLivePhotoOn):`, isLivePhotoOn);
-        console.log(`[DEBUG GIF] 3. Jumlah Foto (req.body.selectedPhotos):`, req.body.selectedPhotos ? req.body.selectedPhotos.length : 0);
-        console.log("=========================================");
-        // Syarat berlapis: Cek dari frontend (req.body.livePhoto) DAN dari Dashboard (isLivePhotoOn)
-        // KODE BARU (Cukup cek Dashboard dan foto yang dipilih)
-if (isLivePhotoOn && req.body.selectedPhotos && req.body.selectedPhotos.length > 0) {
-         console.log(`[FFMPEG] Merakit Live Photo Multi-Grid untuk sesi: ${activeSessionId}...`);
+
+        if (isLivePhotoOn && req.body.selectedPhotos && req.body.selectedPhotos.length > 0) {
             const namaGif = `live_${activeSessionId}.gif`;
             pathGif = path.join(sessionDir, namaGif);
             
-            // Kalkulasi Skala Keseluruhan (Kita buat lebar GIF 600px agar rapi tapi tidak berat)
             const wAsli = frameMeta.width || 1200;
             const hAsli = frameMeta.height || 1800;
-            const sf = 600 / wAsli; // Faktor Skala (Scale Factor)
+            const sf = 600 / wAsli; 
             const canvasW = 600;
             const canvasH = Math.round(hAsli * sf);
 
-            // Mulai membangun Perintah FFmpeg
             let ffmpegInputs = `-i "${path.join(frameDir, `${req.body.templateId}.png`).replace(/\\/g, '/')}" `;
-            let filterComplex = `color=c=white:s=${canvasW}x${canvasH}:d=2.5[bg0];`; // Canvas dasar putih
+            let filterComplex = `color=c=white:s=${canvasW}x${canvasH}:d=2.5[bg0];`; 
             let overlayChain = ``;
             let foldersToClean = [];
 
-            // Proses setiap slot foto satu per satu
             req.body.selectedPhotos.forEach((fotoName, i) => {
                 const slotDir = path.join(tempDir, `frames_${activeSessionId}_slot_${i}`);
                 if (!fs.existsSync(slotDir)) fs.mkdirSync(slotDir, { recursive: true });
                 foldersToClean.push(slotDir);
 
-                // Tarik memori video dan status mirror khusus untuk pose foto ini
                 let frameData = global.liveFramesByPhoto ? global.liveFramesByPhoto[fotoName] : null;
                 let framesBuffer = frameData ? frameData.buffer : null;
                 let isMirrored = frameData ? frameData.isMirrored : false;
                 let isFallback = false;
                 
-                // Fallback: Jika error/memori kosong, gandakan foto statis
                 if (!framesBuffer || framesBuffer.length === 0) {
                     const fallbackImg = fs.readFileSync(path.join(sessionDir, fotoName));
                     framesBuffer = Array(50).fill(fallbackImg);
-                    isFallback = true; // Fallback sudah berbentuk foto matang (sudah ter-mirror dari Sharp)
+                    isFallback = true; 
                 }
 
-                // Tulis frame ke dalam folder slot masing-masing
                 framesBuffer.forEach((buf, idx) => {
                     fs.writeFileSync(path.join(slotDir, `frame_${String(idx).padStart(3, '0')}.jpg`), buf);
                 });
 
-                ffmpegInputs += `-i "${path.join(slotDir, 'frame_%03d.jpg').replace(/\\/g, '/')}" `;
+                // Tambahkan -framerate tepat SEBELUM input frame_%03d.jpg
+ffmpegInputs += `-framerate 20 -i "${path.join(slotDir, 'frame_%03d.jpg').replace(/\\/g, '/')}" `;
 
-                // Hitung koordinat dan ukuran slot untuk video ini
                 const coord = templateData.layout.coords[i];
                 const sw = Math.round((coord.width || templateData.layout.width) * sf);
                 const sh = Math.round((coord.height || templateData.layout.height) * sf);
                 const sx = Math.round(coord.x * sf);
                 const sy = Math.round(coord.y * sf);
 
-                // [KUNCI PERBAIKAN MIRROR] Tambahkan filter 'hflip' (Horizontal Flip) jika mode cermin ON!
-                // Catatan: Jika memori gagal & pakai fallback, jangan di-flip lagi karena fallback sudah ter-flip.
                 const mirrorFilter = (isMirrored && !isFallback) ? 'hflip,' : '';
+                
+                // [BARU] Filter putar video jika fotonya tadi diputar di Sharp
+                const rotFilter = statusRotasiFoto[i] ? 'transpose=1,' : '';
 
-                // [Index i+1] karena Index 0 adalah Template Bingkai
-                filterComplex += `[${i+1}:v]${mirrorFilter}scale=${sw}:${sh}:force_original_aspect_ratio=increase,crop=${sw}:${sh}[v${i+1}];`;
+                // [BARU] Hitung titik crop FFmpeg dari Drag & Drop berdasarkan 0-100%
+let offX = 50, offY = 50;
+if (req.body.customOffsets && req.body.customOffsets[i]) {
+    offX = parseFloat(req.body.customOffsets[i].x);
+    offY = parseFloat(req.body.customOffsets[i].y);
+    if (isNaN(offX)) offX = 50;
+    if (isNaN(offY)) offY = 50;
+}
+
+// Kunci nilai offX dan offY agar selalu aman di antara 0 sampai 100 menggunakan JavaScript
+offX = Math.max(0, Math.min(100, offX));
+offY = Math.max(0, Math.min(100, offY));
+
+// in_w = lebar asli video; sw = lebar cetak. 
+// in_w - sw adalah sisa area yang bisa digeser
+// HAPUS PENGGUNAAN MAX/MIN DI FFMPEG KARENA TANDA KOMA MERUSAK SYNTAX FILTER
+const cx = `(in_w-${sw})*(${offX}/100)`;
+const cy = `(in_h-${sh})*(${offY}/100)`;
+
+                // Aplikasikan rotasi dan kustom koordinat pada ffmpeg
+                filterComplex += `[${i+1}:v]${mirrorFilter}${rotFilter}scale=${sw}:${sh}:force_original_aspect_ratio=increase,crop=${sw}:${sh}:${cx}:${cy}[v${i+1}];`;
                 overlayChain += `[bg${i}][v${i+1}]overlay=x=${sx}:y=${sy}[bg${i+1}];`;
             });
-            // Timpa Bingkai Frame di atas semua video, lalu generate Palet GIF
+
             filterComplex += `[0:v]scale=${canvasW}:${canvasH}[frame];`;
             filterComplex += overlayChain;
             const jumlahSlot = req.body.selectedPhotos.length;
             filterComplex += `[bg${jumlahSlot}][frame]overlay=0:0,split[s0][s1];[s0]palettegen=stats_mode=diff[p];[s1][p]paletteuse=dither=bayer:bayer_scale=5`;
-const outputPattern = pathGif.replace(/\\/g, '/');
-
-// 1. Tentukan lokasi pasti dari file ffmpeg.exe bawaan aplikasi Anda
-const ffmpegPath = path.join(__dirname, 'ffmpeg.exe').replace('app.asar', 'app.asar.unpacked');
-
-// 2. Ganti kata 'ffmpeg' dengan variabel lokasi path tersebut
-const ffmpegCmd = `"${ffmpegPath}" -y -framerate 20 ${ffmpegInputs} -filter_complex "${filterComplex}" -loop 0 "${outputPattern}"`;
-            console.log(`[FFMPEG] Memproses penggabungan Grid...`);
+            
+            const outputPattern = pathGif.replace(/\\/g, '/');
+            const ffmpegPath = path.join(__dirname, 'ffmpeg.exe').replace('app.asar', 'app.asar.unpacked');
+            const ffmpegCmd = `"${ffmpegPath}" -y ${ffmpegInputs} -filter_complex "${filterComplex}" -loop 0 "${outputPattern}"`;
 
             await new Promise((resolve) => {
-                exec(ffmpegCmd, (error) => {
-                    if (error) {
-                        console.error("[FFMPEG] ❌ GAGAL membuat Live Photo Multi-Grid!");
-                        console.error(error.message);
-                    } else {
-                        console.log(`[FFMPEG] ✅ Live Photo GIF Multi-Grid sukses: ${namaGif}`);
-                        urlLivePhoto = `/uploads/${activeSessionId}/${namaGif}`;
-                    }
-                    // Bersihkan semua folder temporary
-                    foldersToClean.forEach(folder => {
-                        try { fs.rmSync(folder, { recursive: true, force: true }); } catch(e){}
-                    });
-                    resolve();
-                });
+                exec(ffmpegCmd, (error, stdout, stderr) => {
+    if (!error) {
+        urlLivePhoto = `/uploads/${activeSessionId}/${namaGif}`;
+        console.log(`✅ Live Photo berhasil dibuat: ${namaGif}`);
+    } else {
+        console.error("❌ [FFMPEG ERROR] Gagal membuat Live Photo:", error.message);
+        console.error("Detail Error:", stderr);
+    }
+    foldersToClean.forEach(folder => {
+        try { fs.rmSync(folder, { recursive: true, force: true }); } catch(e){}
+    });
+    resolve();
+});
             });
             
-            // Bersihkan database memori RAM agar hemat daya
             global.liveFramesByPhoto = {}; 
-        } else {
-            console.log("[CEK GIF] ⚠️ Pembuatan GIF dilewati (Fitur dimatikan dari Dashboard / Syarat tidak terpenuhi).");
         }
 
-        // 🚀 LOGIKA CEK MODE PENYIMPANAN
-        let isOnlineMode = true; // Default Online
+        // ==========================================
+        // SISTEM UPLOAD DRIVE (LOGIKA ASLI DIBIARKAN)
+        // ==========================================
+        let isOnlineMode = true; 
         try {
             if (fs.existsSync(settingsPath)) {
                 const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
@@ -1426,9 +1587,6 @@ const ffmpegCmd = `"${ffmpegPath}" -y -framerate 20 ${ffmpegInputs} -filter_comp
         let linkShareAkhir = "";
 
         if (isOnlineMode) {
-            // ==========================================
-            // MODE ONLINE: UPLOAD GOOGLE DRIVE
-            // ==========================================
             let parentFolderId = "1scPtcs7JaGmnF4TYfpUL2DIcN_7iU9DB"; 
             try {
                 if (fs.existsSync(settingsPath)) {
@@ -1442,70 +1600,47 @@ const ffmpegCmd = `"${ffmpegPath}" -y -framerate 20 ${ffmpegInputs} -filter_comp
             linkShareAkhir = `https://drive.google.com/drive/folders/${parentFolderId}`; 
             
             if (typeof uploadToDrive === 'function') {
-                console.log("[SISTEM] Mode Online: Mengupload file ke GDrive...");
                 try {
                     const datePrefix = new Date().toISOString().replace(/T/, '_').replace(/\..+/, '').replace(/:/g, '-');
                     const driveFolderName = `${datePrefix}_${activeSessionId}`;
-
-                    // 1. Upload File Hasil (Composite) CEPAT
                     const uploadedUrl = await uploadToDrive(outputPath, driveFolderName, parentFolderId);
                     
-                    if (uploadedUrl) {
-                        linkShareAkhir = uploadedUrl; 
-                        console.log(`[DRIVE] ✅ Sukses Upload Utama! Link: ${linkShareAkhir}`);
-                    }
+                    if (uploadedUrl) { linkShareAkhir = uploadedUrl; }
 
-                    // 2. Upload GIF & File Mentah DIAM-DIAM & MENGANTRE (Mencegah GDrive Error)
                     (async () => {
-                        // Antrean 1: Upload file GIF 
                         if (urlLivePhoto && fs.existsSync(pathGif)) {
-                            try {
-                                await uploadToDrive(pathGif, driveFolderName, parentFolderId);
-                                console.log(`[DRIVE] ✅ GIF Live Photo terupload!`);
-                            } catch(err) { console.error(`[DRIVE] Gagal upload GIF:`, err.message); }
+                            try { await uploadToDrive(pathGif, driveFolderName, parentFolderId); } catch(err) {}
                         }
-                        
-                        // Antrean 2: Upload SEMUA file mentah dari folder sesi ini SATU PER SATU
-                        // Mengambil semua foto asli yang terjepret, bukan hanya yang dipilih
                         const allRawFiles = fs.readdirSync(sessionDir).filter(f => f.endsWith('_mentah.jpg'));
-
                         for (let fotoName of allRawFiles) {
                             const rawPath = path.join(sessionDir, fotoName);
                             if (fs.existsSync(rawPath)) {
-                                try {
-                                    await uploadToDrive(rawPath, driveFolderName, parentFolderId);
-                                    console.log(`[DRIVE-BACKGROUND] Semua Mentahan terupload: ${fotoName}`);
-                                } catch(err) {}
+                                try { await uploadToDrive(rawPath, driveFolderName, parentFolderId); } catch(err) {}
                             }
                         }
                     })();
                 } catch (err) {
-                    console.error("❌ Gagal Upload GDrive (Tidak ada internet/Error).", err.message);
-                    console.log("[SISTEM] Mengalihkan otomatis ke QR Lokal (IP Router)...");
                     const ipLokal = getLocalIP();
                     linkShareAkhir = `http://${ipLokal}:3000/uploads/${activeSessionId}/${outputName}`;
                 }
             }
         } else {
-            // ==========================================
-            // MODE OFFLINE MURNI
-            // ==========================================
             const ipLokal = getLocalIP();
             linkShareAkhir = `http://${ipLokal}:3000/uploads/${activeSessionId}/${outputName}`;
-            console.log(`[SISTEM] Mode Offline aktif. Upload Cloud dilewati.`);
         }
 
        res.json({ 
             success: true, 
             file: `/uploads/${activeSessionId}/${outputName}`, 
             driveLink: linkShareAkhir,
-            livePhoto: urlLivePhoto // <-- [BARU] Kirim URL GIF ke frontend
+            livePhoto: urlLivePhoto 
         });
-
         
-    } catch (error) { res.status(500).json({ success: false, message: error.message }); }
+    } catch (error) { 
+        console.error("Gagal Generate:", error);
+        res.status(500).json({ success: false, message: error.message }); 
+    }
 });
-
 // =======================================================
 // 10. 🖨️ MESIN PRINTER & MANAJEMEN GALERI
 // =======================================================

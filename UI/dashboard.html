@@ -365,9 +365,12 @@
     </select>
 </div>
 <div class="form-group">
-                        <label>Port Kamera / IP (Opsional)</label>
-                        <input type="text" id="sys-cameraPort" placeholder="Contoh: COM3, /dev/video0, atau Kosongkan">
-                    </div>
+    <label>Take from Kamera / Remote</label>
+    <select id="sys-takeFromRemote">
+        <option value="false">OFF (Normal - via Tombol Layar / Auto Timer)</option>
+        <option value="true">ON (Bisa Jepret via Remote / Tombol Kamera)</option>
+    </select>
+</div>
                     <hr style="border: 1px dashed #ccc; margin: 15px 0;">
                     <div class="form-group"><label>Kecerahan Kamera di Layar (%)</label><input type="number" id="sys-brightness" min="10" max="500"></div>
                     <div class="form-group">
@@ -929,6 +932,45 @@
     
 
     <script>
+        // === FUNGSI KONFIRMASI CUSTOM (Bebas Bug Focus Input Teks) ===
+    function customConfirm(pesan, judul = "Konfirmasi Aksi", ikon = "⚠️") {
+        return new Promise((resolve) => {
+            const modal = document.getElementById('customConfirmModal');
+            const titleEl = document.getElementById('confirmModalTitle');
+            const msgEl = document.getElementById('confirmModalMessage');
+            const iconEl = document.getElementById('confirmModalIcon');
+            const btnOk = document.getElementById('confirmModalBtnOk');
+            const btnCancel = document.getElementById('confirmModalBtnCancel');
+
+            titleEl.innerText = judul;
+            msgEl.innerHTML = pesan.replace(/\n/g, '<br>');
+            iconEl.innerText = ikon;
+            modal.style.display = 'flex';
+
+            // Kembalikan fokus ke window
+            window.focus();
+
+            const handleOk = () => {
+                modal.style.display = 'none';
+                cleanup();
+                resolve(true);
+            };
+
+            const handleCancel = () => {
+                modal.style.display = 'none';
+                cleanup();
+                resolve(false);
+            };
+
+            const cleanup = () => {
+                btnOk.removeEventListener('click', handleOk);
+                btnCancel.removeEventListener('click', handleCancel);
+            };
+
+            btnOk.onclick = handleOk;
+            btnCancel.onclick = handleCancel;
+        });
+    }
         
        // === PERBAIKAN PERMANEN BUG FOCUS (TIDAK BISA KETIK) ===
         // 1. Ganti Alert bawaan OS dengan Custom Toast UI (Elegan & Bebas Bug)
@@ -1089,31 +1131,34 @@
                 document.getElementById('clg-timer').value = data.collage?.timer || "5";
                 document.getElementById('clg-sessionTimer').value = data.collage?.sessionTimer || "300"; 
                 document.getElementById('clg-maxRetake').value = data.collage?.maxRetake !== undefined ? data.collage.maxRetake : "3";
-                // Tambahkan ini di dalam muatPengaturan()
-document.getElementById('sys-usePin').checked = data.global?.usePin === true;
-document.getElementById('sys-adminPin').value = data.global?.adminPin || "1234";
-togglePinInput(); // Panggil agar UI menyesuaikan saat dimuat
+                
+                document.getElementById('sys-usePin').checked = data.global?.usePin === true;
+                document.getElementById('sys-adminPin').value = data.global?.adminPin || "1234";
+                togglePinInput();
 
                 document.getElementById('sys-cameraEngine').value = data.global?.cameraEngine || "canon";
-               // Load status cermin dari server
-               if (document.getElementById('sys-cameraOrientation')) {
-            const orientasi = data.global?.cameraOrientation || "landscape";
-            document.getElementById('sys-cameraOrientation').value = orientasi;
-            cekPeringatanPotret(orientasi, false); // <-- Cek status saat halaman dimuat
-        }
+                
+                // --- LOAD TAKE FROM REMOTE ---
+                if (document.getElementById('sys-takeFromRemote')) {
+                    document.getElementById('sys-takeFromRemote').value = data.global?.takeFromRemote ? "true" : "false";
+                }
+
+                if (document.getElementById('sys-cameraOrientation')) {
+                    const orientasi = data.global?.cameraOrientation || "landscape";
+                    document.getElementById('sys-cameraOrientation').value = orientasi;
+                    cekPeringatanPotret(orientasi, false);
+                }
                 if (document.getElementById('sys-mirrorCamera')) {
                     document.getElementById('sys-mirrorCamera').value = data.global?.mirrorCamera ? "true" : "false";
                 }
                 document.getElementById('sys-cameraPort').value = data.global?.cameraPort || "";
                 document.getElementById('sys-brightness').value = data.global?.liveViewBrightness || "100";
                 document.getElementById('sys-flashWorkaround').value = data.global?.flashWorkaround !== undefined ? data.global.flashWorkaround.toString() : "true";
-                // Tambahkan di bawah document.getElementById('sys-flashWorkaround').value = ...
                 document.getElementById('sys-livePhoto').value = data.global?.livePhotoEnabled ? "true" : "false";
                 document.getElementById('sys-cloudStorage').value = data.global?.cloudStorage !== false ? "true" : "false";
                 document.getElementById('driveParentFolderId').value = data.global?.driveParentFolderId || "";
                 if (document.getElementById('input-cf-token')) document.getElementById('input-cf-token').value = data.global?.cloudflareToken || "";
                 
-                // Load Harga Extra Print Statis
                 if (document.getElementById('sys-extraPrintPriceStatic')) {
                     document.getElementById('sys-extraPrintPriceStatic').value = data.global?.extraPrintPriceStatic || "15000";
                 }
@@ -1134,14 +1179,12 @@ togglePinInput(); // Panggil agar UI menyesuaikan saat dimuat
         // PERBAIKAN LOGIC SIMPAN (KODE LEBIH AMAN / ANTI-CRASH)
         async function simpanPengaturan() {
             try {
-                // Tarik data yg ada dulu untuk di-merge
                 const resSettings = await fetch('/api/settings');
                 const currentData = await resSettings.json().catch(() => ({})); 
                 
                 const currentTheme = currentData.global?.theme || 'theme-pop-art';
                 const currentCustomIdle = currentData.global?.customIdleScreen || null;
 
-                // Fungsi bantu agar tidak error jika ada ID HTML yang tidak sengaja terhapus
                 const getVal = (id, def = "") => document.getElementById(id) ? document.getElementById(id).value : def;
                 const getCheck = (id) => document.getElementById(id) ? document.getElementById(id).checked : false;
                 
@@ -1158,16 +1201,17 @@ togglePinInput(); // Panggil agar UI menyesuaikan saat dimuat
                     },
                     global: { 
                         cameraOrientation: getVal('sys-cameraOrientation', 'landscape'),
-                        mirrorCamera: getVal('sys-mirrorCamera', 'false') === "true", // Baris tambahan untuk simpan cermin
-                        // Konfigurasi PIN Baru
+                        mirrorCamera: getVal('sys-mirrorCamera', 'false') === "true",
+                        
+                        // SIMPAN STATUS TAKE FROM REMOTE
+                        takeFromRemote: getVal('sys-takeFromRemote', 'false') === "true",
+
                         usePin: getCheck('sys-usePin'),
                         adminPin: getVal('sys-adminPin', '1234'),
                         
-                        // Konfigurasi Bawaan Tema
                         theme: currentTheme,
                         customIdleScreen: currentCustomIdle,
                         
-                        // Konfigurasi Form Lainnya
                         extraPrintPriceStatic: parseInt(getVal('sys-extraPrintPriceStatic', 15000)) || 15000,
                         cameraEngine: getVal('sys-cameraEngine', 'canon'),
                         cameraPort: getVal('sys-cameraPort', ''),
@@ -1180,7 +1224,6 @@ togglePinInput(); // Panggil agar UI menyesuaikan saat dimuat
                         printer4R: getVal('sys-printer4R', ''),  
                         printerA4: getVal('sys-printerA4', ''),
                         cloudflareToken: getVal('input-cf-token', '') 
-                        
                     },
                     waMessage: getVal('wa-message-text', '')
                 };
@@ -1195,7 +1238,6 @@ togglePinInput(); // Panggil agar UI menyesuaikan saat dimuat
 
                 alert("✅ Pengaturan berhasil disimpan!");
             } catch (e) { 
-                // Sekarang jika gagal, pop-up akan memberitahu ALASAN spesifik error-nya
                 alert("❌ Gagal menyimpan pengaturan.\nDetail: " + e.message); 
                 console.error("Error Simpan Pengaturan:", e);
             }
@@ -1247,36 +1289,65 @@ togglePinInput(); // Panggil agar UI menyesuaikan saat dimuat
         setInterval(cekStatusDrive, 3000);
 
         async function disconnectDrive() {
-            if (!confirm("⚠️ Anda yakin ingin memutuskan koneksi Google Drive saat ini?")) return;
-            try {
-                const res = await fetch('/api/disconnect-drive', { method: 'POST' });
-                const data = await res.json();
-                if (data.success) { alert("✅ Koneksi diputus."); cekStatusDrive(); }
-                else alert("Gagal memutuskan koneksi.");
-            } catch (e) { alert("Kesalahan server."); }
-        }
+        if (!(await customConfirm("Anda yakin ingin memutuskan koneksi Google Drive?", "Putuskan G-Drive", "☁️"))) return;
+        try {
+            const res = await fetch('/api/disconnect-drive', { method: 'POST' });
+            const data = await res.json();
+            if (data.success) { alert("✅ Koneksi diputus."); cekStatusDrive(); }
+            else alert("Gagal memutuskan koneksi.");
+        } catch (e) { alert("Kesalahan server."); }
+    }
 
         let lastWaQr = '';
-        async function cekStatusWa() {
-            try {
-                const res = await fetch('/api/wa-status'); const data = await res.json();
-                const statusText = document.getElementById('wa-status-text'); const qrContainer = document.getElementById('wa-qr-container');
-                if (data.status === 'READY' || data.status === 'AUTHENTICATED') {
-                    statusText.innerHTML = "Status: <b style='color:#10b981;'>✅ Bot Terhubung & Siap</b>";
-                    qrContainer.innerHTML = '<div style="font-size: 5rem;">🤖</div>'; qrContainer.style.border = '3px solid #10b981';
-                    lastWaQr = '';
-                } else if (data.status === 'QR_READY') {
-                    statusText.innerHTML = "Status: <b style='color:#eab308;'>⚠️ Siap Scan, Buka WA HP Anda</b>";
-                    qrContainer.style.border = '3px dashed #cbd5e1';
-                    if (data.qr !== lastWaQr) { qrContainer.innerHTML = ''; new QRCode(qrContainer, { text: data.qr, width: 180, height: 180 }); lastWaQr = data.qr; }
-                } else {
-                    statusText.innerHTML = "Status: <b style='color:#6b7280;'>⏳ Memulai Mesin...</b>";
-                    qrContainer.innerHTML = '<div style="font-size: 3rem; color: #cbd5e1;">⏳</div>'; qrContainer.style.border = '3px dashed #cbd5e1';
+    async function cekStatusWa() {
+        try {
+            const res = await fetch('/api/wa-status'); 
+            const data = await res.json();
+            const statusText = document.getElementById('wa-status-text'); 
+            const qrContainer = document.getElementById('wa-qr-container');
+            
+            if (data.status === 'READY' || data.status === 'AUTHENTICATED') {
+                statusText.innerHTML = "Status: <b style='color:#10b981;'>✅ Bot Terhubung & Tertaut (Siap)</b>";
+                qrContainer.innerHTML = '<div style="font-size: 4rem;">🤖<br><span style="font-size:0.9rem; color:#10b981; font-weight:bold;">Sesi Aktif Permanen</span></div>'; 
+                qrContainer.style.border = '3px solid #10b981';
+                lastWaQr = '';
+            } else if (data.status === 'QR_READY') {
+                statusText.innerHTML = "Status: <b style='color:#eab308;'>⚠️ Silakan Scan QR di bawah ini</b>";
+                qrContainer.style.border = '3px dashed #cbd5e1';
+                if (data.qr && data.qr !== lastWaQr) { 
+                    qrContainer.innerHTML = ''; 
+                    new QRCode(qrContainer, { text: data.qr, width: 180, height: 180 }); 
+                    lastWaQr = data.qr; 
                 }
-            } catch (e) {}
-        }
+            } else {
+                statusText.innerHTML = "Status: <b style='color:#6b7280;'>⏳ Menghubungkan ke WhatsApp...</b>";
+                qrContainer.innerHTML = '<div style="font-size: 3rem; color: #cbd5e1;">⏳</div>'; 
+                qrContainer.style.border = '3px dashed #cbd5e1';
+            }
+        } catch (e) {}
+    }
+
         setInterval(cekStatusWa, 3000);
-        async function logoutWa() { if(!confirm('⚠️ Yakin reset WhatsApp?')) return; await fetch('/api/wa-logout', { method: 'POST' }); alert('Bot direstart. Tunggu 10-20 detik.'); }
+        // === REVISI LOGOUT WHATSAPP (Bebas Bug & Aman) ===
+    async function logoutWa() { 
+        const setuju = await customConfirm(
+            'Yakin ingin mereset/logout Bot WhatsApp?\nSesi yang tersimpan di laptop akan dihapus dan Anda harus scan QR ulang.', 
+            'Logout Bot WhatsApp', 
+            '🔌'
+        );
+        
+        if (!setuju) return; 
+
+        try {
+            await fetch('/api/wa-logout', { method: 'POST' }); 
+            alert('✅ Bot WA berhasil di-logout. Menyiapkan QR Code baru (10-15 detik)...'); 
+            lastWaQr = '';
+            document.getElementById('wa-status-text').innerHTML = "Status: <b style='color:#6b7280;'>⏳ Memulai Ulang Mesin...</b>";
+            document.getElementById('wa-qr-container').innerHTML = '<div style="font-size: 3rem; color: #cbd5e1;">⏳</div>';
+        } catch (e) {
+            alert('❌ Gagal melakukan logout Bot WA.');
+        }
+    }
 
         // --- MODE & VISUAL TEMPLATE EDITOR ---
         let currentTemplateMode = 'collage'; 
@@ -1552,10 +1623,11 @@ togglePinInput(); // Panggil agar UI menyesuaikan saat dimuat
             fetchTemplateData();
         }
         
-        function hapusTemplate(format, idTemplate) {
-            if (!confirm("⚠️ Hapus template ini secara permanen?")) return;
-            fetch('/api/delete-template', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ format, idTemplate }) }).then(() => fetchTemplateData());
-        }
+       async function hapusTemplate(format, idTemplate) {
+        if (!(await customConfirm("Hapus template ini secara permanen?", "Hapus Template", "🗑️"))) return;
+        fetch('/api/delete-template', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ format, idTemplate }) })
+            .then(() => fetchTemplateData());
+    }
 
         function bukaEditModal(format, id) {
             const template = dbTemplatesGlobal[format].find(t => t.id === id); if(!template) return;
@@ -1698,40 +1770,38 @@ togglePinInput(); // Panggil agar UI menyesuaikan saat dimuat
         });
 
         async function resetIdleScreen() {
-            if(!confirm('Yakin ingin menghapus custom idle screen dan kembali ke tampilan bawaan tema?')) return;
-            try {
-                const resSettings = await fetch('/api/settings'); const dataSettings = await resSettings.json();
-                if (dataSettings.global) {
-                    dataSettings.global.customIdleScreen = null; 
-                    await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dataSettings) });
-                    document.getElementById('status-idle-screen').innerHTML = "Bawaan Tema (Default)";
-                    alert("✅ Layar utama dikembalikan ke tema bawaan.");
-                }
-            } catch (error) { alert("Gagal mereset pengaturan."); }
-        }
-        async function resetSistemTotal() {
-            if (!confirm("⚠️ PERINGATAN KERAS: Semua setelan, koneksi bot, Drive, QRIS, dan analitik akan terhapus & direset! (JSON Token aman, Template aman). Anda yakin ingin melanjutkan?")) return;
-            
-            try {
-                // 1. Putuskan WA & Gdrive
-                await fetch('/api/wa-logout', { method: 'POST' }).catch(e=>console.log(e));
-                await fetch('/api/disconnect-drive', { method: 'POST' }).catch(e=>console.log(e));
-                
-                // 2. Panggil API backend untuk factory reset
-                // CATATAN PENTING: Anda harus membuat route app.post('/api/factory-reset') di server.js Anda!
-                const res = await fetch('/api/factory-reset', { method: 'POST' });
-                const data = await res.json();
-                
-                if (data.success) {
-                    alert("✅ Sistem berhasil dikembalikan ke pengaturan awal (Default)!");
-                    window.location.reload();
-                } else {
-                    alert("❌ Gagal mereset sistem: " + data.message);
-                }
-            } catch (error) {
-                alert("Terjadi kesalahan jaringan saat mencoba reset.");
+        if(!(await customConfirm('Yakin ingin menghapus custom idle screen dan kembali ke tema bawaan?', 'Reset Layar Utama', '🗑️'))) return;
+        try {
+            const resSettings = await fetch('/api/settings'); 
+            const dataSettings = await resSettings.json();
+            if (dataSettings.global) {
+                dataSettings.global.customIdleScreen = null; 
+                await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dataSettings) });
+                document.getElementById('status-idle-screen').innerHTML = "Bawaan Tema (Default)";
+                alert("✅ Layar utama dikembalikan ke tema bawaan.");
             }
+        } catch (error) { alert("Gagal mereset pengaturan."); }
+    }
+        async function resetSistemTotal() {
+        if (!(await customConfirm("⚠️ PERINGATAN KERAS: Semua setelan, koneksi bot, Drive, QRIS, dan analitik akan terhapus & direset!\n\nTemplate & Akun Lisensi Anda tetap aman. Lanjutkan?", "Reset Sistem Total", "🧨"))) return;
+        
+        try {
+            await fetch('/api/wa-logout', { method: 'POST' }).catch(e=>console.log(e));
+            await fetch('/api/disconnect-drive', { method: 'POST' }).catch(e=>console.log(e));
+            
+            const res = await fetch('/api/factory-reset', { method: 'POST' });
+            const data = await res.json();
+            
+            if (data.success) {
+                alert("✅ Sistem berhasil dikembalikan ke pengaturan awal!");
+                window.location.reload();
+            } else {
+                alert("❌ Gagal mereset sistem: " + data.message);
+            }
+        } catch (error) {
+            alert("Terjadi kesalahan jaringan saat mencoba reset.");
         }
+    }
         // Fetch pengaturan saat halaman dimuat
 // --- FUNGSI MENGATUR TAMPILAN KOTAK MIDTRANS ---
 function toggleDynamicFields(type) {
@@ -1892,44 +1962,116 @@ function prosesSimulasiBayar() {
 }
 // === LOGIC PENGECEKAN PEMBARUAN KE GITHUB (VIA ELECTRON) ===
 
-function cekPembaruanSistem() {
-    const btn = document.getElementById('btn-cek-update'); // Sesuaikan ID dengan tombol Anda
-    if(btn) btn.innerText = "⏳ Sedang mengecek ke GitHub...";
+// === LOGIC PENGECEKAN PEMBARUAN KE GITHUB & IPC LISTENERS ===
 
-    try {
-        const { ipcRenderer } = require('electron');
-        
-        // Mengirim perintah ke main.js untuk mengecek rilis terbaru di GitHub
-        ipcRenderer.send('cek-update-manual');
-        
-        window.alert("Mencari pembaruan di server...\nJika ada versi baru, layar pop-up unduhan akan otomatis muncul.");
-        
-        // Sembunyikan badge notifikasi merah karena pengecekan sudah dilakukan
-        const badgeMenu = document.getElementById('badge-menu-update');
-        if(badgeMenu) badgeMenu.style.display = 'none';
-        
-        const badgeBtn = document.getElementById('badge-btn-update');
-        if(badgeBtn) badgeBtn.style.display = 'none';
-
-        // Kembalikan teks tombol seperti semula setelah 3 detik
-        setTimeout(() => {
-            if(btn) btn.innerHTML = `🔄 Cek Pembaruan Software`;
-        }, 3000);
-
-    } catch (error) {
-        console.error(error);
-        window.alert("❌ Gagal terhubung ke mesin utama. Pastikan dibuka melalui aplikasi (bukan browser).");
-        if(btn) btn.innerHTML = `🔄 Cek Pembaruan Software`;
+// Inisialisasi IPC Electron yang aman (Tidak crash jika dibuka di browser biasa)
+let ipcRenderer = null;
+try {
+    if (typeof require !== 'undefined') {
+        ipcRenderer = require('electron').ipcRenderer;
     }
+} catch (e) {
+    console.log("Dashboard dibuka di lingkungan browser biasa.");
 }
 
-// Opsional: Cek secara otomatis setiap 5 menit (300.000 ms) di background
-setInterval(cekPembaruanSistem, 300000); 
+function cekPembaruanSistem() {
+    const btn = document.getElementById('btn-cek-update');
+    if (btn) btn.innerText = "⏳ Sedang mengecek ke GitHub...";
 
-// Opsional: Cek otomatis 1x saat pertama kali halaman dimuat
-document.addEventListener('DOMContentLoaded', () => {
-    // cekPembaruanSistem(); // Buka komentar ini jika ingin langsung ngecek saat buka web
-});
+    if (!ipcRenderer) {
+        alert("❌ Fitur Auto-Update hanya berfungsi saat aplikasi dibuka di Desktop (bukan browser).");
+        if (btn) btn.innerHTML = `🔄 Cek Pembaruan Software`;
+        return;
+    }
+
+    // Mengirim perintah ke main.js untuk mengecek rilis terbaru di GitHub
+    ipcRenderer.send('cek-update-manual');
+
+    // Sembunyikan badge notifikasi merah
+    const badgeMenu = document.getElementById('badge-menu-update');
+    if (badgeMenu) badgeMenu.style.display = 'none';
+    const badgeBtn = document.getElementById('badge-btn-update');
+    if (badgeBtn) badgeBtn.style.display = 'none';
+
+    setTimeout(() => {
+        if (btn) btn.innerHTML = `🔄 Cek Pembaruan Software`;
+    }, 3000);
+}
+
+// =======================================================
+// PENDEGAR SINYAL DARI BACKEND (MAIN.JS)
+// =======================================================
+if (ipcRenderer) {
+    // 1. Tangkap sinyal saat ada update baru ditemukan di GitHub
+    ipcRenderer.on('update-available-alert', (event, version) => {
+        const modal = document.getElementById('updateProgressModal');
+        const title = document.getElementById('updateModalTitle');
+        const msg = document.getElementById('updateModalMessage');
+        const progressBox = document.getElementById('updateProgressContainer');
+        const btnBox = document.getElementById('updateModalButtons');
+        const btnStart = document.getElementById('btnStartUpdate');
+        const icon = document.getElementById('updateModalIcon');
+
+        icon.innerText = "🎉";
+        title.innerText = "Pembaruan Ditemukan!";
+        msg.innerHTML = `Versi baru <b>v${version}</b> telah rilis di GitHub.<br>Apakah Anda ingin mengunduhnya sekarang?`;
+        progressBox.style.display = 'none';
+        btnBox.style.display = 'flex';
+        modal.style.display = 'flex';
+
+        btnStart.onclick = () => {
+            btnBox.style.display = 'none';
+            msg.innerText = "Sedang mengunduh pembaruan dari GitHub... Mohon tunggu.";
+            progressBox.style.display = 'block';
+            ipcRenderer.send('start-download-update');
+        };
+    });
+
+    // 2. Tangkap persentase unduhan real-time (0% -> 100%)
+    ipcRenderer.on('update-progress', (event, percent) => {
+        const modal = document.getElementById('updateProgressModal');
+        modal.style.display = 'flex';
+        
+        const bar = document.getElementById('updateProgressBar');
+        const text = document.getElementById('updateProgressText');
+        const roundedPercent = percent.toFixed(1);
+
+        bar.style.width = roundedPercent + '%';
+        text.innerText = `Mengunduh... ${roundedPercent}%`;
+    });
+
+    // 3. Tangkap sinyal saat unduhan selesai & siap dipasang
+    ipcRenderer.on('update-ready', () => {
+        const title = document.getElementById('updateModalTitle');
+        const msg = document.getElementById('updateModalMessage');
+        const progressBox = document.getElementById('updateProgressContainer');
+        const icon = document.getElementById('updateModalIcon');
+
+        icon.innerText = "✅";
+        title.innerText = "Unduhan Selesai!";
+        msg.innerHTML = "Pembaruan telah berhasil diunduh.<br><b>Aplikasi akan restart otomatis dalam 3 detik</b> untuk memasang versi baru.";
+        progressBox.style.display = 'none';
+    });
+
+    // 4. Tangkap pesan jika terjadi kegagalan/error saat unduh
+    ipcRenderer.on('update-error', (event, errorMsg) => {
+        const title = document.getElementById('updateModalTitle');
+        const msg = document.getElementById('updateModalMessage');
+        const progressBox = document.getElementById('updateProgressContainer');
+        const btnBox = document.getElementById('updateModalButtons');
+        const btnStart = document.getElementById('btnStartUpdate');
+        const btnCancel = document.getElementById('btnCancelUpdate');
+        const icon = document.getElementById('updateModalIcon');
+
+        icon.innerText = "❌";
+        title.innerText = "Gagal Mengunduh";
+        msg.innerHTML = `<span style="color:#ef4444; font-weight:bold;">${errorMsg}</span>`;
+        progressBox.style.display = 'none';
+        btnBox.style.display = 'flex';
+        btnStart.style.display = 'none';
+        btnCancel.innerText = "Tutup";
+    });
+}
 
 // === FUNGSI DUPLIKASI PRINTER BARU (BEBAS BUG FOCUS) ===
 async function buatProfilPrinterBaru(selectId, btnElement) {
@@ -2503,5 +2645,35 @@ document.addEventListener('DOMContentLoaded', loadQrisSettings);
             }
         }
     </script>
+    <div class="modal-overlay" id="customConfirmModal" style="z-index: 999999;">
+    <div class="modal-content" style="max-width: 420px; text-align: center; padding: 30px;">
+        <div id="confirmModalIcon" style="font-size: 3.5rem; margin-bottom: 10px;">⚠️</div>
+        <h3 id="confirmModalTitle" style="font-family: 'Fredoka', sans-serif; font-size: 1.4rem; margin-bottom: 10px; color: var(--ink);">Konfirmasi Aksi</h3>
+        <p id="confirmModalMessage" style="font-size: 0.95rem; color: #444; margin-bottom: 25px; font-weight: 500; line-height: 1.4;"></p>
+        <div style="display: flex; gap: 12px; justify-content: center;">
+            <button id="confirmModalBtnCancel" class="btn-primary" style="background: #e2e8f0; color: #334155; border-color: var(--ink); flex: 1;">Batal</button>
+            <button id="confirmModalBtnOk" class="btn-primary" style="background: #ef4444; color: white; border-color: #b91c1c; flex: 1;">Ya, Lanjutkan</button>
+        </div>
+    </div>
+    <div class="modal-overlay" id="updateProgressModal" style="z-index: 999999;">
+    <div class="modal-content" style="max-width: 450px; text-align: center; padding: 30px;">
+        <div id="updateModalIcon" style="font-size: 3.5rem; margin-bottom: 10px;">🔄</div>
+        <h3 id="updateModalTitle" style="font-family: 'Fredoka', sans-serif; font-size: 1.5rem; margin-bottom: 10px; color: var(--ink);">Pembaruan Ditemukan!</h3>
+        <p id="updateModalMessage" style="font-size: 0.95rem; color: #444; margin-bottom: 20px; font-weight: 500; line-height: 1.4;">Versi baru telah rilis. Apakah Anda ingin mengunduh sekarang?</p>
+        
+        <div id="updateProgressContainer" style="display: none; margin-bottom: 20px;">
+            <div style="width: 100%; background-color: #e2e8f0; border-radius: 10px; border: 2px solid var(--ink); overflow: hidden; height: 25px; position: relative;">
+                <div id="updateProgressBar" style="width: 0%; height: 100%; background-color: var(--blue); transition: width 0.3s ease;"></div>
+            </div>
+            <p id="updateProgressText" style="font-size: 0.85rem; font-weight: bold; margin-top: 8px; color: var(--ink);">Mengunduh... 0%</p>
+        </div>
+
+        <div id="updateModalButtons" style="display: flex; gap: 12px; justify-content: center;">
+            <button id="btnCancelUpdate" class="btn-primary" style="background: #e2e8f0; color: #334155; border-color: var(--ink); flex: 1;" onclick="document.getElementById('updateProgressModal').style.display='none'">Nanti Saja</button>
+            <button id="btnStartUpdate" class="btn-primary" style="background: var(--blue); color: var(--ink); flex: 1;">🚀 Unduh Sekarang</button>
+        </div>
+    </div>
+</div>
+</div>
 </body>
 </html>

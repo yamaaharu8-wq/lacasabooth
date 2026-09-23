@@ -124,9 +124,12 @@
         
         #loadingTeks { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--paper-white); padding: 25px 50px; border-radius: 50px; font-size: 1.5rem; font-weight: 700; color: var(--ink); z-index: 999999; box-shadow: 6px 6px 0px var(--ink); border: 3px solid var(--ink); font-family: 'Caveat', cursive; }
 
-        /* --- PANEL EFEK --- */
+       /* --- PANEL EFEK --- */
         #effectOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(253, 251, 247, 0.95); z-index: 99999; flex-direction: column; justify-content: center; align-items: center; padding: 40px; box-sizing: border-box; }
         .effect-container { display: flex; gap: 40px; align-items: center; background: var(--paper-white); padding: 40px; border-radius: 40px; box-shadow: 10px 12px 0px var(--ink); border: 3px solid var(--ink); max-width: 1000px; width: 100%; }
+        
+        #effectPreviewContainer { width: 100%; display: flex; justify-content: center; align-items: center; }
+        #effectPreviewContainer > div { max-width: 100% !important; flex-shrink: 1; } /* Mencegah gepeng/hilang di lanskap */
         
         .effect-options-box { width: 350px; display: flex; flex-direction: column; gap: 15px; }
         .effect-btn { background: var(--bg-color); border: 3px solid var(--ink); padding: 14px 20px; border-radius: 20px; font-size: 1.1rem; font-weight: 600; color: var(--ink); cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 15px; text-align: left; font-family: 'Fredoka', sans-serif; box-shadow: 4px 4px 0px var(--ink); }
@@ -159,33 +162,63 @@
         .numpad-grid .btn-del { background: var(--pink); }
         .numpad-grid .btn-close { grid-column: span 3; background: var(--green); }   
         
-        /* RESPONSIVE MOBILE */
-        @media (max-width: 768px) {
-            .judul-interaktif { font-size: 2.8rem; }
+        /* RESPONSIVE MOBILE & POTRET */
+        @media (max-width: 850px), (orientation: portrait) {
+            .judul-interaktif { font-size: 2.5rem; }
             .nav-bar { top: 15px; left: 15px; right: 15px; }
             .panel { padding: 80px 15px 30px 15px; }
-            .btn-format { width: 140px; font-size: 1rem; padding: 20px 15px; }
-            .btn-format span { width: 50px; height: 50px; font-size: 2rem; }
+            
+            .btn-format { width: 140px; font-size: 1.1rem; padding: 20px 15px; gap: 10px; }
+            .btn-format span { width: 55px; height: 55px; font-size: 2rem; }
             .card { width: 160px; padding: 15px 10px; }
             .card h3 { font-size: 1.2rem; }
-            .pip-video { width: 100px; height: 150px; bottom: 20px; left: 15px; border-radius: 10px; }
-            .pip-label { font-size: 1rem; }
             
-            .mini-gallery-container { top: 80px; right: 15px; transform: none; padding: 10px; }
+            /* --- Layout Kamera Potret --- */
+            #kamera-container .nav-bar { top: 80px; align-items: center; } 
+            .pip-video { width: 125px; height: 180px; bottom: 120px; left: 15px; border-radius: 15px; } /* Perbesar sedikit pip-video */
+            .pip-label { font-size: 1.1rem; padding: 5px 0;}
+            
+            /* Pindahkan Galeri Mini ke Kanan Secara Vertikal */
+            .mini-gallery-container { top: 50%; right: 15px; transform: translateY(-50%); flex-direction: column; width: auto; max-height: 60vh; overflow-y: auto; overflow-x: hidden; padding: 12px; left: auto; }
             
             .kamera-ui-bottom { bottom: 20px; flex-direction: column; gap: 10px; }
-            .btn-diafragma { width: 70px; height: 70px; }
-            .retake-floating-panel { padding: 15px 20px; flex-direction: column; text-align: center; }
-            #effectOverlay { padding: 20px; }
-            .effect-container { flex-direction: column; padding: 20px; border-radius: 20px; }
-            .effect-options-box { width: 100%; }
+            .btn-diafragma { width: 75px; height: 75px; }
+            .retake-floating-panel { padding: 12px 20px; flex-direction: column; text-align: center; }
+
+            /* --- Panel Efek Fit ke Layar --- */
+            #effectOverlay { padding: 15px; justify-content: center; } /* Memaksa ke tengah */
+            .effect-container { flex-direction: column; padding: 20px 15px; gap: 15px; width: 100%; max-height: none; margin: 0 auto; box-sizing: border-box; }
+            #effectPreviewContainer { width: 100%; display: flex; justify-content: center; }
+            #effectPreviewContainer > div { height: 45vh !important; max-width: 100% !important; flex-shrink: 1; } /* Atur tinggi preview agar tidak tertumpuk */
             
-            /* Mengizinkan scroll di mobile jika tertumpuk */
-            #finalPreviewOverlay { height: 100% !important; overflow-y: auto !important; justify-content: flex-start; }
-            #finalPreviewOverlay > div { flex-wrap: wrap !important; }
-           #finalImageResult, #img-hasil-gif { max-width: 100% !important; max-height: 50vh !important; }
-            .image-showcase { flex-direction: column; }
-            .card-hasil { max-width: 100% !important; max-height: none !important; overflow-y: visible !important; padding: 25px;}
+            .effect-options-box { width: 100%; gap: 8px; display: grid; grid-template-columns: 1fr 1fr; align-items: center; }
+            .effect-options-box h2 { grid-column: span 2; font-size: 1.5rem !important; margin: 0; text-align: left; }
+            .effect-options-box > p { display: none; }
+            .effect-btn { padding: 8px 10px; font-size: 0.9rem; border-width: 2px; }
+            
+            #livePhotoWrapper { grid-column: span 2; padding: 8px 10px; margin-top: 0; border-width: 2px; justify-content: center; }
+            #btn-rakit { grid-column: span 2; padding: 10px !important; margin-top: 0 !important; font-size: 1.1rem; }
+
+            /* --- Panel Hasil Final Center Box --- */
+            #finalPreviewOverlay { padding: 15px; align-items: center; justify-content: center; flex-direction: column; overflow-y: auto; }
+            #finalPreviewOverlay > div { flex-direction: column; align-items: center; justify-content: center; gap: 15px; height: auto !important; max-height: none; width: 100%; margin: auto 0; }
+            
+            .image-showcase { height: 35vh !important; flex-direction: row !important; align-items: center; min-height: 0; width: 100%; gap: 10px !important; justify-content: center; }
+            .image-showcase img { max-height: 100% !important; max-width: 48% !important; border-width: 2px; border-radius: 10px; box-shadow: 4px 4px 0px rgba(0,0,0,0.1) !important; }
+            
+            .card-hasil { max-width: 100% !important; max-height: none !important; overflow-y: visible !important; padding: 15px; flex-shrink: 0; border-radius: 20px;}
+            .card-hasil h2 { font-size: 1.5rem; margin-bottom: 10px; }
+            .jumlah-kontrol { margin-bottom: 8px; border-width: 2px; }
+            .btn-jumlah { padding: 2px 10px; font-size: 1.2rem; }
+            #btn-action-cetak { padding: 8px !important; font-size: 1rem !important; margin-bottom: 5px !important; border-width: 2px; }
+            
+            .qr-box { padding: 12px; margin-top: 10px; flex-direction: column; gap: 5px; align-items: center; border-width: 2px; width: 100%; box-sizing: border-box;}
+            #qrCodeContainer { width: 110px; height: 110px; padding: 6px !important; margin: 0 auto; border-width: 2px !important; }
+            #qrCodeContainer img, #qrCodeContainer canvas { width: 100% !important; height: 100% !important; }
+            
+            .qr-box > div { width: 100%; margin-top: 5px !important; gap: 8px !important; flex-direction: row !important; display: flex; }
+            #inputWA_news { padding: 8px 12px !important; font-size: 0.9rem !important; flex: 1; border-width: 2px; text-align: left; }
+            #btnKirimWA_news { padding: 8px 15px !important; font-size: 0.9rem !important; margin: 0 !important; border-width: 2px; }
         }
     </style>
 </head>
@@ -398,6 +431,7 @@
         let webcamStream = null;
         let isLiveViewRunning = false;
         let currentSessionId = 'NEWS-' + Date.now(); 
+        let currentCustomOffsets = {};
         let intervalCekPembayaranExtra = null;
         
         let isEventBerbayar = false; let hargaExtraCetakPerLembar = 15000; let jumlahCetakDipilih = 1;
@@ -500,19 +534,24 @@
         function terapkanVisualKamera() {
             let w = "100vw";
             let h = "100vh";
-            let transformCSS = "translate(-50%, -50%) "; 
+            
+            // 1. Transformasi Dasar
+            let transformCSSBase = "translate(-50%, -50%) "; 
             
             if (isPortrait) {
-                transformCSS += "rotate(90deg) ";
+                transformCSSBase += "rotate(90deg) ";
                 w = "100vh"; 
                 h = "100vw"; 
             }
             
+            // 2. Transformasi Live (Dengan Cermin)
+            let transformCSSLive = transformCSSBase;
             if (isMirror) {
-                transformCSS += isPortrait ? "scaleY(-1) " : "scaleX(-1) "; 
+                transformCSSLive += isPortrait ? "scaleY(-1) " : "scaleX(-1) "; 
             }
 
-            ['liveView', 'webcam-view', 'previewImage'].forEach(id => {
+            // 3. Terapkan ke LiveView dan Webcam
+            ['liveView', 'webcam-view'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) {
                     el.style.position = "absolute";
@@ -521,10 +560,23 @@
                     el.style.width = w;
                     el.style.height = h;
                     el.style.objectFit = "cover";
-                    el.style.imageOrientation = "none"; // Anti-miring (Matikan Exif Rotate)
-                    el.style.transform = transformCSS;
+                    el.style.imageOrientation = "none";
+                    el.style.transform = transformCSSLive; 
                 }
             });
+
+            // 4. Terapkan ke Preview Foto (Tanpa Efek Cermin Tambahan)
+            const previewEl = document.getElementById('previewImage');
+            if (previewEl) {
+                previewEl.style.position = "absolute";
+                previewEl.style.top = "50%";
+                previewEl.style.left = "50%";
+                previewEl.style.width = w;
+                previewEl.style.height = h;
+                previewEl.style.objectFit = "cover";
+                previewEl.style.imageOrientation = "none";
+                previewEl.style.transform = transformCSSBase; 
+            }
 
             const btnMirror = document.getElementById('btn-mirror');
             if(btnMirror) btnMirror.innerText = isMirror ? "🪞 Cermin: ON" : "🪞 Cermin: OFF";
@@ -543,12 +595,19 @@
             templateTerpilih = idTemplate; fotoTerpilih = []; indexFotoSaatIni = 1; 
             retakeCounts = new Array(targetJepretan).fill(settingMaxRetake);
             
-            document.getElementById('panel-template').classList.remove('active-panel'); document.getElementById('kamera-container').style.display = 'flex';
+            document.getElementById('panel-template').classList.remove('active-panel'); 
+            document.getElementById('kamera-container').style.display = 'flex';
             
             siapkanMiniGallery(); 
             
-            document.getElementById('mode-jepret-manual').style.display = 'flex'; document.getElementById('mode-retake-manual').style.display = 'none'; document.getElementById('previewImage').style.display = 'none'; document.getElementById('liveView').style.display = 'block';
-            document.getElementById('liveView').classList.toggle('mirrored', isMirror); document.getElementById('liveView').style.filter = `brightness(${settingKecerahanLV}%)`;
+            document.getElementById('mode-jepret-manual').style.display = 'flex'; 
+            document.getElementById('mode-retake-manual').style.display = 'none'; 
+            document.getElementById('previewImage').style.display = 'none'; 
+            document.getElementById('liveView').style.display = 'block';
+            
+            // PERBAIKAN: Gunakan fungsi terapkanVisualKamera() alih-alih classlist.toggle
+            terapkanVisualKamera(); 
+            document.getElementById('liveView').style.filter = `brightness(${settingKecerahanLV}%)`;
             
             if (activeCameraMode === 'webcam') {
                 jalankanWebcam();
@@ -557,7 +616,6 @@
                 isLiveViewRunning = true; jalankanLiveViewAman();
             }
         }
-
         // --- SISTEM MINI GALLERY ---
         function siapkanMiniGallery() { 
             const container = document.getElementById('miniGallery'); container.innerHTML = ''; 
@@ -623,7 +681,11 @@
                 document.getElementById('liveView').src = ""; 
                 document.getElementById('liveView').style.background = "#e5e7eb"; 
                 document.getElementById('liveView').style.filter = "brightness(100%)";
-                document.getElementById('liveView').classList.remove('mirrored'); 
+                
+                // PERBAIKAN: Reset transform ke tengah tanpa cermin dengan aman
+                let resetTransform = "translate(-50%, -50%) ";
+                if (isPortrait) resetTransform += "rotate(90deg) ";
+                document.getElementById('liveView').style.transform = resetTransform;
             }
             const flash = document.createElement('div'); flash.style = "position:fixed;top:0;left:0;width:100vw;height:100vh;background:white;z-index:9999;opacity:1;transition:0.4s ease-out;"; document.body.appendChild(flash); setTimeout(() => { flash.style.opacity = '0'; }, 50); setTimeout(() => { flash.remove(); }, 500);
 
@@ -705,11 +767,13 @@
             }
         }
 
-        function lanjutKeLiveViewManual() {
+      function lanjutKeLiveViewManual() {
             document.getElementById('mode-jepret-manual').style.display = 'flex'; 
             document.getElementById('previewImage').style.display = 'none'; 
             document.getElementById('liveView').style.display = 'block'; 
-            document.getElementById('liveView').classList.toggle('mirrored', isMirror); 
+            
+            // PERBAIKAN: Gunakan fungsi terapkanVisualKamera()
+            terapkanVisualKamera();
             document.getElementById('liveView').style.filter = `brightness(${settingKecerahanLV}%)`;
             
             setTimeout(() => { 
@@ -741,12 +805,20 @@
                     <div id="filterTarget" style="position: absolute; top:0; left:0; width:100%; height:100%; transition: filter 0.3s ease;">
                 `;
 
+                // Set default tengah 50%
+                if (Object.keys(currentCustomOffsets).length === 0) {
+                    fotoTerpilih.forEach((_, i) => currentCustomOffsets[i] = {x: 50, y: 50});
+                }
+
                 fotoTerpilih.forEach((fotoName, i) => {
                     const coord = templateInfo.layout.coords[i];
                     const leftPct = (coord.x / canvasW) * 100; const topPct = (coord.y / canvasH) * 100;
                     const fWidth = coord.width || templateInfo.layout.width; const fHeight = coord.height || templateInfo.layout.height;
                     const wPct = (fWidth / canvasW) * 100; const hPct = (fHeight / canvasH) * 100;
-                    htmlDom += `<img src="/uploads/${currentSessionId}/${fotoName}" data-index="${i}" class="drag-img" draggable="true" style="position: absolute; left: ${leftPct}%; top: ${topPct}%; width: ${wPct}%; height: ${hPct}%; object-fit: cover; z-index: 2; cursor: grab;">`;
+                    const off = currentCustomOffsets[i] || {x: 50, y: 50};
+                    
+                    // Gunakan pointer-events & object-position 
+                    htmlDom += `<img src="/uploads/${currentSessionId}/${fotoName}" data-index="${i}" class="drag-img" style="position: absolute; left: ${leftPct}%; top: ${topPct}%; width: ${wPct}%; height: ${hPct}%; object-fit: cover; object-position: ${off.x}% ${off.y}%; z-index: 2; cursor: grab; touch-action: none;">`;
                 });
 
                 htmlDom += `</div><img src="${frameUrl}" style="position: absolute; top:0; left:0; width:100%; height:100%; z-index: 10; pointer-events: none;"></div>`;
@@ -756,19 +828,79 @@
             };
         }
 
-        // --- SISTEM DRAG & DROP PHOTO ---
         function inisiasiDragAndDrop() {
-            const dragImgs = document.querySelectorAll('.drag-img'); let draggedIndex = null;
+            const dragImgs = document.querySelectorAll('.drag-img'); 
+            let draggedImg = null;
+            let startX, startY;
+            let initialX, initialY;
+
             dragImgs.forEach(img => {
-                img.addEventListener('dragstart', (e) => { draggedIndex = e.target.getAttribute('data-index'); e.target.style.opacity = '0.5'; e.dataTransfer.effectAllowed = 'move'; });
-                img.addEventListener('dragend', (e) => { e.target.style.opacity = '1'; }); img.addEventListener('dragover', (e) => { e.preventDefault(); });
-                img.addEventListener('drop', (e) => { e.preventDefault(); let targetIndex = e.target.getAttribute('data-index'); if (draggedIndex !== null && targetIndex !== null && draggedIndex !== targetIndex) tukarPosisiFoto(draggedIndex, targetIndex); });
-                img.addEventListener('touchstart', (e) => { draggedIndex = e.target.getAttribute('data-index'); e.target.style.opacity = '0.5'; }, {passive: true});
-                img.addEventListener('touchend', (e) => { e.target.style.opacity = '1'; let touch = e.changedTouches[0]; let elementBawah = document.elementFromPoint(touch.clientX, touch.clientY); if (elementBawah && elementBawah.classList.contains('drag-img')) { let targetIndex = elementBawah.getAttribute('data-index'); if (draggedIndex !== null && targetIndex !== null && draggedIndex !== targetIndex) tukarPosisiFoto(draggedIndex, targetIndex); } });
+                img.addEventListener('pointerdown', (e) => {
+                    e.preventDefault();
+                    draggedImg = img;
+                    const idx = img.getAttribute('data-index');
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    initialX = currentCustomOffsets[idx].x;
+                    initialY = currentCustomOffsets[idx].y;
+                    img.style.cursor = 'grabbing';
+                });
+            });
+
+            document.addEventListener('pointermove', (e) => {
+                if (!draggedImg) return;
+                e.preventDefault();
+                const idx = draggedImg.getAttribute('data-index');
+                
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                
+                const imgPctX = (dx / draggedImg.offsetWidth) * 150;
+                const imgPctY = (dy / draggedImg.offsetHeight) * 150;
+                
+                let newImgX = initialX - imgPctX;
+                let newImgY = initialY - imgPctY;
+                
+                newImgX = Math.max(0, Math.min(100, newImgX));
+                newImgY = Math.max(0, Math.min(100, newImgY));
+                
+                currentCustomOffsets[idx] = {x: newImgX, y: newImgY};
+                draggedImg.style.objectPosition = `${newImgX}% ${newImgY}%`;
+            }, {passive: false});
+
+            document.addEventListener('pointerup', (e) => {
+                if (!draggedImg) return;
+                const idx = draggedImg.getAttribute('data-index');
+                draggedImg.style.cursor = 'grab';
+                
+                draggedImg.style.visibility = 'hidden';
+                const elemBawah = document.elementFromPoint(e.clientX, e.clientY);
+                draggedImg.style.visibility = 'visible';
+                
+                if (elemBawah && elemBawah.classList.contains('drag-img')) {
+                    const targetIdx = elemBawah.getAttribute('data-index');
+                    if (idx !== targetIdx) {
+                        tukarPosisiFoto(idx, targetIdx); 
+                    }
+                }
+                draggedImg = null;
             });
         }
-        function tukarPosisiFoto(idx1, idx2) { let temp = fotoTerpilih[parseInt(idx1)]; fotoTerpilih[parseInt(idx1)] = fotoTerpilih[parseInt(idx2)]; fotoTerpilih[parseInt(idx2)] = temp; bukaPanelEfek(); }
 
+        function tukarPosisiFoto(idx1, idx2) { 
+            let temp = fotoTerpilih[parseInt(idx1)]; 
+            fotoTerpilih[parseInt(idx1)] = fotoTerpilih[parseInt(idx2)]; 
+            fotoTerpilih[parseInt(idx2)] = temp; 
+            
+            // Swap Data Offset
+            let tempOff = currentCustomOffsets[parseInt(idx1)];
+            currentCustomOffsets[parseInt(idx1)] = currentCustomOffsets[parseInt(idx2)];
+            currentCustomOffsets[parseInt(idx2)] = tempOff;
+
+            bukaPanelEfek(); 
+        }
+
+        // Jangan lupa sisakan fungsi kembaliDariEfek & terapkanFilterLive yang kamu miliki
         function kembaliDariEfek() { document.getElementById('effectOverlay').style.display = 'none'; masukKeKamera(templateTerpilih); }
 
         function terapkanFilterLive(namaServer, cssFilter, btnElem) {
@@ -789,13 +921,15 @@
                         templateId: templateTerpilih, 
                         selectedPhotos: fotoTerpilih, 
                         effect: efekTerpilihServer,
-                        livePhoto: document.getElementById('chk-livePhoto-news')?.checked || true
+                        livePhoto: document.getElementById('chk-livePhoto-news') ? document.getElementById('chk-livePhoto-news').checked : true,
+                        customOffsets: currentCustomOffsets, // <--- BARU (Data Geser)
+                        orientation: isPortrait ? 'potret' : 'lanskap' // <--- BARU (Deteksi Kamera)
                     })
                 });
                 const data = await response.json(); 
                 teksLoading.style.display = 'none';
                 
-               if (data.success) {
+                if (data.success) {
                     document.getElementById('effectOverlay').style.display = 'none'; 
                     document.getElementById('finalPreviewOverlay').style.display = 'flex';
                     
@@ -1016,6 +1150,67 @@
                 document.body.focus();
             }, 50);
         };
+    </script>
+
+    <script>
+        try {
+            const { ipcRenderer } = require('electron');
+
+            ipcRenderer.on('shutter-fisik-ditekan', async (event, data) => {
+                console.log("📸 Sinyal tombol fisik diterima di Newspaper!");
+
+                // 1. CEK STATUS SETTING DASHBOARD (Take from Remote)
+                try {
+                    const res = await fetch('/api/settings');
+                    const settings = await res.json();
+                    
+                    if (settings.global && settings.global.takeFromRemote === false) {
+                        console.log("⛔ Sinyal diabaikan: Fitur Take from Remote sedang OFF.");
+                        return;
+                    }
+                } catch (e) {
+                    console.error("Gagal memeriksa status settings:", e);
+                }
+
+                // 2. AMBIL ELEMEN UI NEWSPAPER
+                const kameraContainer = document.getElementById('kamera-container');
+                const modeJepretManual = document.getElementById('mode-jepret-manual');
+                const btnJepretManual = document.getElementById('btn-jepret-manual');
+                
+                // 3. VALIDASI LAYAR (Harus di layar kamera & bukan sedang di layar opsi retake)
+                if (kameraContainer.style.display === 'flex' && modeJepretManual.style.display !== 'none') {
+                    if (btnJepretManual && !btnJepretManual.disabled) {
+                        jepretKameraManual();
+                    }
+                }
+            });
+        } catch (e) {
+            console.log("Berjalan di browser biasa, IPC Renderer dinonaktifkan.");
+        }
+
+        // EVENT LISTENER UNTUK REMOTE BLUETOOTH / PEDAL (SPACEBAR ATAU ENTER)
+        document.addEventListener('keydown', async function(e) {
+            if (e.code === 'Space' || e.code === 'Enter') {
+                // Hindari menjepret saat ngetik WA
+                if (document.activeElement.tagName === 'INPUT') return;
+
+                const kameraContainer = document.getElementById('kamera-container');
+                const modeJepretManual = document.getElementById('mode-jepret-manual');
+                const btnJepretManual = document.getElementById('btn-jepret-manual');
+                
+                if (kameraContainer.style.display === 'flex' && modeJepretManual.style.display !== 'none' && btnJepretManual && !btnJepretManual.disabled) {
+                    e.preventDefault();
+                    
+                    try {
+                        const res = await fetch('/api/settings');
+                        const settings = await res.json();
+                        if (settings.global && settings.global.takeFromRemote === false) return;
+                    } catch(err){}
+
+                    jepretKameraManual();
+                }
+            }
+        });
     </script>
 </body>
 </html>

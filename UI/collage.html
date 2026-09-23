@@ -74,7 +74,10 @@
 
         #effectOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); z-index: 99999; flex-direction: column; justify-content: center; align-items: center; padding: 40px; box-sizing: border-box; overflow-y: auto;}
         .effect-container { display: flex; gap: 40px; align-items: center; background: var(--paper-white); padding: 40px; border-radius: 20px; box-shadow: 8px 8px 0px var(--ink); border: 4px solid var(--ink); max-width: 1000px; width: 100%; }
-        .effect-preview-box { flex: 1; display: flex; flex-direction: column; align-items: center;}
+        .effect-preview-box { flex: 1; display: flex; flex-direction: column; align-items: center; width: 100%; }
+        #effectPreviewContainer { width: 100%; display: flex; justify-content: center; align-items: center; }
+        /* Hapus pemaksaan auto agar tidak jadi 0 piksel */
+        #effectPreviewContainer > div { max-width: 100% !important; flex-shrink: 1; }
         
         .effect-options-box { width: 350px; display: flex; flex-direction: column; gap: 12px; }
         .effect-btn { background: var(--paper-white); border: 3px solid var(--ink); padding: 14px 20px; border-radius: 12px; font-size: 1.1rem; font-weight: 700; color: var(--ink); cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 15px; text-align: left; font-family: 'Poppins', sans-serif; box-shadow: 4px 4px 0px var(--ink); }
@@ -119,25 +122,65 @@
         #paymentModalOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 99999999; justify-content: center; align-items: center; }
         .payment-modal { background: var(--paper-white); padding: 30px; border-radius: 20px; border: 4px solid var(--ink); box-shadow: 10px 10px 0px var(--ink); width: 340px; text-align: center; max-height: 90vh; overflow-y: auto;}
 
-        @media (max-width: 768px) {
+        @media (max-width: 850px), (orientation: portrait) {
             .judul-interaktif { font-size: 2.2rem; }
-            .nav-bar { top: 15px; left: 15px; right: 15px; }
+            .sub-judul { font-size: 0.9rem; margin-bottom: 10px; }
             .panel { padding: 80px 15px 30px 15px; }
+            .nav-bar { top: 15px; left: 15px; right: 15px; }
             .btn-format { width: 140px; font-size: 1.2rem; }
             .card { width: 160px; padding: 15px 10px; }
-            .pose-card-container { top: 80px; left: 15px; transform: none; width: 100px; padding: 10px; }
-            .pose-card-container h3 { font-size: 0.8rem; }
-            .mini-gallery-container { top: 80px; right: 15px; transform: none; padding: 10px; }
+            
+            /* --- Layout Kamera Potret --- */
+            #kamera-container .nav-bar { top: 80px; } /* Turunkan tombol agar tidak tertutup Timer */
+            .pose-card-container { top: auto; bottom: 130px; left: 15px; transform: none; width: 135px; padding: 10px; } /* Perbesar Ide Pose */
+            .pose-card-container h3 { font-size: 0.95rem; margin-bottom: 5px; }
+            
+            /* Pertahankan Galeri Mini di sisi kanan vertikal */
+            .mini-gallery-container { top: 50%; right: 15px; transform: translateY(-50%); flex-direction: column; width: auto; max-height: 60vh; overflow-y: auto; overflow-x: hidden; padding: 12px; left: auto; }
+            .mini-slot { width: 65px; height: 50px; }
+            
             .kamera-ui-bottom { bottom: 20px; flex-direction: column; gap: 10px; }
             .btn-diafragma { width: 70px; height: 70px; }
             .retake-floating-panel { padding: 10px 20px; flex-direction: column; text-align: center; }
-            #effectOverlay { padding: 20px; }
-            .effect-container { flex-direction: column; padding: 20px; }
-            .effect-options-box { width: 100%; }
-            #finalPreviewOverlay { padding: 20px; align-items: flex-start;}
-            .final-wrapper { flex-direction: column; align-items: center;}
-            .card-hasil { width: 100%; max-width: 100%; }
-            #finalImageResult { max-height: 45vh; max-width: 100%;}
+            
+            /* --- Panel Efek Custom Grid Agar Fit di Layar --- */
+            #effectOverlay { padding: 15px; justify-content: center; }
+            .effect-container { flex-direction: column; padding: 20px 15px; gap: 15px; width: 100%; max-height: none; margin: 0 auto; box-sizing: border-box; }
+            #effectPreviewContainer { width: 100%; display: flex; justify-content: center; }
+            #effectPreviewContainer > div { height: 45vh !important; max-width: 100% !important; flex-shrink: 1; }
+            
+            .effect-options-box { width: 100%; gap: 6px; display: grid; grid-template-columns: 1fr 1fr; align-items: center; }
+            .effect-options-box h2 { grid-column: span 2; font-size: 1.3rem !important; margin: 0; text-align: left; }
+            .effect-options-box > p { display: none; }
+            .effect-btn { padding: 6px 10px; font-size: 0.85rem; border-width: 2px; }
+            #livePhotoWrapper { grid-column: span 2; padding: 6px 10px; margin-top: 0; border-width: 2px; justify-content: center; }
+            #livePhotoWrapper label { font-size: 0.9rem !important; }
+            #btn-rakit { grid-column: span 2; padding: 8px !important; margin-top: 0 !important; font-size: 1rem; }
+            
+            /* --- Panel Hasil Final Custom Fit --- */
+            #finalPreviewOverlay { padding: 15px; align-items: center; justify-content: center; flex-direction: column; overflow-y: auto; }
+            .final-wrapper { flex-direction: column; align-items: center; justify-content: center; gap: 15px; height: auto; max-height: none; width: 100%; margin: auto 0; }
+            
+            /* Posisi Gambar Hasil Bersebelahan (Jika ada GIF) */
+            .image-showcase { height: 35vh !important; flex-direction: row !important; align-items: center; min-height: 0; width: 100%; gap: 10px !important; }
+            .image-showcase img { max-height: 100% !important; max-width: 48% !important; border-width: 2px; border-radius: 10px; box-shadow: 4px 4px 0px var(--ink) !important; }
+            
+            .card-hasil { padding: 15px; width: 100%; max-width: 100%; border-radius: 20px; box-sizing: border-box; flex-shrink: 0; }
+            .card-hasil h2 { font-size: 1.5rem; margin-bottom: 10px; }
+            .jumlah-kontrol { margin-bottom: 8px; border-width: 2px; }
+            .btn-jumlah { padding: 2px 10px; font-size: 1.2rem; }
+            #btn-action-cetak { padding: 8px !important; font-size: 1rem !important; margin-bottom: 5px !important; border-width: 2px; }
+            
+            /* Layout Box QR & WA Menjadi Simetris Vertikal */
+            .qr-box { padding: 12px; margin-top: 10px; flex-direction: column; gap: 5px; align-items: center; border-width: 2px; width: 100%; box-sizing: border-box;}
+            #qrCodeContainer { width: 110px; height: 110px; padding: 6px !important; margin: 0 auto; border-width: 2px !important; }
+            #qrCodeContainer img, #qrCodeContainer canvas { width: 100% !important; height: 100% !important; }
+            .qr-box > p { font-size: 0.85rem; margin-top: 5px; margin-bottom: 0; display: block; }
+            .qr-box > hr { margin: 8px 0; border-top: 2px dashed var(--ink); width: 100%; display: block; }
+            
+            .qr-box > div:last-child { width: 100%; margin-top: 5px !important; gap: 8px !important; flex-direction: row !important; display: flex; }
+            #inputWA { padding: 8px 12px !important; font-size: 0.9rem !important; flex: 1; border-width: 2px; text-align: left; }
+            #btnKirimWA { padding: 8px 15px !important; font-size: 0.9rem !important; margin: 0 !important; border-width: 2px; }
         }
     </style>
 </head>
@@ -316,6 +359,7 @@
         let settingMaxRetake = 3; let retakeCounts = []; let isEventBerbayar = false; let hargaExtraCetakPerLembar = 15000; 
         let jumlahCetakDipilih = 1; let isLiveViewRunning = false; let sisaWaktuSesi = 300; let intervalTimerSesi = null; let timeoutIdleAkhir = null; 
         let currentSessionId = 'COL-' + Date.now();
+        let currentCustomOffsets = {};
         let intervalCekPembayaranExtra = null; 
         let activeCameraMode = 'canon'; 
         let webcamStream = null;
@@ -407,42 +451,51 @@
         }
 
        function terapkanVisualKamera() {
-            // Kita gunakan satuan ukuran layar mutlak
             let w = "100vw";
             let h = "100vh";
             
-            // Selalu kunci titik pusat di tengah layar
-            let transformCSS = "translate(-50%, -50%) "; 
+            // 1. Transformasi Dasar (Hanya Posisi & Rotasi)
+            let transformCSSBase = "translate(-50%, -50%) "; 
             
-            // 1. Jika mode potret, putar 90 derajat dan silangkan ukurannya
             if (isPortrait) {
-                transformCSS += "rotate(90deg) ";
+                transformCSSBase += "rotate(90deg) ";
                 w = "100vh"; 
                 h = "100vw"; 
             }
             
-            // 2. Jika cermin aktif, balikkan layarnya
+            // 2. Transformasi Khusus Live (Ditambah Efek Cermin jika ON)
+            let transformCSSLive = transformCSSBase;
             if (isMirror) {
-                transformCSS += isPortrait ? "scaleY(-1) " : "scaleX(-1) "; 
+                transformCSSLive += isPortrait ? "scaleY(-1) " : "scaleX(-1) "; 
             }
 
-            // 3. Terapkan gaya ini ke LiveView, Webcam, dan Preview Sesaat sekaligus!
-            ['liveView', 'webcam-view', 'previewImage'].forEach(id => {
+            // 3. Terapkan gaya ke LiveView dan Webcam (Butuh Efek Cermin)
+            ['liveView', 'webcam-view'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) {
                     el.style.position = "absolute";
-                    el.style.top = "50%";          // Paksa ke tengah
-                    el.style.left = "50%";         // Paksa ke tengah
-                    el.style.width = w;            // Paksa ukuran dinamis
-                    el.style.height = h;           // Paksa ukuran dinamis
-                    el.style.objectFit = "cover";  // Pastikan menutupi area tanpa gepeng
-                    
-                    // 👇 INI KUNCI ANTI-MIRING: Matikan EXIF auto-rotate bawaan browser
+                    el.style.top = "50%";          
+                    el.style.left = "50%";         
+                    el.style.width = w;            
+                    el.style.height = h;           
+                    el.style.objectFit = "cover";  
                     el.style.imageOrientation = "none"; 
-                    
-                    el.style.transform = transformCSS;
+                    el.style.transform = transformCSSLive; // <-- Menggunakan CSS Live
                 }
             });
+
+            // 4. Terapkan gaya ke Preview Foto (TIDAK BOLEH di-cermin lagi karena file dari server sudah dibalik)
+            const previewEl = document.getElementById('previewImage');
+            if (previewEl) {
+                previewEl.style.position = "absolute";
+                previewEl.style.top = "50%";
+                previewEl.style.left = "50%";
+                previewEl.style.width = w;
+                previewEl.style.height = h;
+                previewEl.style.objectFit = "cover";
+                previewEl.style.imageOrientation = "none";
+                previewEl.style.transform = transformCSSBase; // <-- Hanya menggunakan CSS Dasar (Tanpa Mirror)
+            }
 
             // Perbarui tulisan pada tombol
             document.querySelectorAll('.btn-mirror').forEach(btn => btn.innerText = isMirror ? "🪞 Cermin: ON" : "🪞 Cermin: OFF");
@@ -597,24 +650,103 @@
             document.getElementById('kamera-container').style.display = 'none'; document.getElementById('effectOverlay').style.display = 'flex'; isLiveViewRunning = false; await fetch('/toggle-liveview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: false }) });
             const previewContainer = document.getElementById('effectPreviewContainer'); previewContainer.innerHTML = '<p style="color:var(--ink); font-weight:bold;">Menyiapkan preview...</p>';
             const templateTersedia = databaseTemplate[targetJepretan.toString()]; const templateInfo = templateTersedia.find(t => t.id === templateTerpilih); const frameUrl = `/frames/${templateTerpilih}.png`; const frameImg = new Image(); frameImg.src = frameUrl;
+            
             frameImg.onload = () => {
                 const canvasW = frameImg.naturalWidth; const canvasH = frameImg.naturalHeight; let htmlDom = `<div style="height: 55vh; max-width: 100%; aspect-ratio: ${canvasW} / ${canvasH}; position: relative; border-radius: 12px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); overflow: hidden; background: white;"><div id="filterTarget" style="position: absolute; top:0; left:0; width:100%; height:100%; transition: filter 0.3s ease;">`;
-                fotoTerpilih.forEach((fotoName, i) => { const urlFoto = `/uploads/${currentSessionId}/${fotoName}?t=${Date.now()}`; const coord = templateInfo.layout.coords[i]; const fWidth = coord.width || templateInfo.layout.width; const fHeight = coord.height || templateInfo.layout.height; const leftPct = (coord.x / canvasW) * 100; const topPct = (coord.y / canvasH) * 100; const wPct = (fWidth / canvasW) * 100; const hPct = (fHeight / canvasH) * 100; htmlDom += `<img src="${urlFoto}" data-index="${i}" class="drag-img" draggable="true" style="position: absolute; left: ${leftPct}%; top: ${topPct}%; width: ${wPct}%; height: ${hPct}%; object-fit: cover; z-index: 2; cursor: grab;">`; });
+                
+                // Set default titik tengah (50%)
+                if (Object.keys(currentCustomOffsets).length === 0) {
+                    fotoTerpilih.forEach((_, i) => currentCustomOffsets[i] = {x: 50, y: 50});
+                }
+
+                fotoTerpilih.forEach((fotoName, i) => { 
+                    const urlFoto = `/uploads/${currentSessionId}/${fotoName}?t=${Date.now()}`; 
+                    const coord = templateInfo.layout.coords[i]; 
+                    const fWidth = coord.width || templateInfo.layout.width; 
+                    const fHeight = coord.height || templateInfo.layout.height; 
+                    const leftPct = (coord.x / canvasW) * 100; const topPct = (coord.y / canvasH) * 100; 
+                    const wPct = (fWidth / canvasW) * 100; const hPct = (fHeight / canvasH) * 100; 
+                    const off = currentCustomOffsets[i] || {x: 50, y: 50};
+
+                    // Gunakan object-position untuk pratinjau geser
+                    htmlDom += `<img src="${urlFoto}" data-index="${i}" class="drag-img" style="position: absolute; left: ${leftPct}%; top: ${topPct}%; width: ${wPct}%; height: ${hPct}%; object-fit: cover; object-position: ${off.x}% ${off.y}%; z-index: 2; cursor: grab; touch-action: none;">`; 
+                });
+                
                 htmlDom += `</div><img src="${frameUrl}" style="position: absolute; top:0; left:0; width:100%; height:100%; z-index: 10; pointer-events: none;"></div>`; previewContainer.innerHTML = htmlDom; terapkanFilterLive('none', 'none', document.getElementById('btn-efek-none')); inisiasiDragAndDrop(); 
             };
         }
 
         function inisiasiDragAndDrop() {
-            const dragImgs = document.querySelectorAll('.drag-img'); let draggedIndex = null;
+            const dragImgs = document.querySelectorAll('.drag-img'); 
+            let draggedImg = null;
+            let startX, startY;
+            let initialX, initialY;
+
             dragImgs.forEach(img => {
-                img.addEventListener('dragstart', (e) => { draggedIndex = e.target.getAttribute('data-index'); e.target.style.opacity = '0.5'; e.dataTransfer.effectAllowed = 'move'; });
-                img.addEventListener('dragend', (e) => { e.target.style.opacity = '1'; }); img.addEventListener('dragover', (e) => { e.preventDefault(); });
-                img.addEventListener('drop', (e) => { e.preventDefault(); let targetIndex = e.target.getAttribute('data-index'); if (draggedIndex !== null && targetIndex !== null && draggedIndex !== targetIndex) tukarPosisiFoto(draggedIndex, targetIndex); });
-                img.addEventListener('touchstart', (e) => { draggedIndex = e.target.getAttribute('data-index'); e.target.style.opacity = '0.5'; }, {passive: true});
-                img.addEventListener('touchend', (e) => { e.target.style.opacity = '1'; let touch = e.changedTouches[0]; let elementBawah = document.elementFromPoint(touch.clientX, touch.clientY); if (elementBawah && elementBawah.classList.contains('drag-img')) { let targetIndex = elementBawah.getAttribute('data-index'); if (draggedIndex !== null && targetIndex !== null && draggedIndex !== targetIndex) tukarPosisiFoto(draggedIndex, targetIndex); } });
+                img.addEventListener('pointerdown', (e) => {
+                    e.preventDefault();
+                    draggedImg = img;
+                    const idx = img.getAttribute('data-index');
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    initialX = currentCustomOffsets[idx].x;
+                    initialY = currentCustomOffsets[idx].y;
+                    img.style.cursor = 'grabbing';
+                });
+            });
+
+            document.addEventListener('pointermove', (e) => {
+                if (!draggedImg) return;
+                e.preventDefault();
+                const idx = draggedImg.getAttribute('data-index');
+                
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                
+                const imgPctX = (dx / draggedImg.offsetWidth) * 150;
+                const imgPctY = (dy / draggedImg.offsetHeight) * 150;
+                
+                let newImgX = initialX - imgPctX;
+                let newImgY = initialY - imgPctY;
+                
+                newImgX = Math.max(0, Math.min(100, newImgX));
+                newImgY = Math.max(0, Math.min(100, newImgY));
+                
+                currentCustomOffsets[idx] = {x: newImgX, y: newImgY};
+                draggedImg.style.objectPosition = `${newImgX}% ${newImgY}%`;
+            }, {passive: false});
+
+            document.addEventListener('pointerup', (e) => {
+                if (!draggedImg) return;
+                const idx = draggedImg.getAttribute('data-index');
+                draggedImg.style.cursor = 'grab';
+                
+                draggedImg.style.visibility = 'hidden';
+                const elemBawah = document.elementFromPoint(e.clientX, e.clientY);
+                draggedImg.style.visibility = 'visible';
+                
+                if (elemBawah && elemBawah.classList.contains('drag-img')) {
+                    const targetIdx = elemBawah.getAttribute('data-index');
+                    if (idx !== targetIdx) {
+                        tukarPosisiFoto(idx, targetIdx); 
+                    }
+                }
+                draggedImg = null;
             });
         }
-        function tukarPosisiFoto(idx1, idx2) { let temp = fotoTerpilih[parseInt(idx1)]; fotoTerpilih[parseInt(idx1)] = fotoTerpilih[parseInt(idx2)]; fotoTerpilih[parseInt(idx2)] = temp; bukaPanelEfek(); }
+
+        function tukarPosisiFoto(idx1, idx2) { 
+            let temp = fotoTerpilih[parseInt(idx1)]; 
+            fotoTerpilih[parseInt(idx1)] = fotoTerpilih[parseInt(idx2)]; 
+            fotoTerpilih[parseInt(idx2)] = temp; 
+            
+            // Pertahankan pergeseran offset foto setelah pindah bingkai
+            let tempOff = currentCustomOffsets[parseInt(idx1)];
+            currentCustomOffsets[parseInt(idx1)] = currentCustomOffsets[parseInt(idx2)];
+            currentCustomOffsets[parseInt(idx2)] = tempOff;
+
+            bukaPanelEfek(); 
+        }
         function terapkanFilterLive(namaServer, cssFilter, btnElem) { efekTerpilihServer = namaServer; const filterTarget = document.getElementById('filterTarget'); if(filterTarget) filterTarget.style.filter = cssFilter; document.querySelectorAll('.effect-btn').forEach(btn => btn.classList.remove('active')); btnElem.classList.add('active'); }
 
         async function rakitDanSimpanFinal() {
@@ -628,7 +760,9 @@
                         templateId: templateTerpilih, 
                         selectedPhotos: fotoTerpilih, 
                         effect: efekTerpilihServer,
-                        livePhoto: document.getElementById('chk-livePhoto-collage')?.checked || true,
+                        livePhoto: document.getElementById('chk-livePhoto-studio') ? document.getElementById('chk-livePhoto-studio').checked : true,
+                        customOffsets: currentCustomOffsets, // <--- BARU: Kirim koordinat geser
+                        orientation: isPortrait ? 'potret' : 'lanskap' // <--- BARU: Kirim status potret
                     }) 
                 });
                 const data = await response.json(); 
@@ -839,6 +973,67 @@
                 document.body.focus();
             }, 50);
         };
+    </script>
+<script>
+        try {
+            const { ipcRenderer } = require('electron');
+
+            ipcRenderer.on('shutter-fisik-ditekan', async (event, data) => {
+                console.log("📸 Sinyal tombol fisik diterima di Collage!");
+
+                // 1. CEK STATUS SETTING DASHBOARD (Take from Remote)
+                try {
+                    const res = await fetch('/api/settings');
+                    const settings = await res.json();
+                    
+                    if (settings.global && settings.global.takeFromRemote === false) {
+                        console.log("⛔ Sinyal diabaikan: Fitur Take from Remote sedang OFF.");
+                        return;
+                    }
+                } catch (e) {
+                    console.error("Gagal memeriksa status settings:", e);
+                }
+
+                // 2. AMBIL ELEMEN UI COLLAGE
+                const kameraContainer = document.getElementById('kamera-container');
+                const modeJepret = document.getElementById('mode-jepret');
+                const btnJepret = document.getElementById('btn-jepret');
+                
+                // 3. VALIDASI LAYAR (Harus di layar kamera & bukan sedang di layar opsi retake)
+                if (kameraContainer.style.display === 'flex' && modeJepret.style.display !== 'none') {
+                    if (btnJepret && !btnJepret.disabled) {
+                        jepretKamera();
+                    }
+                }
+            });
+        } catch (e) {
+            console.log("Berjalan di browser biasa, IPC Renderer dinonaktifkan.");
+        }
+
+        // EVENT LISTENER UNTUK REMOTE BLUETOOTH / PEDAL (SPACEBAR ATAU ENTER)
+        document.addEventListener('keydown', async function(e) {
+            if (e.code === 'Space' || e.code === 'Enter') {
+                // Hindari pemicu otomatis jika user sedang mengetik sesuatu (misal di input WA)
+                if (document.activeElement.tagName === 'INPUT') return;
+
+                const kameraContainer = document.getElementById('kamera-container');
+                const modeJepret = document.getElementById('mode-jepret');
+                const btnJepret = document.getElementById('btn-jepret');
+                
+                if (kameraContainer.style.display === 'flex' && modeJepret.style.display !== 'none' && btnJepret && !btnJepret.disabled) {
+                    e.preventDefault();
+                    
+                    // Cek variabel "takeFromRemote" dari backend sebelum menjepret
+                    try {
+                        const res = await fetch('/api/settings');
+                        const settings = await res.json();
+                        if (settings.global && settings.global.takeFromRemote === false) return;
+                    } catch(err){}
+
+                    jepretKamera();
+                }
+            }
+        });
     </script>
 </body>
 </html>
