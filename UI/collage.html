@@ -454,22 +454,25 @@
             let w = "100vw";
             let h = "100vh";
             
-            // 1. Transformasi Dasar (Hanya Posisi & Rotasi)
+            // 1. Transformasi Dasar (Tanpa Mirror) - Untuk Preview Foto
             let transformCSSBase = "translate(-50%, -50%) "; 
-            
             if (isPortrait) {
                 transformCSSBase += "rotate(90deg) ";
                 w = "100vh"; 
                 h = "100vw"; 
             }
             
-            // 2. Transformasi Khusus Live (Ditambah Efek Cermin jika ON)
-            let transformCSSLive = transformCSSBase;
+            // 2. Transformasi Khusus Live View (Dengan Efek Cermin)
+            // Trik CSS: Deklarasikan scaleX(-1) SEBELUM rotate agar flip selalu horizontal di layar
+            let transformCSSLive = "translate(-50%, -50%) ";
             if (isMirror) {
-                transformCSSLive += isPortrait ? "scaleY(-1) " : "scaleX(-1) "; 
+                transformCSSLive += "scaleX(-1) "; 
+            }
+            if (isPortrait) {
+                transformCSSLive += "rotate(90deg) ";
             }
 
-            // 3. Terapkan gaya ke LiveView dan Webcam (Butuh Efek Cermin)
+            // 3. Terapkan gaya ke LiveView dan Webcam
             ['liveView', 'webcam-view'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) {
@@ -484,7 +487,7 @@
                 }
             });
 
-            // 4. Terapkan gaya ke Preview Foto (TIDAK BOLEH di-cermin lagi karena file dari server sudah dibalik)
+            // 4. Terapkan gaya ke Preview Foto 
             const previewEl = document.getElementById('previewImage');
             if (previewEl) {
                 previewEl.style.position = "absolute";
@@ -494,7 +497,7 @@
                 previewEl.style.height = h;
                 previewEl.style.objectFit = "cover";
                 previewEl.style.imageOrientation = "none";
-                previewEl.style.transform = transformCSSBase; // <-- Hanya menggunakan CSS Dasar (Tanpa Mirror)
+                previewEl.style.transform = transformCSSBase; // <-- CSS Dasar (Tanpa Mirror)
             }
 
             // Perbarui tulisan pada tombol
@@ -556,9 +559,19 @@
                 const tCtx = tempCanvas.getContext('2d');
 
                 recordInterval = setInterval(() => {
-                    if(isMirror) { tCtx.save(); tCtx.translate(tempCanvas.width, 0); tCtx.scale(-1, 1); }
+                    if (isMirror) { 
+                        tCtx.save(); 
+                        if (isPortrait) {
+                            // Di potret, mentahan adalah lanskap. Balik Vertikal agar jadi Horizontal saat diputar nanti
+                            tCtx.translate(0, tempCanvas.height); 
+                            tCtx.scale(1, -1);
+                        } else {
+                            tCtx.translate(tempCanvas.width, 0); 
+                            tCtx.scale(-1, 1);
+                        }
+                    }
                     tCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
-                    if(isMirror) { tCtx.restore(); }
+                    if (isMirror) { tCtx.restore(); }
                     webcamFrames.push(tempCanvas.toDataURL('image/jpeg', 0.6));
                 }, 100);
             }
@@ -594,7 +607,15 @@
                 canvas.width = video.videoWidth; canvas.height = video.videoHeight;
                 const ctx = canvas.getContext('2d');
 
-                if (isMirror) { ctx.translate(canvas.width, 0); ctx.scale(-1, 1); }
+               if (isMirror) { 
+                    if (isPortrait) {
+                        ctx.translate(0, canvas.height); 
+                        ctx.scale(1, -1);
+                    } else {
+                        ctx.translate(canvas.width, 0); 
+                        ctx.scale(-1, 1);
+                    }
+                }
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                 const base64Image = canvas.toDataURL('image/jpeg', 0.9);
 
@@ -607,7 +628,16 @@
                     }) 
                 });
             } else {
-                await fetch('/capture', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'collage', mirror: isMirror, lvActive: settingFlashWorkaround }) });
+                await fetch('/capture', { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ 
+                        mode: 'collage', 
+                        mirror: isMirror, 
+                        lvActive: settingFlashWorkaround, 
+                        orientation: isPortrait ? 'potret' : 'lanskap' 
+                    }) 
+                });
             }
 
             let fotoBaruDitemukan = false; let waktuTunggu = 0;
@@ -621,8 +651,16 @@
                 } catch (e) { }
             }
             if (!fotoBaruDitemukan) teksLoading.style.display = 'none'; 
-            if(fotoBaruDitemukan) document.getElementById(`slot-${indexFotoSaatIni}`).innerHTML = `<img src="${tempFotoMentahBaru.file}"><div class="overlay-review">Lihat/Retake</div>`;
-            document.getElementById('teks-retake-judul').innerText = `Bagaimana hasilnya?`; updateUIRetakeInfo(); document.getElementById('mode-retake').style.display = 'flex';
+            if (fotoBaruDitemukan) {
+                // Berikan rotasi 90 derajat & sedikit zoom agar pas di kotak mini galeri saat potret
+                let imgStyle = isPortrait ? "width: 100%; height: 100%; object-fit: cover; transform: rotate(90deg) scale(1.35);" : "width: 100%; height: 100%; object-fit: cover;";
+                document.getElementById(`slot-${indexFotoSaatIni}`).innerHTML = `<img src="${tempFotoMentahBaru.file}" style="${imgStyle}"><div class="overlay-review">Lihat/Retake</div>`;
+            }
+            // --- BARIS INI YANG KEMUNGKINAN TERHAPUS SEBELUMNYA ---
+            document.getElementById('teks-retake-judul').innerText = `Bagaimana hasilnya?`; 
+            updateUIRetakeInfo(); 
+            document.getElementById('mode-retake').style.display = 'flex';
+
         }
 
         function updateUIRetakeInfo() {
@@ -669,7 +707,11 @@
                     const off = currentCustomOffsets[i] || {x: 50, y: 50};
 
                     // Gunakan object-position untuk pratinjau geser
-                    htmlDom += `<img src="${urlFoto}" data-index="${i}" class="drag-img" style="position: absolute; left: ${leftPct}%; top: ${topPct}%; width: ${wPct}%; height: ${hPct}%; object-fit: cover; object-position: ${off.x}% ${off.y}%; z-index: 2; cursor: grab; touch-action: none;">`; 
+                    // Gunakan wrapper container-type untuk rotasi gambar tanpa merusak dimensi frame
+                    let cssWrap = `position: absolute; left: ${leftPct}%; top: ${topPct}%; width: ${wPct}%; height: ${hPct}%; overflow: hidden; z-index: 2; container-type: size;`;
+                    let cssImg = `position: absolute; top: 50%; left: 50%; width: ${isPortrait ? '100cqh' : '100%'}; height: ${isPortrait ? '100cqw' : '100%'}; transform: translate(-50%, -50%) ${isPortrait ? 'rotate(90deg)' : ''}; object-fit: cover; object-position: ${off.x}% ${off.y}%; cursor: grab; touch-action: none;`;
+                    
+                    htmlDom += `<div style="${cssWrap}"><img src="${urlFoto}" data-index="${i}" class="drag-img" style="${cssImg}"></div>`;
                 });
                 
                 htmlDom += `</div><img src="${frameUrl}" style="position: absolute; top:0; left:0; width:100%; height:100%; z-index: 10; pointer-events: none;"></div>`; previewContainer.innerHTML = htmlDom; terapkanFilterLive('none', 'none', document.getElementById('btn-efek-none')); inisiasiDragAndDrop(); 
@@ -695,16 +737,25 @@
                 });
             });
 
-            document.addEventListener('pointermove', (e) => {
+           document.addEventListener('pointermove', (e) => {
                 if (!draggedImg) return;
                 e.preventDefault();
                 const idx = draggedImg.getAttribute('data-index');
                 
-                const dx = e.clientX - startX;
-                const dy = e.clientY - startY;
+                let dx = e.clientX - startX;
+                let dy = e.clientY - startY;
                 
-                const imgPctX = (dx / draggedImg.offsetWidth) * 150;
-                const imgPctY = (dy / draggedImg.offsetHeight) * 150;
+                let moveX = dx;
+                let moveY = dy;
+                
+                // Jika potret (gambar diputar 90deg), sumbu geser mouse harus ditukar & dibalik
+                if (isPortrait) {
+                    moveX = dy;
+                    moveY = -dx;
+                }
+                
+                const imgPctX = (moveX / draggedImg.offsetWidth) * 150;
+                const imgPctY = (moveY / draggedImg.offsetHeight) * 150;
                 
                 let newImgX = initialX - imgPctX;
                 let newImgY = initialY - imgPctY;

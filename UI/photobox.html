@@ -626,17 +626,16 @@
 
        function updateTransformKamera() {
             let w = "100vw", h = "100vh";
-            let transformCSSBase = "translate(-50%, -50%) "; 
             
+            let transformCSSBase = "translate(-50%, -50%) "; 
             if (orientasiKamera === 'potret') {
-                transformCSSBase += "rotate(90deg) "; // <-- UBAH KE 90deg POSITIF
+                transformCSSBase += "rotate(90deg) ";
                 w = "100vh"; h = "100vw"; 
             } 
             
-            let transformCSSLive = transformCSSBase;
-            if (isMirror) { 
-                transformCSSLive += (orientasiKamera === 'potret') ? "scaleY(-1) " : "scaleX(-1) "; 
-            }
+            let transformCSSLive = "translate(-50%, -50%) ";
+            if (isMirror) transformCSSLive += "scaleX(-1) ";
+            if (orientasiKamera === 'potret') transformCSSLive += "rotate(90deg) ";
 
             ['liveView', 'webcam-view'].forEach(id => {
                 const el = document.getElementById(id);
@@ -651,8 +650,12 @@
             const previewEl = document.getElementById('previewImageOverlay');
             if (previewEl) {
                 previewEl.style.position = "absolute"; previewEl.style.top = "50%"; previewEl.style.left = "50%";
-                previewEl.style.width = w; previewEl.style.height = h; previewEl.style.objectFit = "cover";
-                previewEl.style.imageOrientation = "none"; previewEl.style.transform = transformCSSBase; 
+                // Paksa width 100vw dan height 100vh tanpa mengikuti variabel w/h yang terbalik
+                previewEl.style.width = "100vw"; previewEl.style.height = "100vh"; 
+                previewEl.style.objectFit = "cover"; previewEl.style.imageOrientation = "none"; 
+                
+                // Hapus rotasi CSS karena fisik gambar sudah tegak
+                previewEl.style.transform = "translate(-50%, -50%)"; 
             }
         }
 
@@ -698,12 +701,12 @@
                     tCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
                     tCtx.translate(tempCanvas.width / 2, tempCanvas.height / 2);
                     
+                    if (isMirror) { tCtx.scale(-1, 1); } // <-- Balik horizontal SEBELUM rotasi
+                    
                     if (orientasiKamera === 'potret') {
-                        tCtx.rotate(90 * Math.PI / 180); // <-- UBAH KE 90 POSITIF
-                        if (isMirror) { tCtx.scale(1, -1); } 
+                        tCtx.rotate(90 * Math.PI / 180);
                         tCtx.drawImage(video, -tempCanvas.height / 2, -tempCanvas.width / 2, tempCanvas.height, tempCanvas.width);
                     } else {
-                        if (isMirror) { tCtx.scale(-1, 1); }
                         tCtx.drawImage(video, -tempCanvas.width / 2, -tempCanvas.height / 2, tempCanvas.width, tempCanvas.height);
                     }
                     
@@ -752,12 +755,12 @@
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.translate(canvas.width / 2, canvas.height / 2);
                 
+                if (isMirror) { ctx.scale(-1, 1); } // <-- Balik horizontal SEBELUM rotasi
+                
                 if (orientasiKamera === 'potret') {
-                    ctx.rotate(90 * Math.PI / 180); // <-- UBAH KE 90 POSITIF
-                    if (isMirror) { ctx.scale(1, -1); } 
+                    ctx.rotate(90 * Math.PI / 180);
                     ctx.drawImage(video, -canvas.height / 2, -canvas.width / 2, canvas.height, canvas.width);
                 } else {
-                    if (isMirror) { ctx.scale(-1, 1); }
                     ctx.drawImage(video, -canvas.width / 2, -canvas.height / 2, canvas.width, canvas.height);
                 }
                 ctx.restore();
@@ -783,21 +786,24 @@
                 } catch (e) { }
             }
 
-            if (fotoBaruDitemukan) {
+           if (fotoBaruDitemukan) {
                 jumlahFotoTerjepret++; await new Promise(r => setTimeout(r, 800)); 
                 const gallery = document.getElementById('miniGallery');
-                gallery.innerHTML += `<div class="mini-slot" onclick="previewFoto('${urlFotoBaru}')"><img src="${urlFotoBaru}"><div class="overlay-review">Preview</div></div>`;
+                
+                // Hapus rotasi CSS, biarkan gambar masuk ke thumbnail secara natural
+                let imgStyle = "width: 100%; height: 100%; object-fit: cover;";
+                
+                gallery.innerHTML += `<div class="mini-slot" onclick="previewFoto('${urlFotoBaru}')"><img src="${urlFotoBaru}" style="${imgStyle}"><div class="overlay-review">Preview</div></div>`;
                 gallery.scrollTop = gallery.scrollHeight;
-
+                
                 const imgHasil = new Image();
                 imgHasil.onload = function() { 
                     teksLoading.style.display = 'none'; 
                     document.getElementById('liveView').classList.remove('mirrored');
                     document.getElementById('liveView').style.filter = "brightness(100%)";
                     
-                    let transformNormal = "translate(-50%, -50%) ";
-                    if (orientasiKamera === 'potret') transformNormal += "rotate(90deg) ";
-                    document.getElementById('liveView').style.transform = transformNormal;
+                    // Jangan diputar dengan CSS lagi karena gambar fisiknya sudah di-rotate
+                    document.getElementById('liveView').style.transform = "translate(-50%, -50%)";
                     
                     document.getElementById('liveView').src = imgHasil.src; 
                 };
@@ -890,13 +896,14 @@
                 }
                 
                 fotoTerpilih.forEach((fotoName, i) => {
-                    const urlFoto = `/uploads/${currentSessionId}/${fotoName}?t=${Date.now()}`; 
                     const coord = templateInfo.layout.coords[i];
+                    const leftPct = (coord.x / canvasW) * 100; const topPct = (coord.y / canvasH) * 100;
                     const fWidth = coord.width || templateInfo.layout.width; const fHeight = coord.height || templateInfo.layout.height;
-                    const leftPct = (coord.x / canvasW) * 100; const topPct = (coord.y / canvasH) * 100; const wPct = (fWidth / canvasW) * 100; const hPct = (fHeight / canvasH) * 100;
+                    const wPct = (fWidth / canvasW) * 100; const hPct = (fHeight / canvasH) * 100;
                     const off = currentCustomOffsets[i] || {x: 50, y: 50};
                     
-                    htmlDom += `<img src="${urlFoto}" data-index="${i}" class="drag-img" style="position: absolute; left: ${leftPct}%; top: ${topPct}%; width: ${wPct}%; height: ${hPct}%; object-fit: cover; object-position: ${off.x}% ${off.y}%; z-index: 2; cursor: grab; touch-action: none;">`;
+                    // Gunakan tag img standar tanpa rotasi CSS karena fisik file sudah portrait
+                    htmlDom += `<img src="/uploads/${currentSessionId}/${fotoName}" data-index="${i}" class="drag-img" style="position: absolute; left: ${leftPct}%; top: ${topPct}%; width: ${wPct}%; height: ${hPct}%; object-fit: cover; object-position: ${off.x}% ${off.y}%; z-index: 2; cursor: grab; touch-action: none;">`;
                 });
                 
                 htmlDom += `</div><img src="${frameUrl}" style="position: absolute; top:0; left:0; width:100%; height:100%; z-index: 10; pointer-events: none;"></div>`;
@@ -919,11 +926,21 @@
             });
 
             document.addEventListener('pointermove', (e) => {
-                if (!draggedImg) return; e.preventDefault(); const idx = draggedImg.getAttribute('data-index');
-                const dx = e.clientX - startX; const dy = e.clientY - startY;
-                const imgPctX = (dx / draggedImg.offsetWidth) * 150; const imgPctY = (dy / draggedImg.offsetHeight) * 150;
+                if (!draggedImg) return;
+                e.preventDefault();
+                const idx = draggedImg.getAttribute('data-index');
+                
+                let dx = e.clientX - startX;
+                let dy = e.clientY - startY;
+                
+                // Tidak perlu menukar dx dan dy karena gambar sudah tegak lurus secara natural
+                const imgPctX = (dx / draggedImg.offsetWidth) * 150; 
+                const imgPctY = (dy / draggedImg.offsetHeight) * 150;
                 let newImgX = initialX - imgPctX; let newImgY = initialY - imgPctY;
-                newImgX = Math.max(0, Math.min(100, newImgX)); newImgY = Math.max(0, Math.min(100, newImgY));
+                
+                newImgX = Math.max(0, Math.min(100, newImgX));
+                newImgY = Math.max(0, Math.min(100, newImgY));
+                
                 currentCustomOffsets[idx] = {x: newImgX, y: newImgY};
                 draggedImg.style.objectPosition = `${newImgX}% ${newImgY}%`;
             }, {passive: false});

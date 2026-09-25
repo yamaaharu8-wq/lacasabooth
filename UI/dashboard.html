@@ -1151,8 +1151,10 @@
                 if (document.getElementById('sys-mirrorCamera')) {
                     document.getElementById('sys-mirrorCamera').value = data.global?.mirrorCamera ? "true" : "false";
                 }
-                document.getElementById('sys-cameraPort').value = data.global?.cameraPort || "";
-                document.getElementById('sys-brightness').value = data.global?.liveViewBrightness || "100";
+                if (document.getElementById('sys-cameraPort')) {
+    document.getElementById('sys-cameraPort').value = data.global?.cameraPort || "";
+}
+document.getElementById('sys-brightness').value = data.global?.liveViewBrightness || "100";
                 document.getElementById('sys-flashWorkaround').value = data.global?.flashWorkaround !== undefined ? data.global.flashWorkaround.toString() : "true";
                 document.getElementById('sys-livePhoto').value = data.global?.livePhotoEnabled ? "true" : "false";
                 document.getElementById('sys-cloudStorage').value = data.global?.cloudStorage !== false ? "true" : "false";
@@ -1173,61 +1175,78 @@
                 
                 if (data.global && data.global.theme) perbaruiTombolTema(data.global.theme);
                 else perbaruiTombolTema('theme-pop-art');
-            } catch (e) {}
+            } catch (e) { console.error("Error Muat Pengaturan: ", e); }
         }
 
-        // PERBAIKAN LOGIC SIMPAN (KODE LEBIH AMAN / ANTI-CRASH)
+       // PERBAIKAN PERMANEN LOGIC SIMPAN (ANTI-CRASH & ANTI-HILANG SAAT RESTART)
         async function simpanPengaturan() {
             try {
+                // 1. Ambil data asli dari server sebelum menimpa
                 const resSettings = await fetch('/api/settings');
                 const currentData = await resSettings.json().catch(() => ({})); 
-                
-                const currentTheme = currentData.global?.theme || 'theme-pop-art';
-                const currentCustomIdle = currentData.global?.customIdleScreen || null;
 
-                const getVal = (id, def = "") => document.getElementById(id) ? document.getElementById(id).value : def;
-                const getCheck = (id) => document.getElementById(id) ? document.getElementById(id).checked : false;
-                
-                const payload = {
-                    photobox: { sessionTimer: parseInt(getVal('pb-sessionTimer', 300)) || 300 },
-                    collage: { 
-                        timer: parseInt(getVal('clg-timer', 5)) || 5, 
-                        sessionTimer: parseInt(getVal('clg-sessionTimer', 300)) || 300,
-                        maxRetake: parseInt(getVal('clg-maxRetake', 0)) || 0
-                    },
-                    newspaper: {
-                        sessionTimer: parseInt(getVal('clg-sessionTimer', 300)) || 300,
-                        maxRetake: parseInt(getVal('clg-maxRetake', 0)) || 0
-                    },
-                    global: { 
-                        cameraOrientation: getVal('sys-cameraOrientation', 'landscape'),
-                        mirrorCamera: getVal('sys-mirrorCamera', 'false') === "true",
-                        
-                        // SIMPAN STATUS TAKE FROM REMOTE
-                        takeFromRemote: getVal('sys-takeFromRemote', 'false') === "true",
-
-                        usePin: getCheck('sys-usePin'),
-                        adminPin: getVal('sys-adminPin', '1234'),
-                        
-                        theme: currentTheme,
-                        customIdleScreen: currentCustomIdle,
-                        
-                        extraPrintPriceStatic: parseInt(getVal('sys-extraPrintPriceStatic', 15000)) || 15000,
-                        cameraEngine: getVal('sys-cameraEngine', 'canon'),
-                        cameraPort: getVal('sys-cameraPort', ''),
-                        liveViewBrightness: parseInt(getVal('sys-brightness', 100)) || 100, 
-                        flashWorkaround: getVal('sys-flashWorkaround', 'true') === "true",
-                        
-                        livePhotoEnabled: getVal('sys-livePhoto', 'false') === "true",
-                        cloudStorage: getVal('sys-cloudStorage', 'true') === "true",
-                        driveParentFolderId: getVal('driveParentFolderId', ''),
-                        printer4R: getVal('sys-printer4R', ''),  
-                        printerA4: getVal('sys-printerA4', ''),
-                        cloudflareToken: getVal('input-cf-token', '') 
-                    },
-                    waMessage: getVal('wa-message-text', '')
+                // 2. Fungsi cerdas pengambil nilai dari HTML (AMAN):
+                const getVal = (id, fallback) => {
+                    const el = document.getElementById(id);
+                    if (!el) return fallback; // Jika kotak tidak ada, pakai data lama
+                    
+                    // Cegah settingan Dropdown (seperti Printer) terhapus 
+                    // jika alat sedang offline dan tidak muncul di daftar HTML
+                    if (el.tagName === 'SELECT' && el.value === "" && fallback) {
+                        return fallback;
+                    }
+                    
+                    return el.value; // Jika input teks dikosongkan, tetap simpan kosong
                 };
 
+                const getCheck = (id, fallback) => {
+                    const el = document.getElementById(id);
+                    return el ? el.checked : fallback;
+                };
+
+                // 3. Susun muatan data untuk disimpan
+                const payload = {
+                    ...currentData, // Pertahankan data akar lain yang tidak ada di form ini
+                    photobox: { 
+                        ...(currentData.photobox || {}),
+                        sessionTimer: parseInt(getVal('pb-sessionTimer', currentData.photobox?.sessionTimer)) || 300 
+                    },
+                    collage: { 
+                        ...(currentData.collage || {}),
+                        timer: parseInt(getVal('clg-timer', currentData.collage?.timer)) || 5, 
+                        sessionTimer: parseInt(getVal('clg-sessionTimer', currentData.collage?.sessionTimer)) || 300,
+                        maxRetake: parseInt(getVal('clg-maxRetake', currentData.collage?.maxRetake)) || 0
+                    },
+                    newspaper: {
+                        ...(currentData.newspaper || {}),
+                        sessionTimer: parseInt(getVal('clg-sessionTimer', currentData.newspaper?.sessionTimer)) || 300,
+                        maxRetake: parseInt(getVal('clg-maxRetake', currentData.newspaper?.maxRetake)) || 0
+                    },
+                    global: { 
+                        ...(currentData.global || {}), 
+                        cameraOrientation: getVal('sys-cameraOrientation', currentData.global?.cameraOrientation || 'landscape'),
+                        mirrorCamera: getVal('sys-mirrorCamera', currentData.global?.mirrorCamera ? 'true' : 'false') === "true",
+                        takeFromRemote: getVal('sys-takeFromRemote', currentData.global?.takeFromRemote ? 'true' : 'false') === "true",
+                        usePin: getCheck('sys-usePin', currentData.global?.usePin || false),
+                        adminPin: getVal('sys-adminPin', currentData.global?.adminPin || '1234'),
+                        theme: currentData.global?.theme || 'theme-pop-art',
+                        customIdleScreen: currentData.global?.customIdleScreen || null,
+                        extraPrintPriceStatic: parseInt(getVal('sys-extraPrintPriceStatic', currentData.global?.extraPrintPriceStatic)) || 15000,
+                        cameraEngine: getVal('sys-cameraEngine', currentData.global?.cameraEngine || 'canon'),
+                        cameraPort: getVal('sys-cameraPort', currentData.global?.cameraPort || ''),
+                        liveViewBrightness: parseInt(getVal('sys-brightness', currentData.global?.liveViewBrightness)) || 100, 
+                        flashWorkaround: getVal('sys-flashWorkaround', currentData.global?.flashWorkaround !== false ? 'true' : 'false') === "true",
+                        livePhotoEnabled: getVal('sys-livePhoto', currentData.global?.livePhotoEnabled ? 'true' : 'false') === "true",
+                        cloudStorage: getVal('sys-cloudStorage', currentData.global?.cloudStorage !== false ? 'true' : 'false') === "true",
+                        driveParentFolderId: getVal('driveParentFolderId', currentData.global?.driveParentFolderId || ''),
+                        printer4R: getVal('sys-printer4R', currentData.global?.printer4R || ''),  
+                        printerA4: getVal('sys-printerA4', currentData.global?.printerA4 || ''),
+                        cloudflareToken: getVal('input-cf-token', currentData.global?.cloudflareToken || '') 
+                    },
+                    waMessage: getVal('wa-message-text', currentData.waMessage || '')
+                };
+
+                // 4. Kirim ke Server
                 const res = await fetch('/api/settings', { 
                     method: 'POST', 
                     headers: { 'Content-Type': 'application/json' }, 
@@ -1236,7 +1255,7 @@
 
                 if (!res.ok) throw new Error("Gagal menyimpan ke Server! Status: " + res.status);
 
-                alert("✅ Pengaturan berhasil disimpan!");
+                alert("✅ Pengaturan berhasil disimpan permanen!");
             } catch (e) { 
                 alert("❌ Gagal menyimpan pengaturan.\nDetail: " + e.message); 
                 console.error("Error Simpan Pengaturan:", e);

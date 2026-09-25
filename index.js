@@ -285,7 +285,16 @@ waClient.on('disconnected', (reason) => {
     waClient.initialize(); 
 });
 
-waClient.initialize();
+waClient.initialize().catch(async (err) => {
+    console.error("❌ [WA ERROR] Gagal inisialisasi WA:", err.message);
+    
+    // Buka kunci sesi Chrome secara paksa jika nyangkut dari sesi sebelumnya
+    try {
+        const sessionLock = path.join(waSessionPath, 'session-lacasabooth-bot', 'SingletonLock');
+        if (fs.existsSync(sessionLock)) fs.unlinkSync(sessionLock);
+        console.log("✅ Kunci sesi lama berhasil dibersihkan. Server tetap berjalan aman.");
+    } catch(e) {}
+});
 
 expressApp.get('/api/wa-status', (req, res) => {
     res.json({ status: waBotStatus, qr: waBotQr });
@@ -561,10 +570,21 @@ autoUpdater.on('update-downloaded', () => {
 electronApp.on('window-all-closed', () => { if (process.platform !== 'darwin') electronApp.quit(); });
 
 ipcMain.on('minimize-window', () => { BrowserWindow.getFocusedWindow().minimize(); });
-ipcMain.on('tutup-aplikasi', () => { console.log("🛑 Mematikan mesin..."); electronApp.quit(); });
-ipcMain.on('app-quit', () => {
-    console.log("🛑 Tombol Matikan Sistem ditekan. Menutup aplikasi...");
+// Fungsi universal untuk menutup semua jembatan belakang layar dengan bersih
+const matikanSistem = async () => {
+    console.log("🛑 Mematikan mesin & membersihkan sesi latar belakang...");
+    try { await waClient.destroy(); } catch (e) {} // Matikan bot WA dengan aman
+    if (cfTunnelProcess) cfTunnelProcess.kill();
+    exec('taskkill /f /im cloudflared.exe', () => {});
     electronApp.quit();
+};
+
+ipcMain.on('tutup-aplikasi', matikanSistem);
+ipcMain.on('app-quit', matikanSistem);
+
+// Tangani tombol 'X' bawaan Windows agar tetap melewati proses ini
+electronApp.on('window-all-closed', () => { 
+    if (process.platform !== 'darwin') matikanSistem();
 });
 // Menerima perintah cek update manual dari tombol Dashboard
 ipcMain.on('cek-update-manual', () => {
@@ -874,9 +894,25 @@ expressApp.get('/api/settings', (req, res) => {
 
 expressApp.post('/api/settings', (req, res) => {
     try {
-        fs.writeFileSync(settingsPath, JSON.stringify(req.body, null, 2));
+        let currentSettings = {};
+        if (fs.existsSync(settingsPath)) {
+            currentSettings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+        }
+        
+        // Gabungkan data lama dengan data baru yang dikirim dari Dashboard
+        const newSettings = { ...currentSettings, ...req.body };
+        
+        // Merge khusus untuk objek di dalam "global" agar data lainnya tidak ikut terhapus
+        if (req.body.global) {
+            newSettings.global = { ...(currentSettings.global || {}), ...req.body.global };
+        }
+
+        fs.writeFileSync(settingsPath, JSON.stringify(newSettings, null, 2));
         res.json({ success: true, message: "Pengaturan berhasil disimpan!" });
-    } catch (err) { res.json({ success: false, message: "Gagal menyimpan pengaturan." }); }
+    } catch (err) { 
+        console.error("Gagal simpan setting:", err);
+        res.json({ success: false, message: "Gagal menyimpan pengaturan." }); 
+    }
 });
 // =======================================================
 // [BARU] API FACTORY RESET (DANGER ZONE)

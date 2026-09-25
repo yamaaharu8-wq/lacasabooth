@@ -532,50 +532,31 @@
         }
 
         function terapkanVisualKamera() {
-            let w = "100vw";
-            let h = "100vh";
-            
-            // 1. Transformasi Dasar
-            let transformCSSBase = "translate(-50%, -50%) "; 
-            
+            let w = "100vw", h = "100vh";
+            let transformCSSLive = "translate(-50%, -50%) ";
+
+            if (isMirror) transformCSSLive += "scaleX(-1) ";
             if (isPortrait) {
-                transformCSSBase += "rotate(90deg) ";
-                w = "100vh"; 
-                h = "100vw"; 
-            }
-            
-            // 2. Transformasi Live (Dengan Cermin)
-            let transformCSSLive = transformCSSBase;
-            if (isMirror) {
-                transformCSSLive += isPortrait ? "scaleY(-1) " : "scaleX(-1) "; 
+                transformCSSLive += "rotate(90deg) ";
+                w = "100vh"; h = "100vw";
             }
 
-            // 3. Terapkan ke LiveView dan Webcam
             ['liveView', 'webcam-view'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) {
-                    el.style.position = "absolute";
-                    el.style.top = "50%";
-                    el.style.left = "50%";
-                    el.style.width = w;
-                    el.style.height = h;
-                    el.style.objectFit = "cover";
-                    el.style.imageOrientation = "none";
-                    el.style.transform = transformCSSLive; 
+                    el.style.position = "absolute"; el.style.top = "50%"; el.style.left = "50%";
+                    el.style.width = w; el.style.height = h; el.style.objectFit = "cover";
+                    el.style.imageOrientation = "none"; el.style.transform = transformCSSLive;
                 }
             });
 
-            // 4. Terapkan ke Preview Foto (Tanpa Efek Cermin Tambahan)
+            // Preview TIDAK diputar CSS karena gambar dari canvas sudah diputar secara fisik
             const previewEl = document.getElementById('previewImage');
             if (previewEl) {
-                previewEl.style.position = "absolute";
-                previewEl.style.top = "50%";
-                previewEl.style.left = "50%";
-                previewEl.style.width = w;
-                previewEl.style.height = h;
-                previewEl.style.objectFit = "cover";
-                previewEl.style.imageOrientation = "none";
-                previewEl.style.transform = transformCSSBase; 
+                previewEl.style.position = "absolute"; previewEl.style.top = "50%"; previewEl.style.left = "50%";
+                previewEl.style.width = "100vw"; previewEl.style.height = "100vh";
+                previewEl.style.objectFit = "cover"; previewEl.style.imageOrientation = "none";
+                previewEl.style.transform = "translate(-50%, -50%)"; // <-- Tidak ada rotasi tambahan
             }
 
             const btnMirror = document.getElementById('btn-mirror');
@@ -658,15 +639,30 @@
             if (activeCameraMode === 'webcam') {
                 const video = document.getElementById('webcam-view');
                 const tempCanvas = document.createElement('canvas');
-                tempCanvas.width = 640; 
-                tempCanvas.height = (video.videoHeight / video.videoWidth) * 640; 
                 const tCtx = tempCanvas.getContext('2d');
 
+                const vW = video.videoWidth || 1920;
+                const vH = video.videoHeight || 1080;
+                tempCanvas.width = isPortrait ? 480 : 640;
+                tempCanvas.height = isPortrait ? Math.floor((vW / vH) * 480) : Math.floor((vH / vW) * 640);
+
                 recordInterval = setInterval(() => {
-                    if(isMirror) { tCtx.save(); tCtx.translate(tempCanvas.width, 0); tCtx.scale(-1, 1); }
-                    tCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
-                    if(isMirror) { tCtx.restore(); }
-                    webcamFrames.push(tempCanvas.toDataURL('image/jpeg', 0.6));
+                    tCtx.save();
+                    tCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+                    tCtx.translate(tempCanvas.width / 2, tempCanvas.height / 2);
+
+                    if (isMirror) { tCtx.scale(-1, 1); } // Cermin horizontal sebelum rotasi
+
+                    if (isPortrait) {
+                        tCtx.rotate(90 * Math.PI / 180);
+                        tCtx.drawImage(video, -tempCanvas.height / 2, -tempCanvas.width / 2, tempCanvas.height, tempCanvas.width);
+                    } else {
+                        tCtx.drawImage(video, -tempCanvas.width / 2, -tempCanvas.height / 2, tempCanvas.width, tempCanvas.height);
+                    }
+                    tCtx.restore();
+
+                    const frameData = tempCanvas.toDataURL('image/jpeg', 0.5);
+                    if (frameData.length > 500) webcamFrames.push(frameData);
                 }, 100);
             }
 
@@ -694,20 +690,36 @@
             if (activeCameraMode === 'webcam') {
                 const video = document.getElementById('webcam-view');
                 const canvas = document.getElementById('webcam-canvas');
-                canvas.width = video.videoWidth; canvas.height = video.videoHeight;
                 const ctx = canvas.getContext('2d');
 
-                if (isMirror) { ctx.translate(canvas.width, 0); ctx.scale(-1, 1); }
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const vW = video.videoWidth || 1920;
+                const vH = video.videoHeight || 1080;
+                canvas.width = isPortrait ? vH : vW;
+                canvas.height = isPortrait ? vW : vH;
+
+                ctx.save();
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.translate(canvas.width / 2, canvas.height / 2);
+
+                if (isMirror) { ctx.scale(-1, 1); }
+
+                if (isPortrait) {
+                    ctx.rotate(90 * Math.PI / 180);
+                    ctx.drawImage(video, -canvas.height / 2, -canvas.width / 2, canvas.height, canvas.width);
+                } else {
+                    ctx.drawImage(video, -canvas.width / 2, -canvas.height / 2, canvas.width, canvas.height);
+                }
+                ctx.restore();
+
                 const base64Image = canvas.toDataURL('image/jpeg', 0.9);
 
                 await fetch('/api/upload-webcam', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        imageBase64: base64Image, 
+                    body: JSON.stringify({
+                        imageBase64: base64Image,
                         isMirrored: false,
-                        liveFramesBase64: webcamFrames 
-                    }) 
+                        liveFramesBase64: webcamFrames
+                    })
                 });
             } 
             else {
@@ -729,7 +741,10 @@
                 document.getElementById('liveView').style.display = 'none'; 
                 document.getElementById('previewImage').src = tempFotoMentahBaru.file + "?t=" + Date.now(); 
                 document.getElementById('previewImage').style.display = 'block';
-                document.getElementById(`slot-${indexFotoSaatIni}`).innerHTML = `<img src="${tempFotoMentahBaru.file}"><div class="overlay-review">Lihat/Retake</div>`;
+                
+                // Hapus rotasi CSS, biarkan gambar menyesuaikan kotaknya
+                let imgStyle = "width: 100%; height: 100%; object-fit: cover;";
+                document.getElementById(`slot-${indexFotoSaatIni}`).innerHTML = `<img src="${tempFotoMentahBaru.file}" style="${imgStyle}"><div class="overlay-review">Lihat/Retake</div>`;
             }
 
             document.getElementById('teks-retake-judul').innerText = `Bagaimana hasilnya?`; 
@@ -817,7 +832,7 @@
                     const wPct = (fWidth / canvasW) * 100; const hPct = (fHeight / canvasH) * 100;
                     const off = currentCustomOffsets[i] || {x: 50, y: 50};
                     
-                    // Gunakan pointer-events & object-position 
+                    // Gunakan tag img standar tanpa rotasi CSS karena fisik file sudah portrait
                     htmlDom += `<img src="/uploads/${currentSessionId}/${fotoName}" data-index="${i}" class="drag-img" style="position: absolute; left: ${leftPct}%; top: ${topPct}%; width: ${wPct}%; height: ${hPct}%; object-fit: cover; object-position: ${off.x}% ${off.y}%; z-index: 2; cursor: grab; touch-action: none;">`;
                 });
 
@@ -852,14 +867,13 @@
                 e.preventDefault();
                 const idx = draggedImg.getAttribute('data-index');
                 
-                const dx = e.clientX - startX;
-                const dy = e.clientY - startY;
+                let dx = e.clientX - startX;
+                let dy = e.clientY - startY;
                 
-                const imgPctX = (dx / draggedImg.offsetWidth) * 150;
+                // Tidak perlu menukar dx dan dy karena gambar sudah tegak lurus secara natural
+                const imgPctX = (dx / draggedImg.offsetWidth) * 150; 
                 const imgPctY = (dy / draggedImg.offsetHeight) * 150;
-                
-                let newImgX = initialX - imgPctX;
-                let newImgY = initialY - imgPctY;
+                let newImgX = initialX - imgPctX; let newImgY = initialY - imgPctY;
                 
                 newImgX = Math.max(0, Math.min(100, newImgX));
                 newImgY = Math.max(0, Math.min(100, newImgY));
