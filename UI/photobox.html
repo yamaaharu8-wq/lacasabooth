@@ -537,10 +537,17 @@
                 
                 setTimeout(updateTransformKamera, 500);
                 if (data.photobox?.sessionTimer) settingWaktuIdleMilih = parseInt(data.photobox.sessionTimer);
-                if (data.global?.extraPrintPrice) hargaExtraCetakPerLembar = parseInt(data.global.extraPrintPrice);
-                if (data.global?.qrisData) { 
-                    const qrisImg = document.getElementById('qris-image-preview');
-                    if(qrisImg) qrisImg.src = data.global.qrisData; 
+                
+                // --- KUNCI PERBAIKAN: Tentukan Harga Sesuai Tipe QRIS ---
+                const resQris = await fetch(`/api/settings/qris?t=${Date.now()}`);
+                const dataQris = await resQris.json();
+                
+                let tipeQrisAktif = dataQris.type || 'static';
+                
+                if (tipeQrisAktif === 'dynamic') {
+                    hargaExtraCetakPerLembar = dataQris.dynamicExtraPrice || 15000;
+                } else {
+                    hargaExtraCetakPerLembar = data.global?.extraPrintPriceStatic || 15000;
                 }
 
                 const resEvent = await fetch('/api/current-event'); 
@@ -1061,7 +1068,8 @@
                 document.getElementById('paymentModalOverlay').style.display = 'flex';
 
                 try {
-                    const resSettings = await fetch('/api/settings/qris');
+                    // Gunakan parameter time untuk mencegah cache browser
+                    const resSettings = await fetch(`/api/settings/qris?t=${Date.now()}`);
                     const qrisSettings = await resSettings.json();
 
                     if (qrisSettings.type === 'dynamic') {
@@ -1076,18 +1084,34 @@
                             if(extraPrintCheckInterval) clearInterval(extraPrintCheckInterval);
                             extraPrintCheckInterval = setInterval(checkExtraPrintStatus, 3000);
                         } else throw new Error("Gagal generate QR Dinamis dari server.");
-                    } else tampilkanQrisStatis(qrisSettings.staticImageUrl, btnSudahBayar);
+                    } else {
+                        // --- KUNCI PERBAIKAN (QRIS STATIS FRESH DARI API) ---
+                        try {
+                            const resImg = await fetch(`/api/get-qris?t=${Date.now()}`);
+                            const dataImg = await resImg.json();
+                            if(dataImg.success) {
+                                qrisImg.src = dataImg.url; 
+                            } else {
+                                qrisImg.src = `/assets/qris_static.png?t=${Date.now()}`;
+                            }
+                        } catch(e) {
+                            qrisImg.src = `/assets/qris_static.png?t=${Date.now()}`;
+                        }
+                        
+                        document.getElementById('payment-text-info').innerHTML += `<br><span style="font-size:0.9rem; color:#666;">(Harap klik "Sudah Bayar" setelah berhasil transfer)</span>`;
+                        
+                        btnSudahBayar.innerText = "Sudah Bayar (QRIS) ✅"; 
+                        btnSudahBayar.style.pointerEvents = "auto"; 
+                        btnSudahBayar.style.background = "var(--green)";
+                    }
                 } catch (err) {
                     console.error("Error memuat QRIS:", err);
-                    tampilkanQrisStatis(null, btnSudahBayar);
+                    qrisImg.src = `/assets/qris_static.png?t=${Date.now()}`;
+                    btnSudahBayar.innerText = "Sudah Bayar (QRIS) ✅"; 
+                    btnSudahBayar.style.pointerEvents = "auto"; 
+                    btnSudahBayar.style.background = "var(--green)";
                 }
             } else jalankanPerintahCetakKePrinter(); 
-        }
-
-        function tampilkanQrisStatis(customUrl, btnSudahBayar) {
-            const qrisImg = document.getElementById('qris-image-preview');
-            qrisImg.src = customUrl ? customUrl : `/assets/qris_static.png?t=${new Date().getTime()}`;
-            btnSudahBayar.innerText = "Sudah Bayar (QRIS) ✅"; btnSudahBayar.style.pointerEvents = "auto"; btnSudahBayar.style.background = "var(--green)";
         }
 
         async function checkExtraPrintStatus() {

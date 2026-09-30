@@ -1004,13 +1004,22 @@
                     const qrisSetting = await resSetting.json();
 
                     if (qrisSetting.type === 'static') {
-                        if (qrisBase64Tersemat) {
-                            qrisImg.src = qrisBase64Tersemat;
-                        } else {
+                        // [PERBAIKAN] Hapus logika qrisBase64Tersemat lama dan gunakan API get-qris yang fresh
+                        try {
+                            const resImg = await fetch(`/api/get-qris?t=${Date.now()}`);
+                            const dataImg = await resImg.json();
+                            if(dataImg.success) {
+                                qrisImg.src = dataImg.url; 
+                            } else {
+                                qrisImg.src = `/assets/qris_static.png?t=${Date.now()}`;
+                            }
+                        } catch(e) {
                             qrisImg.src = `/assets/qris_static.png?t=${Date.now()}`;
                         }
+                        
                         document.getElementById('payment-text-info').innerHTML += `<br><span style="font-size:0.9rem; color:#666;">(Harap klik "Sudah Bayar" setelah berhasil transfer)</span>`;
                     } else {
+                        // ... (biarkan bagian else QRIS Dinamis tetap sama)
                         const response = await fetch(`/api/payment/qris-dynamic?amount=${biayaTambahan}`);
                         const data = await response.json();
                         

@@ -774,7 +774,8 @@
                     <div class="form-group" style="background: rgba(255,255,255,0.5); padding: 15px; border-radius: 10px; border: 2px dashed var(--ink);">
                         <label>Tipe Pembayaran QRIS:</label>
                         <!-- TAMBAHKAN ONCHANGE DI SINI -->
-                        <select id="qrisType" style="font-weight: bold;" onchange="toggleDynamicFields(this.value)">
+                        <!-- Tambahkan saveQrisSettings(true) pada onchange agar otomatis tersimpan saat diklik -->
+<select id="qrisType" style="font-weight: bold;" onchange="toggleDynamicFields(this.value); saveQrisSettings(true);">
                             <option value="static">QRIS Statis (Gambar Manual)</option>
                             <option value="dynamic">QRIS Dinamis (Generate per Transaksi)</option>
                         </select>
@@ -801,7 +802,7 @@
                         <!-- AKHIR KODE BARU CLOUDFLARE -->
                     </div>
                     
-                    <button type="button" class="btn-primary" style="background: var(--ink); color: white; width: 100%;" onclick="saveQrisSettings()">💾 Simpan Setelan QRIS Dinamis</button>
+                    <button type="button" class="btn-primary" style="background: var(--ink); color: white; width: 100%;" onclick="saveQrisSettings()">💾 Simpan Setelan Tipe & QRIS</button>
                 </div>
 
                 <!-- KARTU 2: UPLOAD QRIS STATIS & HARGA EXTRA STATIS -->
@@ -810,10 +811,21 @@
                     <p style="font-size: 0.85rem; color: #666; margin-bottom: 15px;">(Hanya digunakan jika Anda memilih Tipe QRIS Statis di samping kiri).</p>
                     
                     <div class="form-group" style="background: rgba(255,255,255,0.5); padding: 15px; border-radius: 10px; border: 2px dashed var(--ink); margin-bottom: 15px;">
+                        <label>Harga Sesi Utama Statis (Rp):</label>
+                        <input type="number" id="sys-qrisPriceStatic" placeholder="Misal: 35000" style="font-weight: bold; font-size: 1.1rem; width: 100%; padding: 10px; margin-bottom: 15px; border: 2px solid var(--ink); border-radius: 10px;">
+                        
                         <label>Harga Cetak Extra Statis (Rp):</label>
                         <input type="number" id="sys-extraPrintPriceStatic" placeholder="Misal: 15000" style="font-weight: bold; font-size: 1.1rem; width: 100%; padding: 10px; margin-bottom: 10px; border: 2px solid var(--ink); border-radius: 10px;">
-                        <button type="button" class="btn-primary" style="background:var(--pink); color:var(--ink); width: 100%;" onclick="simpanPengaturan()">💾 Simpan Harga Extra Statis</button>
+                        
+                        <button type="button" class="btn-primary" style="background:var(--pink); color:var(--ink); width: 100%;" onclick="simpanPengaturan()">💾 Simpan Harga Statis</button>
                     </div>
+                    <!-- KOTAK PREVIEW QRIS STATIS (BARU) -->
+<div style="margin-bottom: 15px; text-align: center;">
+    <p style="font-size: 0.85rem; font-weight: 600; color: var(--ink); margin-bottom: 8px;">QRIS Statis Saat Ini:</p>
+    <div style="background: #fff; padding: 10px; border-radius: 10px; border: 2px dashed #cbd5e1; display: inline-block;">
+        <img id="qris-preview-img" src="/assets/qris_static.png" alt="Belum ada QRIS" style="max-width: 150px; max-height: 150px; border-radius: 8px; object-fit: contain;">
+    </div>
+</div>
 
                     <form id="formQrisUpload">
                         <div class="form-group">
@@ -1164,6 +1176,9 @@ document.getElementById('sys-brightness').value = data.global?.liveViewBrightnes
                 if (document.getElementById('sys-extraPrintPriceStatic')) {
                     document.getElementById('sys-extraPrintPriceStatic').value = data.global?.extraPrintPriceStatic || "15000";
                 }
+                if (document.getElementById('sys-qrisPriceStatic')) {
+                    document.getElementById('sys-qrisPriceStatic').value = data.global?.qrisPriceStatic || "35000";
+                }
 
                 document.getElementById('wa-message-text').value = data.waMessage || "Halo dari Lacasaphoto! 📸\n\nTerima kasih sudah berfoto ria bersama kami. Berikut link foto kamu:\n\n🔗 {link}";
 
@@ -1232,6 +1247,7 @@ document.getElementById('sys-brightness').value = data.global?.liveViewBrightnes
                         theme: currentData.global?.theme || 'theme-pop-art',
                         customIdleScreen: currentData.global?.customIdleScreen || null,
                         extraPrintPriceStatic: parseInt(getVal('sys-extraPrintPriceStatic', currentData.global?.extraPrintPriceStatic)) || 15000,
+                        qrisPriceStatic: parseInt(getVal('sys-qrisPriceStatic', currentData.global?.qrisPriceStatic)) || 35000,
                         cameraEngine: getVal('sys-cameraEngine', currentData.global?.cameraEngine || 'canon'),
                         cameraPort: getVal('sys-cameraPort', currentData.global?.cameraPort || ''),
                         liveViewBrightness: parseInt(getVal('sys-brightness', currentData.global?.liveViewBrightness)) || 100, 
@@ -1339,8 +1355,9 @@ document.getElementById('sys-brightness').value = data.global?.liveViewBrightnes
                     lastWaQr = data.qr; 
                 }
             } else {
-                statusText.innerHTML = "Status: <b style='color:#6b7280;'>⏳ Menghubungkan ke WhatsApp...</b>";
-                qrContainer.innerHTML = '<div style="font-size: 3rem; color: #cbd5e1;">⏳</div>'; 
+                statusText.innerHTML = "Status: <b style='color:#6b7280;'>⏳ Menghubungkan ke WhatsApp... (Tunggu 20-30 Detik)</b>";
+                // Beri teks bantuan di bawah jam pasir
+                qrContainer.innerHTML = '<div style="display:flex; flex-direction:column; align-items:center;"><div style="font-size: 3rem; color: #cbd5e1;">⏳</div><p style="font-size:0.8rem; color:#666; margin-top:10px; text-align:center;">Jika loading terlalu lama tanpa muncul QR, klik tombol <b>Reset Bot WA</b> di bawah.</p></div>'; 
                 qrContainer.style.border = '3px dashed #cbd5e1';
             }
         } catch (e) {}
@@ -1676,15 +1693,44 @@ document.getElementById('sys-brightness').value = data.global?.liveViewBrightnes
             await fetch('/api/setup-printer', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ size: ukuran }) });
         }
 
-        document.getElementById('formVideoPose').addEventListener('submit', async (e) => {
-            e.preventDefault(); const formData = new FormData(); formData.append('poseVideo', document.getElementById('fileVideoPose').files[0]);
-            const res = await fetch('/api/upload-video', { method: 'POST', body: formData }); const result = await res.json(); alert(result.message); e.target.reset();
-        });
         document.getElementById('formQrisUpload').addEventListener('submit', async (e) => {
-            e.preventDefault(); const formData = new FormData(); formData.append('qrisImage', document.getElementById('fileQris').files[0]);
-            const res = await fetch('/api/upload-qris', { method: 'POST', body: formData }); const result = await res.json(); alert(result.message); e.target.reset();
-        });
+    e.preventDefault(); 
+    
+    document.getElementById('qrisType').value = 'static';
+    toggleDynamicFields('static');
+    await saveQrisSettings(true); 
 
+    const formData = new FormData(); 
+    formData.append('qrisImage', document.getElementById('fileQris').files[0]);
+    
+    const btn = e.target.querySelector('button[type="submit"]');
+    const teksAsli = btn.innerHTML;
+    btn.innerHTML = "⏳ Mengunggah..."; btn.disabled = true;
+
+    try {
+        const res = await fetch('/api/upload-qris', { method: 'POST', body: formData }); 
+        const result = await res.json(); 
+        
+        if (result.success) {
+            alert("✅ Gambar QRIS tersimpan & Tipe Pembayaran diatur ke Statis!"); 
+            e.target.reset();
+            
+            // [PERBAIKAN] Panggil API ulang untuk memaksa browser menampilkan gambar QRIS yang baru di-upload
+            const resQris = await fetch('/api/get-qris');
+            const dataQris = await resQris.json();
+            if (dataQris.success) {
+                const qrisImg = document.getElementById('qris-preview-img');
+                if (qrisImg) qrisImg.src = dataQris.url;
+            }
+        } else {
+            alert("❌ Gagal: " + result.message);
+        }
+    } catch(err) {
+        alert("❌ Gagal upload gambar QRIS.");
+    } finally {
+        btn.innerHTML = teksAsli; btn.disabled = false;
+    }
+});
         document.getElementById('formTemplateUpload').addEventListener('submit', async (e) => {
             e.preventDefault(); 
             const btn = e.target.querySelector('button[type="submit"]'); 
@@ -1849,15 +1895,25 @@ function toggleDynamicFields(type) {
     }
     
     toggleDynamicFields(data.type);
+    
+    // [PERBAIKAN] Tarik URL QRIS asli dari backend agar preview otomatis muncul saat halaman dibuka
+    try {
+        const resQris = await fetch('/api/get-qris');
+        const dataQris = await resQris.json();
+        if (dataQris.success) {
+            const qrisImg = document.getElementById('qris-preview-img');
+            if (qrisImg) qrisImg.src = dataQris.url;
+        }
+    } catch (e) {}
 }
 
-async function saveQrisSettings() {
+async function saveQrisSettings(silent = false) {
     try {
         const type = document.getElementById('qrisType').value;
-        const price = document.getElementById('qrisPrice').value;
-        const extraDynamicPrice = document.getElementById('sys-extraPrintPriceDynamic').value;
-        const serverKey = document.getElementById('midtransServerKey').value;
-        const clientKey = document.getElementById('midtransClientKey').value;
+        const price = document.getElementById('qrisPrice').value || 35000;
+        const extraDynamicPrice = document.getElementById('sys-extraPrintPriceDynamic').value || 15000;
+        const serverKey = document.getElementById('midtransServerKey').value || "";
+        const clientKey = document.getElementById('midtransClientKey').value || "";
         
         // 1. Tangkap isi kotak Token Cloudflare
         const cfToken = document.getElementById('input-cf-token') ? document.getElementById('input-cf-token').value : ''; 
@@ -1878,11 +1934,11 @@ async function saveQrisSettings() {
         if (!res.ok) throw new Error("API /api/settings/qris tidak ditemukan (404).");
 
         const result = await res.json();
-        if (result.success) {
+        if (result.success && !silent) {
             alert('✅ Pengaturan QRIS, Midtrans & Cloudflare berhasil disimpan!');
         }
     } catch (e) {
-        alert('❌ GAGAL: ' + e.message);
+        if (!silent) alert('❌ GAGAL: ' + e.message);
     }
 }
 const pricing = {

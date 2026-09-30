@@ -200,7 +200,13 @@ function getLocalIP() {
 // Middleware Express
 expressApp.use(express.json({ limit: '50mb' }));
 expressApp.use(express.urlencoded({ limit: '50mb', extended: true }));
-expressApp.use(express.static(uiDir)); // Membuka akses folder UI
+
+// --- [PERBAIKAN URUTAN PRIORITAS FOLDER] ---
+// 1. Baca folder custom (AppData) terlebih dahulu!
+expressApp.use('/assets', express.static(customAssetsDir)); 
+
+// 2. Jika tidak ada di custom, baru baca file bawaan dari folder UI
+expressApp.use(express.static(uiDir)); 
 expressApp.use('/uploads', express.static(uploadDir));
 expressApp.use('/frames', express.static(frameDir));
 expressApp.use('/assets', express.static(customAssetsDir));
@@ -284,6 +290,13 @@ waClient.on('disconnected', (reason) => {
     waBotQr = '';
     waClient.initialize(); 
 });
+try {
+    const sessionLockPath = path.join(waSessionPath, 'session-lacasabooth-bot', 'SingletonLock');
+    if (fs.existsSync(sessionLockPath)) {
+        fs.unlinkSync(sessionLockPath);
+        console.log("✅ Kunci sesi WA (SingletonLock) dibersihkan saat startup.");
+    }
+} catch(e) {}
 
 waClient.initialize().catch(async (err) => {
     console.error("❌ [WA ERROR] Gagal inisialisasi WA:", err.message);
@@ -1172,11 +1185,21 @@ expressApp.post('/api/edit-template', (req, res) => {
 expressApp.post('/api/upload-qris', upload.single('qrisImage'), (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ success: false, message: 'Tidak ada file gambar' });
-        // [DIUBAH] Pindah file temp ke customAssetsDir
+        
         const qrisPath = path.join(customAssetsDir, 'qris_static.png');
-        fs.renameSync(req.file.path, qrisPath);
+        
+        // [PERBAIKAN] Hapus file QRIS yang lama terlebih dahulu jika ada
+        if (fs.existsSync(qrisPath)) {
+            try { fs.unlinkSync(qrisPath); } catch(e) { console.log("Gagal hapus file lama (mungkin sedang dibaca)"); }
+        }
+        
+        // [PERBAIKAN] Gunakan metode salin lalu hapus (Lebih aman dari bentrok/kunci file di Windows)
+        fs.copyFileSync(req.file.path, qrisPath);
+        fs.unlinkSync(req.file.path);
+        
         res.json({ success: true, message: 'QRIS berhasil diperbarui!' });
     } catch (err) {
+        console.error("Gagal Upload QRIS:", err);
         res.status(500).json({ success: false, message: err.message });
     }
 });

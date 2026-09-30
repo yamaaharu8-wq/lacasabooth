@@ -397,10 +397,11 @@
         async function muatPengaturanDanTemplate() {
             try {
                 await fetch('/api/start-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId: currentSessionId }) });
-                const resSet = await fetch('/api/settings'); const dataSet = await resSet.json();
+                // Tambahkan anti-cache
+                const resSet = await fetch(`/api/settings?t=${Date.now()}`); 
+                const dataSet = await resSet.json();
                 
-                // Ambil Pengaturan QRIS
-                const resQris = await fetch('/api/settings/qris'); 
+                const resQris = await fetch(`/api/settings/qris?t=${Date.now()}`); 
                 const dataQris = await resQris.json();
                 
                 if (dataSet.global?.liveViewBrightness) settingKecerahanLV = dataSet.global.liveViewBrightness;
@@ -411,15 +412,18 @@
                 if (dataSet.global?.mirrorCamera !== undefined) isMirror = dataSet.global.mirrorCamera;
                 if (dataSet.global?.cameraOrientation === 'portrait') isPortrait = true; else isPortrait = false;
                 terapkanVisualKamera();
-                // --- PENENTUAN HARGA EXTRA (STATIS / DINAMIS) ---
-                let qrisType = dataQris.type || 'static';
-                if (qrisType === 'dynamic') {
+                
+                // --- PERBAIKAN PENENTUAN HARGA EXTRA CETAK ---
+                // Kita cek tipe QRIS-nya dulu dari dataQris, lalu ambil harga ekstranya yang sesuai
+                let tipeQrisAktif = dataQris.type || 'static';
+                
+                if (tipeQrisAktif === 'dynamic') {
+                    // Jika dinamis, pakai harga ekstra dinamis dari database QRIS
                     hargaExtraCetakPerLembar = dataQris.dynamicExtraPrice || 15000;
                 } else {
+                    // Jika statis, pakai harga ekstra statis dari global settings
                     hargaExtraCetakPerLembar = dataSet.global?.extraPrintPriceStatic || 15000;
                 }
-
-                // --- SEMBUNYIKAN LIVE PHOTO BILA DINONAKTIFKAN ---
                 if (dataSet.global?.livePhotoEnabled === false) {
                     const lpWrapper = document.getElementById('livePhotoWrapper');
                     if(lpWrapper) lpWrapper.style.display = 'none';
@@ -432,10 +436,10 @@
                     activeCameraMode = 'canon';
                 }
 
-                // Ambil data Base64 QRIS jika tersedia
                 if (dataSet.global?.qrisData) qrisBase64Tersemat = dataSet.global.qrisData;
 
-                const resEvent = await fetch('/api/current-event'); const dataEvent = await resEvent.json();
+                const resEvent = await fetch(`/api/current-event?t=${Date.now()}`); 
+                const dataEvent = await resEvent.json();
                 if (dataEvent.success && dataEvent.event && dataEvent.event.payment === 'with_payment') { isEventBerbayar = true; }
                 const resTpl = await fetch('/api/frames'); databaseTemplate = await resTpl.json();
             } catch (error) {}

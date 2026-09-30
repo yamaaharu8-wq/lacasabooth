@@ -97,7 +97,6 @@
             .main-container { position: relative; height: auto; min-height: 100vh; padding-bottom: 40px;}
         }
     </style>
-    <!-- Letakkan di dalam <head> atau tepat di atas <script> utama -->
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
@@ -169,7 +168,8 @@
     </div>
 
     <script>
-        fetch('/api/settings').then(res => res.json()).then(data => {
+        // Gunakan parameter timestamp (?t=Date.now) untuk menembus cache lama
+        fetch(`/api/settings?t=${Date.now()}`).then(res => res.json()).then(data => {
             if (data.global && data.global.theme) document.body.className = data.global.theme;
         }).catch(e => console.error("Gagal memuat tema:", e));
         
@@ -177,7 +177,7 @@
 
         window.onload = async function() {
             try {
-                const res = await fetch('/api/current-event');
+                const res = await fetch(`/api/current-event?t=${Date.now()}`);
                 const data = await res.json();
                 
                 if (data.success) {
@@ -192,32 +192,29 @@
                 }
             } catch (err) { alert("Gagal memuat data event."); }
             
-            // VARIABEL UNTUK AUTO-CHECK STATUS MIDTRANS
             let autoCheckInterval = null;
             let currentOrderId = null;
 
-            // --- TAMBAHAN: MENDENGARKAN SINYAL SOCKET DARI BACKEND ---
             const socket = io();
             socket.on('payment-success', (data) => {
-                // Pastikan sinyal ini untuk order ID yang sedang aktif di layar
                 if (data.orderId === currentOrderId) {
                     console.log("⚡ Pembayaran masuk seketika dari Webhook!", data);
-                    
-                    // Matikan pengecekan berulang (polling) karena sudah sukses
                     if (autoCheckInterval) clearInterval(autoCheckInterval);
-                    
-                    // Ubah UI menjadi Sukses
                     const btnConfirm = document.querySelector('#view-qris .btn-confirm');
                     btnConfirm.innerText = "✅ Pembayaran Berhasil!";
                     btnConfirm.style.background = "var(--green)";
-                    
-                    // Pindah layar ke kamera
                     prosesPembayaran('qris');
                 }
             });
+
             // FETCH PENGATURAN QRIS & GAMBAR
             try {
-                const resSettings = await fetch('/api/settings/qris');
+                // 1. Tarik pengaturan global (untuk membaca Harga Statis)
+                const resGlobal = await fetch(`/api/settings?t=${Date.now()}`);
+                const globalSettings = await resGlobal.json();
+
+                // 2. Tarik pengaturan QRIS (untuk cek tipe Statis/Dinamis)
+                const resSettings = await fetch(`/api/settings/qris?t=${Date.now()}`);
                 if (!resSettings.ok) throw new Error("Backend API QRIS belum berjalan (404)");
                 
                 const qrisSettings = await resSettings.json();
@@ -225,15 +222,45 @@
                 const imgDisplay = document.getElementById('img-qris-display');
                 const loadingText = document.getElementById('qris-loading-text');
                 const priceDisplay = document.getElementById('qris-price-display');
+                
+                // --- KUNCI PERBAIKAN: Tentukan Harga Sesi Sesuai Tipe QRIS ---
+                let sessionPrice = 35000;
+                if (qrisSettings.type === 'static') {
+                    // Jika mode statis, ambil harga dari input baru yang kita buat di dashboard
+                    sessionPrice = globalSettings.global?.qrisPriceStatic || 35000;
+                } else {
+                    // Jika mode dinamis, ambil dari harga dinamis
+                    sessionPrice = qrisSettings.dynamicPrice || 35000;
+                }
 
                 if (qrisSettings.type === 'static') {
-                    imgDisplay.src = qrisSettings.staticImageUrl;
+                    // Tarik URL anti-cache dari API get-qris agar gambarnya update
+                    try {
+                        const resImg = await fetch(`/api/get-qris?t=${Date.now()}`);
+                        const dataImg = await resImg.json();
+                        if(dataImg.success) {
+                            imgDisplay.src = dataImg.url; 
+                        } else {
+                            imgDisplay.src = qrisSettings.staticImageUrl + `?t=${Date.now()}`;
+                        }
+                    } catch(e) {
+                        imgDisplay.src = qrisSettings.staticImageUrl + `?t=${Date.now()}`;
+                    }
+
                     imgDisplay.style.display = 'block';
                     loadingText.style.display = 'none';
-                    // Kalau statis, harus asisten yang klik konfirmasi
+                    
+                    // Tampilkan Harga Statis
+                    priceDisplay.innerText = `Rp ${sessionPrice.toLocaleString('id-ID')}`;
+                    priceDisplay.style.display = 'block';
                 } 
                 else if (qrisSettings.type === 'dynamic') {
-                    const resDynamic = await fetch('/api/payment/qris-dynamic');
+                    // Langsung tampilkan harga dari Dashboard terlebih dahulu
+                    priceDisplay.innerText = `Rp ${sessionPrice.toLocaleString('id-ID')}`;
+                    priceDisplay.style.display = 'block';
+
+// ... (sisa kode di bawahnya biarkan sama) ...
+                    const resDynamic = await fetch(`/api/payment/qris-dynamic?t=${Date.now()}`);
                     if (!resDynamic.ok) throw new Error("API Generate QRIS gagal diakses");
                     
                     const dataDynamic = await resDynamic.json();
@@ -243,18 +270,16 @@
                         imgDisplay.style.display = 'block';
                         loadingText.style.display = 'none';
                         
-                        priceDisplay.innerText = `Rp ${dataDynamic.amount.toLocaleString('id-ID')}`;
-                        priceDisplay.style.display = 'block';
+                        // Perbarui harga dengan nilai aktual dari Midtrans API jika diperlukan
+                        const finalAmount = dataDynamic.amount || sessionPrice;
+                        priceDisplay.innerText = `Rp ${finalAmount.toLocaleString('id-ID')}`;
 
-                        // SIMPAN ORDER ID DARI MIDTRANS
                         currentOrderId = dataDynamic.orderId;
 
-                        // UBAH TEKS TOMBOL KARENA SEKARANG OTOMATIS
                         document.querySelector('#view-qris .btn-confirm').innerText = "⏳ Menunggu Pembayaran (Otomatis)...";
                         document.querySelector('#view-qris .btn-confirm').style.background = "var(--bg-color)";
-                        document.querySelector('#view-qris .btn-confirm').style.pointerEvents = "none"; // Disable klik manual
+                        document.querySelector('#view-qris .btn-confirm').style.pointerEvents = "none"; 
                         
-                        // MULAI MENGECEK KE SERVER SETIAP 3 DETIK
                         autoCheckInterval = setInterval(checkMidtransStatus, 3000);
 
                     } else {
@@ -266,29 +291,22 @@
                 document.getElementById('qris-loading-text').innerHTML = `<span style='color:red;'>❌ Gagal Koneksi</span><br><br><span style='font-size:0.8rem;'>${err.message}</span>`;
             }
 
-            // FUNGSI PENGECEKAN STATUS KE MIDTRANS
             async function checkMidtransStatus() {
                 if (!currentOrderId) return;
                 try {
-                    const res = await fetch(`/api/payment/check-status/${currentOrderId}`);
+                    const res = await fetch(`/api/payment/check-status/${currentOrderId}?t=${Date.now()}`);
                     const data = await res.json();
                     
-                    // JIKA DIBAYAR (SETTLEMENT)
                     if (data.success && data.status === 'settlement') {
-                        clearInterval(autoCheckInterval); // Hentikan pengecekan
-                        
-                        // Efek visual sukses
+                        clearInterval(autoCheckInterval); 
                         document.querySelector('#view-qris .btn-confirm').innerText = "✅ Pembayaran Berhasil!";
                         document.querySelector('#view-qris .btn-confirm').style.background = "var(--green)";
-                        
-                        // Lanjutkan ke kamera secara otomatis (memanggil fungsi prosesPembayaran bawaan Anda)
                         prosesPembayaran('qris');
                     }
-                    // Jika expire / batal
                     else if (data.success && (data.status === 'expire' || data.status === 'cancel')) {
                         clearInterval(autoCheckInterval);
                         alert("⚠️ Waktu pembayaran QRIS telah habis atau dibatalkan.");
-                        window.location.href = '/idle.html'; // Kembalikan ke layar awal
+                        window.location.href = '/idle.html'; 
                     }
                 } catch (e) {
                     console.log("Polling error:", e);
