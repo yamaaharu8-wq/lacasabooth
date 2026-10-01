@@ -170,7 +170,8 @@ if (!fs.existsSync(settingsPath)) {
             cameraEngine: "canon",
             cameraPort: "",
             liveViewBrightness: 100,
-            flashWorkaround: true,
+            flashWorkaround: false,
+            mirrorCamera: true,
             livePhotoEnabled: false,
             cloudStorage: true,
             driveParentFolderId: "",
@@ -868,9 +869,15 @@ expressApp.post('/api/upload-frame', uploadFrame.fields([
 expressApp.post('/api/upload-video', upload.single('poseVideo'), (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ success: false, message: 'Tidak ada file video' });
-        // [DIUBAH] Pindah file temp ke customAssetsDir
         const videoPath = path.join(customAssetsDir, 'pose.mp4');
-        fs.renameSync(req.file.path, videoPath);
+
+        // [PERBAIKAN] Hapus video lama dulu, lalu copy
+        if (fs.existsSync(videoPath)) {
+            try { fs.unlinkSync(videoPath); } catch(e) {}
+        }
+        fs.copyFileSync(req.file.path, videoPath);
+        fs.unlinkSync(req.file.path);
+
         res.json({ success: true, message: 'Video pose berhasil diperbarui!' });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
@@ -964,7 +971,8 @@ expressApp.post('/api/factory-reset', (req, res) => {
                 cameraEngine: "canon",
                 cameraPort: "",
                 liveViewBrightness: 100,
-                flashWorkaround: true,
+                flashWorkaround: false,
+                mirrorCamera: true,
                 livePhotoEnabled: false,
                 cloudStorage: true,
                 driveParentFolderId: "",

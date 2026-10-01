@@ -182,6 +182,8 @@
     </style>
 </head>
 <body>
+    <!-- AREA KHUSUS UNTUK MENGGESER JENDELA (DRAG ZONE) -->
+    <div style="position: fixed; top: 0; left: 30%; width: 40%; height: 35px; -webkit-app-region: drag; z-index: 99999; pointer-events: auto;" title="Tahan dan geser area ini untuk memindahkan jendela"></div>
     <!-- SAAS LOGIN OVERLAY -->
     <div id="saas-login-overlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg-color); z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; background-image: radial-gradient(var(--dot-color) 2px, transparent 2px); background-size: 40px 40px;">
         <div style="background: var(--paper-white); padding: 40px; border-radius: 20px; border: 4px solid var(--ink); box-shadow: 10px 10px 0px var(--ink); text-align: center; max-width: 450px;">
@@ -381,6 +383,7 @@
                         </select>
                     </div>
                     <hr style="border: 1px dashed #ccc; margin: 15px 0;">
+                    <button type="button" class="btn-primary" style="background: #6a35a3; color: white; margin-top: 10px;" onclick="simpanPengaturan()">🎥 Simpan Setelan Kamera</button>
 <div class="form-group" style="background: rgba(239, 68, 68, 0.1); padding: 15px; border-radius: 10px; border: 2px dashed #ef4444;">
     <label style="color: #ef4444; font-weight: bold; font-size: 1rem;">🔥 Fitur Live Photo / GIF</label>
     <p style="font-size: 0.8rem; margin-bottom: 8px; color: #666;">Merekam video pendek saat jepretan. (⚠️ Membutuhkan CPU tinggi & FFmpeg di Windows)</p>
@@ -388,6 +391,7 @@
         <option value="false">OFF (Standar - Ringan untuk Mini PC)</option>
         <option value="true">ON (Aktifkan Live Photo - PC High End)</option>
     </select>
+    <button type="button" class="btn-primary" style="background: #ef4444; color: white; margin-top: 10px;" onclick="simpanPengaturan()">💾 Simpan Setelan GIF</button>
 </div>
                 </div>
                 <div class="card">
@@ -422,10 +426,9 @@
                             <button type="button" onclick="buatProfilPrinterBaru('sys-printerA4', this)" style="flex: 1; padding: 8px; border-radius: 8px; background: var(--pink); color: var(--ink); border: 2px solid var(--ink); font-weight: bold; cursor: pointer; font-size: 0.85rem; box-shadow: 2px 2px 0px var(--ink);">➕ Gandakan</button>
                          </div>
                     </div>
+                    <button type="button" class="btn-primary" style="background: var(--ink); color: white; margin-top: 10px;" onclick="simpanPengaturan()">🖨️ Simpan Setelan Printer</button>
                 </div>
             </div>
-        
-            <button class="btn-primary" style="background:var(--ink); color:white;" onclick="simpanPengaturan()">💾 Simpan Hardware & Printer</button>
         </div>
 
         <div id="tab-tema" class="tab-panel">
@@ -1816,6 +1819,31 @@ document.getElementById('sys-brightness').value = data.global?.liveViewBrightnes
             }
             
             btn.innerText = "📤 Unggah & Simpan Template"; btn.disabled = false;
+        });
+        // --- SCRIPT UPLOAD VIDEO POSE ---
+        document.getElementById('formVideoPose').addEventListener('submit', async (e) => {
+            e.preventDefault(); 
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            submitBtn.innerText = "⏳ Menyimpan..."; submitBtn.disabled = true;
+            
+            const formData = new FormData(); 
+            formData.append('poseVideo', document.getElementById('fileVideoPose').files[0]);
+            
+            try {
+                const res = await fetch('/api/upload-video', { method: 'POST', body: formData }); 
+                const result = await res.json(); 
+                
+                if (result.success) {
+                    alert("✅ Video Pose berhasil diperbarui!"); 
+                    e.target.reset();
+                } else {
+                    alert("❌ Gagal: " + result.message);
+                }
+            } catch (err) {
+                alert("❌ Terjadi kesalahan jaringan.");
+            } finally {
+                submitBtn.innerText = "📤 Perbarui Video"; submitBtn.disabled = false;
+            }
         });
 
         document.getElementById('formIdleScreen').addEventListener('submit', async (e) => {
