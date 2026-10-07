@@ -1403,7 +1403,7 @@ document.getElementById('sys-brightness').value = data.global?.liveViewBrightnes
                 btnCollage.className = 'mode-btn active'; btnCollage.style.background = 'var(--blue)';
                 btnNews.className = 'mode-btn inactive'; btnNews.style.background = 'var(--bg-color)';
                 judulForm.innerText = "📤 Tambah Template: Collage & Self Studio";
-                selectFormat.innerHTML = `<option value="1">1 Foto (Single Shot)</option><option value="2">2 Foto (Double Strip)</option><option value="4" selected>4 Foto (Classic Grid)</option><option value="6">6 Foto (Self Studio)</option>`;
+                selectFormat.innerHTML = `<option value="1">1 Foto (Single Shot)</option><option value="2">2 Foto (Double Strip)</option><option value="4" selected>4 Foto (Classic Grid)</option><option value="6">6 Foto (Self Studio)</option><option value="8">8 Foto (Super Grid)</option>`;
             } else {
                 btnNews.className = 'mode-btn active'; btnNews.style.background = 'var(--yellow)';
                 btnCollage.className = 'mode-btn inactive'; btnCollage.style.background = 'var(--bg-color)';
@@ -2406,31 +2406,40 @@ document.addEventListener('DOMContentLoaded', loadQrisSettings);
             }
         };
 
-        async function checkUserLicense(user) {
-            const userRef = doc(db, "users", user.uid);
-            const userSnap = await getDoc(userRef);
+       async function checkUserLicense(user) {
             let tier = "free"; 
             let expiredAt = null;
 
-            if (!userSnap.exists()) {
-                await setDoc(userRef, {
-                    email: user.email, name: user.displayName, tier: "free", createdAt: new Date()
-                });
-            } else {
-                const data = userSnap.data();
-                tier = data.tier || "free";
-                
-                if(data.expiredAt) {
-                    expiredAt = data.expiredAt.toDate(); 
-                    if(new Date() > expiredAt) {
-                        tier = "free";
-                        await updateDoc(userRef, { tier: "free", expiredAt: null });
-                        expiredAt = null;
-                        alert("⚠️ Masa langganan Anda telah habis, akun dialihkan ke paket Free.");
+            // 1. BUNGKUS DENGAN TRY-CATCH AGAR KEBAL ERROR FIREBASE
+            try {
+                const userRef = doc(db, "users", user.uid);
+                const userSnap = await getDoc(userRef);
+
+                if (!userSnap.exists()) {
+                    await setDoc(userRef, {
+                        email: user.email, name: user.displayName, tier: "free", createdAt: new Date()
+                    });
+                } else {
+                    const data = userSnap.data();
+                    tier = data.tier || "free";
+                    
+                    if(data.expiredAt) {
+                        expiredAt = data.expiredAt.toDate(); 
+                        if(new Date() > expiredAt) {
+                            tier = "free";
+                            await updateDoc(userRef, { tier: "free", expiredAt: null });
+                            expiredAt = null;
+                            alert("⚠️ Masa langganan Anda telah habis, akun dialihkan ke paket Free.");
+                        }
                     }
                 }
+            } catch (error) {
+                console.error("Error Firebase Firestore:", error);
+                // Jika error (misal: Rules Firebase belum disetting / Internet mati), jangan macet!
+                console.log("Gagal memuat data dari server, menggunakan status lisensi darurat (FREE).");
             }
             
+            // 2. UPDATE UI (Teks Langganan)
             const statusTextUI = document.getElementById('status-lisensi-teks');
             const statusTglUI = document.getElementById('status-lisensi-tgl');
             
@@ -2446,7 +2455,6 @@ document.addEventListener('DOMContentLoaded', loadQrisSettings);
                 if(expiredAt) {
                     const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
                     
-                    // --- PERHITUNGAN SISA HARI ---
                     const hariIni = new Date();
                     const selisihWaktu = expiredAt.getTime() - hariIni.getTime();
                     const sisaHari = Math.ceil(selisihWaktu / (1000 * 3600 * 24)); 
@@ -2458,21 +2466,21 @@ document.addEventListener('DOMContentLoaded', loadQrisSettings);
                     }
                 }
                 document.getElementById('btn-tier-free').innerText = "Paket Dasar (Free)";
-            
             }
-            // ... kode checkUserLicense sebelumnya ...
 
-        // --- BUKA PANEL RAHASIA JIKA YANG LOGIN ADALAH ADMIN ---
-        if (user.email === ADMIN_EMAIL) {
-            const adminPanel = document.getElementById('admin-panel-keys');
-            if(adminPanel) adminPanel.style.display = 'block'; // Tampilkan panelnya
-        } else {
-            const adminPanel = document.getElementById('admin-panel-keys');
-            if(adminPanel) adminPanel.style.display = 'none'; // Sembunyikan untuk orang lain
+            // 3. TAMPILKAN PANEL ADMIN (Kini Aman dari Error)
+            // Tambahkan toLowerCase() agar aman dari perbedaan huruf besar/kecil
+            if (user && user.email && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+                const adminPanel = document.getElementById('admin-panel-keys');
+                if(adminPanel) adminPanel.style.display = 'block'; // Tampilkan panelnya
+            } else {
+                const adminPanel = document.getElementById('admin-panel-keys');
+                if(adminPanel) adminPanel.style.display = 'none'; // Sembunyikan untuk orang lain
+            }
+            
+            // 4. TERAPKAN FITUR
+            terapkanFiturBerdasarkanLisensi(tier);
         }
-        
-        terapkanFiturBerdasarkanLisensi(tier); // (Ini baris terakhir Anda yang sudah ada)
-}
 
         // === FUNGSI BANTUAN: VISUAL GEMBOK UI ===
         // (Biarkan kode pasangGembok persis seperti yang Anda miliki)

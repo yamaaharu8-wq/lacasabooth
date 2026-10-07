@@ -186,7 +186,8 @@
 </head>
 <body>
 
-    <div class="secret-back-btn" onclick="akhiriSesiDanKembali()"></div>
+    <!-- Tombol Rahasia Admin (Hold 2 Detik) -->
+    <div class="secret-back-btn" id="btn-rahasia" title="Tahan 2 detik untuk keluar"></div>
     <div id="sessionTimerDisplay"><span>⏱️</span><span id="sessionTimerText">--:--</span></div>
 
     <div id="panel-sub-mode" class="panel active-panel" style="justify-content: center;">
@@ -198,6 +199,7 @@
             <button class="btn-format" onclick="bukaPilihanTemplate(2)"><span>🔥</span> 2 Foto</button>
             <button class="btn-format" onclick="bukaPilihanTemplate(4)"><span>👑</span> 4 Foto</button>
             <button class="btn-format" onclick="bukaPilihanTemplate(6)"><span>✨</span> 6 Foto</button>
+            <button class="btn-format" onclick="bukaPilihanTemplate(8)"><span>💎</span> 8 Foto</button>
         </div>
     </div>
 
@@ -457,54 +459,31 @@
        function terapkanVisualKamera() {
             let w = "100vw";
             let h = "100vh";
+            if (isPortrait) { w = "100vh"; h = "100vw"; }
             
-            // 1. Transformasi Dasar (Tanpa Mirror) - Untuk Preview Foto
-            let transformCSSBase = "translate(-50%, -50%) "; 
-            if (isPortrait) {
-                transformCSSBase += "rotate(90deg) ";
-                w = "100vh"; 
-                h = "100vw"; 
-            }
-            
-            // 2. Transformasi Khusus Live View (Dengan Efek Cermin)
-            // Trik CSS: Deklarasikan scaleX(-1) SEBELUM rotate agar flip selalu horizontal di layar
+            // 1. Live View Kamera tetap diputar karena dia aliran video langsung dari kamera
             let transformCSSLive = "translate(-50%, -50%) ";
-            if (isMirror) {
-                transformCSSLive += "scaleX(-1) "; 
-            }
-            if (isPortrait) {
-                transformCSSLive += "rotate(90deg) ";
-            }
+            if (isPortrait) transformCSSLive += "rotate(90deg) ";
+            if (isMirror) transformCSSLive += "scaleX(-1) "; 
 
-            // 3. Terapkan gaya ke LiveView dan Webcam
             ['liveView', 'webcam-view'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) {
-                    el.style.position = "absolute";
-                    el.style.top = "50%";          
-                    el.style.left = "50%";         
-                    el.style.width = w;            
-                    el.style.height = h;           
-                    el.style.objectFit = "cover";  
-                    el.style.imageOrientation = "none"; 
-                    el.style.transform = transformCSSLive; // <-- Menggunakan CSS Live
+                    el.style.position = "absolute"; el.style.top = "50%"; el.style.left = "50%";          
+                    el.style.width = w; el.style.height = h; el.style.objectFit = "cover";  
+                    el.style.imageOrientation = "none"; el.style.transform = transformCSSLive; 
                 }
             });
 
-            // 4. Terapkan gaya ke Preview Foto 
+            // 2. PREVIEW FOTO MENTAH TIDAK PERLU DIPUTAR/DICERMIN KARENA SUDAH LURUS DARI BACKEND!
             const previewEl = document.getElementById('previewImage');
             if (previewEl) {
-                previewEl.style.position = "absolute";
-                previewEl.style.top = "50%";
-                previewEl.style.left = "50%";
-                previewEl.style.width = w;
-                previewEl.style.height = h;
+                previewEl.style.position = "absolute"; previewEl.style.top = "50%"; previewEl.style.left = "50%";
+                previewEl.style.width = "100vw"; previewEl.style.height = "100vh"; 
                 previewEl.style.objectFit = "cover";
-                previewEl.style.imageOrientation = "none";
-                previewEl.style.transform = transformCSSBase; // <-- CSS Dasar (Tanpa Mirror)
+                previewEl.style.transform = "translate(-50%, -50%)"; // Normal, sejajar layar
             }
 
-            // Perbarui tulisan pada tombol
             document.querySelectorAll('.btn-mirror').forEach(btn => btn.innerText = isMirror ? "🪞 Cermin: ON" : "🪞 Cermin: OFF");
         }
         
@@ -563,20 +542,24 @@
                 const tCtx = tempCanvas.getContext('2d');
 
                 recordInterval = setInterval(() => {
-                    if (isMirror) { 
-                        tCtx.save(); 
-                        if (isPortrait) {
-                            // Di potret, mentahan adalah lanskap. Balik Vertikal agar jadi Horizontal saat diputar nanti
-                            tCtx.translate(0, tempCanvas.height); 
-                            tCtx.scale(1, -1);
-                        } else {
-                            tCtx.translate(tempCanvas.width, 0); 
-                            tCtx.scale(-1, 1);
-                        }
+                    tCtx.save();
+                    tCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+                    tCtx.translate(tempCanvas.width / 2, tempCanvas.height / 2);
+                    
+                    if (isMirror) { tCtx.scale(-1, 1); } // Cermin Horizontal
+                    
+                    if (isPortrait) {
+                        // [PERBAIKAN] Balik arah rotasi jika cermin menyala
+                        const sudutRotasi = isMirror ? -90 : 90;
+                        tCtx.rotate(sudutRotasi * Math.PI / 180);
+                        tCtx.drawImage(video, -tempCanvas.height / 2, -tempCanvas.width / 2, tempCanvas.height, tempCanvas.width);
+                    } else {
+                        tCtx.drawImage(video, -tempCanvas.width / 2, -tempCanvas.height / 2, tempCanvas.width, tempCanvas.height);
                     }
-                    tCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
-                    if (isMirror) { tCtx.restore(); }
-                    webcamFrames.push(tempCanvas.toDataURL('image/jpeg', 0.6));
+                    tCtx.restore();
+                    
+                    const frameData = tempCanvas.toDataURL('image/jpeg', 0.5);
+                    if (frameData.length > 500) webcamFrames.push(frameData);
                 }, 100);
             }
 
@@ -608,19 +591,29 @@
             if (activeCameraMode === 'webcam') {
                 const video = document.getElementById('webcam-view');
                 const canvas = document.getElementById('webcam-canvas');
-                canvas.width = video.videoWidth; canvas.height = video.videoHeight;
                 const ctx = canvas.getContext('2d');
 
-               if (isMirror) { 
-                    if (isPortrait) {
-                        ctx.translate(0, canvas.height); 
-                        ctx.scale(1, -1);
-                    } else {
-                        ctx.translate(canvas.width, 0); 
-                        ctx.scale(-1, 1);
-                    }
+                const vW = video.videoWidth || 1920;
+                const vH = video.videoHeight || 1080;
+                canvas.width = isPortrait ? vH : vW;
+                canvas.height = isPortrait ? vW : vH;
+
+                ctx.save();
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.translate(canvas.width / 2, canvas.height / 2);
+
+                if (isMirror) { ctx.scale(-1, 1); } // Cermin Horizontal
+
+                if (isPortrait) {
+                    // [PERBAIKAN] Balik arah rotasi jika cermin menyala
+                    const sudutRotasi = isMirror ? -90 : 90;
+                    ctx.rotate(sudutRotasi * Math.PI / 180);
+                    ctx.drawImage(video, -canvas.height / 2, -canvas.width / 2, canvas.height, canvas.width);
+                } else {
+                    ctx.drawImage(video, -canvas.width / 2, -canvas.height / 2, canvas.width, canvas.height);
                 }
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                ctx.restore();
+
                 const base64Image = canvas.toDataURL('image/jpeg', 0.9);
 
                 await fetch('/api/upload-webcam', {
@@ -656,8 +649,8 @@
             }
             if (!fotoBaruDitemukan) teksLoading.style.display = 'none'; 
             if (fotoBaruDitemukan) {
-                // Berikan rotasi 90 derajat & sedikit zoom agar pas di kotak mini galeri saat potret
-                let imgStyle = isPortrait ? "width: 100%; height: 100%; object-fit: cover; transform: rotate(90deg) scale(1.35);" : "width: 100%; height: 100%; object-fit: cover;";
+                // Tidak perlu CSS rotate lagi!
+                let imgStyle = "width: 100%; height: 100%; object-fit: cover;";
                 document.getElementById(`slot-${indexFotoSaatIni}`).innerHTML = `<img src="${tempFotoMentahBaru.file}" style="${imgStyle}"><div class="overlay-review">Lihat/Retake</div>`;
             }
             // --- BARIS INI YANG KEMUNGKINAN TERHAPUS SEBELUMNYA ---
@@ -710,14 +703,16 @@
                     const wPct = (fWidth / canvasW) * 100; const hPct = (fHeight / canvasH) * 100; 
                     const off = currentCustomOffsets[i] || {x: 50, y: 50};
 
-                    // Gunakan object-position untuk pratinjau geser
-                    // Gunakan wrapper container-type untuk rotasi gambar tanpa merusak dimensi frame
-                    let cssWrap = `position: absolute; left: ${leftPct}%; top: ${topPct}%; width: ${wPct}%; height: ${hPct}%; overflow: hidden; z-index: 2; container-type: size;`;
-                    let cssImg = `position: absolute; top: 50%; left: 50%; width: ${isPortrait ? '100cqh' : '100%'}; height: ${isPortrait ? '100cqw' : '100%'}; transform: translate(-50%, -50%) ${isPortrait ? 'rotate(90deg)' : ''}; object-fit: cover; object-position: ${off.x}% ${off.y}%; cursor: grab; touch-action: none;`;
+                    // [PERBAIKAN] Hitung rotasi dinamis untuk efek preview
+                    let rotasiEfek = (isPortrait && isMirror) ? 'rotate(-90deg)' : (isPortrait ? 'rotate(90deg)' : '');
                     
+                   // Hapus rotate dan tidak perlu lagi unit 100cqh/100cqw karena gambar sudah natural potret!
+                    // Hapus CSS rotate dan kembalikan ke format 100% standar
+                    let cssWrap = `position: absolute; left: ${leftPct}%; top: ${topPct}%; width: ${wPct}%; height: ${hPct}%; overflow: hidden; z-index: 2;`;
+                    let cssImg = `position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; object-position: ${off.x}% ${off.y}%; cursor: grab; touch-action: none;`;
                     htmlDom += `<div style="${cssWrap}"><img src="${urlFoto}" data-index="${i}" class="drag-img" style="${cssImg}"></div>`;
                 });
-                
+
                 htmlDom += `</div><img src="${frameUrl}" style="position: absolute; top:0; left:0; width:100%; height:100%; z-index: 10; pointer-events: none;"></div>`; previewContainer.innerHTML = htmlDom; terapkanFilterLive('none', 'none', document.getElementById('btn-efek-none')); inisiasiDragAndDrop(); 
             };
         }
@@ -1089,6 +1084,43 @@
                 }
             }
         });
+    </script>
+    <!-- SCRIPT TOMBOL RAHASIA (TAHAN 2 DETIK) -->
+    <script>
+        const btnRahasia = document.getElementById('btn-rahasia');
+        let holdTimerRahasia;
+
+        if (btnRahasia) {
+            // Fungsi untuk memulai hitung mundur 2 detik saat ditekan
+            const startHold = (e) => {
+                // Mencegah perilaku default (seperti seleksi teks/klik dobel)
+                if (e.cancelable) e.preventDefault(); 
+                
+                holdTimerRahasia = setTimeout(() => {
+                    // Jika berhasil ditahan 2 detik penuh, eksekusi fungsi keluar
+                    if (typeof akhiriSesiDanKembali === 'function') {
+                        akhiriSesiDanKembali();
+                    } else {
+                        window.location.href = '/idle.html';
+                    }
+                }, 2000); // 2000 milidetik = 2 detik
+            };
+
+            // Fungsi untuk membatalkan hitungan jika tombol dilepas sebelum 2 detik
+            const cancelHold = () => {
+                clearTimeout(holdTimerRahasia);
+            };
+
+            // Event untuk Mouse (PC/Desktop)
+            btnRahasia.addEventListener('mousedown', startHold);
+            btnRahasia.addEventListener('mouseup', cancelHold);
+            btnRahasia.addEventListener('mouseleave', cancelHold);
+
+            // Event untuk Layar Sentuh (Touchscreen/Tablet)
+            btnRahasia.addEventListener('touchstart', startHold, { passive: false });
+            btnRahasia.addEventListener('touchend', cancelHold);
+            btnRahasia.addEventListener('touchcancel', cancelHold);
+        }
     </script>
 </body>
 </html>

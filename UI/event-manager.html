@@ -325,6 +325,14 @@
                             <p>Cetak eksklusif dengan gaya koran estetik.</p>
                         </div>
                     </label>
+                    <label class="radio-label" onclick="selectRadio('mode', this)" id="opt-aibooth">
+                        <input type="radio" name="modeData" value="aibooth">
+                        <div class="radio-icon">✨</div>
+                        <div class="radio-text">
+                            <h4>AI Magic Booth</h4>
+                            <p>Ubah foto menjadi gaya Anime 3D / Retro.</p>
+                        </div>
+                    </label>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
     <a href="#" onclick="nextStep(1); return false;" style="color: var(--ink); font-weight: 600; text-decoration: none; opacity: 0.5; font-size: 0.95rem;">‹ Kembali</a>
@@ -440,7 +448,7 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-    
+    window.auth = auth;
     // PENTING: Memaksa Google memunculkan popup pemilihan akun
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
@@ -578,30 +586,48 @@
         
         const optCollage = document.getElementById('opt-collage');
         const optNews = document.getElementById('opt-news');
+        const optAibooth = document.getElementById('opt-aibooth'); 
         const optPaid = document.getElementById('opt-pay-paid');
 
         // Hapus Kunci (Reset) di Modal
-        [optCollage, optNews, optPaid].forEach(el => {
-            el.style.opacity = '1'; 
-            el.style.pointerEvents = 'auto';
-            const badge = el.querySelector('.lock-badge');
-            if (badge) badge.remove();
+        [optCollage, optNews, optAibooth, optPaid].forEach(el => {
+            if (el) {
+                el.style.opacity = '1'; 
+                el.style.pointerEvents = 'auto';
+                const badge = el.querySelector('.lock-badge');
+                if (badge) badge.remove();
+            }
         });
 
-        const getBadge = (namaPaket) => `<div class="lock-badge" style="position:absolute; top:-10px; right:-10px; background:#ef4444; color:white; font-size:0.75rem; padding:4px 10px; border-radius:10px; border:2px solid var(--ink); font-weight:bold; box-shadow:2px 2px 0px var(--ink);">🔒 BUKA DI ${namaPaket}</div>`;
+        // Modifikasi fungsi getBadge agar bisa ganti warna (Default: Merah)
+        const getBadge = (teks, warna = '#ef4444') => `<div class="lock-badge" style="position:absolute; top:-10px; right:-10px; background:${warna}; color:white; font-size:0.75rem; padding:4px 10px; border-radius:10px; border:2px solid var(--ink); font-weight:bold; box-shadow:2px 2px 0px var(--ink); z-index:10;">${teks}</div>`;
 
         if (tier === 'free') {
-            optCollage.style.opacity = '0.5'; optCollage.style.pointerEvents = 'none'; optCollage.insertAdjacentHTML('beforeend', getBadge('PLUS'));
-            optNews.style.opacity = '0.5'; optNews.style.pointerEvents = 'none'; optNews.insertAdjacentHTML('beforeend', getBadge('PRIME'));
-            optPaid.style.opacity = '0.5'; optPaid.style.pointerEvents = 'none'; optPaid.insertAdjacentHTML('beforeend', getBadge('PLUS'));
+            if(optCollage) { optCollage.style.opacity = '0.5'; optCollage.style.pointerEvents = 'none'; optCollage.insertAdjacentHTML('beforeend', getBadge('🔒 BUKA DI PLUS')); }
+            if(optNews) { optNews.style.opacity = '0.5'; optNews.style.pointerEvents = 'none'; optNews.insertAdjacentHTML('beforeend', getBadge('🔒 BUKA DI PRIME')); }
+            if(optPaid) { optPaid.style.opacity = '0.5'; optPaid.style.pointerEvents = 'none'; optPaid.insertAdjacentHTML('beforeend', getBadge('🔒 BUKA DI PLUS')); }
         } else if (tier === 'plus' || tier === 'basic') {
-            optNews.style.opacity = '0.5'; optNews.style.pointerEvents = 'none'; optNews.insertAdjacentHTML('beforeend', getBadge('PRIME'));
-        } else if (tier === 'prime' || tier === 'premium') {
-            // Prime = Terbuka Semua
+            if(optNews) { optNews.style.opacity = '0.5'; optNews.style.pointerEvents = 'none'; optNews.insertAdjacentHTML('beforeend', getBadge('🔒 BUKA DI PRIME')); }
+        } 
+
+        // 🚧 KUNCI SEMENTARA MODE AI BOOTH (KECUALI ADMIN) 🚧
+        const isAdmin = auth.currentUser && auth.currentUser.email === 'adenakbar455@gmail.com';
+        
+        if(optAibooth) { 
+            if (isAdmin) {
+                // Jika yang login adalah Admin: Buka kunci & beri label DEV MODE (Warna Hijau)
+                optAibooth.style.opacity = '1'; 
+                optAibooth.style.pointerEvents = 'auto'; 
+                optAibooth.insertAdjacentHTML('beforeend', getBadge('🛠️ DEV MODE', '#10b981')); 
+            } else {
+                // Jika klien biasa: Kunci & beri label SEGERA HADIR (Warna Biru)
+                optAibooth.style.opacity = '0.6'; 
+                optAibooth.style.pointerEvents = 'none'; 
+                optAibooth.insertAdjacentHTML('beforeend', getBadge('🚧 SEGERA HADIR', '#3b82f6')); 
+            }
         }
 
-        // [PENTING] Render ulang daftar event di latar belakang 
-        // agar status gembok pada event yang sudah terbuat otomatis aktif/hilang sesuai tier
+        // Render ulang daftar event
         muatDaftarEvent();
     }
 </script>
@@ -656,21 +682,31 @@
                 if (data.success && data.events && data.events.length > 0) {
                    const tier = window.userTier || localStorage.getItem('saas_user_tier') || 'free';
                     data.events.reverse().forEach(evt => {
-                        let modeTeks = evt.mode === 'collage' ? '🖼️ Kolase' : evt.mode === 'photobox' ? '⏱️ Self Studio' : '📰 Newspaper';
+                        let modeTeks = evt.mode === 'collage' ? '🖼️ Kolase' : evt.mode === 'photobox' ? '⏱️ Self Studio' : evt.mode === 'aibooth' ? '✨ AI Booth' : '📰 Newspaper';
                         let payTeks = evt.payment === 'with_payment' ? '💳 Berbayar' : '🆓 Gratis';
-                        let badgeModeColor = evt.mode === 'collage' ? 'var(--blue)' : evt.mode === 'photobox' ? 'var(--pink)' : 'var(--yellow)';
+                        let badgeModeColor = evt.mode === 'collage' ? 'var(--blue)' : evt.mode === 'photobox' ? 'var(--pink)' : evt.mode === 'aibooth' ? '#a855f7' : 'var(--yellow)';
                         let badgePayColor = evt.payment === 'with_payment' ? 'var(--green)' : 'var(--paper-white)';
                         
                         // --- LOGIKA SILENT KILLER UNTUK EVENT YANG SUDAH TERBUAT ---
                         let isLocked = false;
-                        let requiredTier = "";
+                        let badgeText = "";
+                        let alertText = "";
                         
-                        if (tier === 'free') {
-                            if (evt.mode === 'newspaper') { isLocked = true; requiredTier = 'PRIME'; }
-                            else if (evt.mode === 'collage') { isLocked = true; requiredTier = 'PLUS'; }
-                            else if (evt.payment === 'with_payment') { isLocked = true; requiredTier = 'PLUS'; }
+                       const isAdmin = window.auth && window.auth.currentUser && window.auth.currentUser.email === 'adenakbar455@gmail.com';
+                       
+                        // Kunci Permanen AI Booth Sementara (KECUALI ADMIN)
+                        if (evt.mode === 'aibooth' && !isAdmin) {
+                            isLocked = true;
+                            badgeText = "🚧 TAHAP PENGEMBANGAN";
+                            alertText = "Fitur AI Booth sedang dalam tahap perbaikan dan pengembangan. Segera hadir kembali!";
+                        } 
+                        // Kunci Tier Biasa
+                        else if (tier === 'free') {
+                            if (evt.mode === 'newspaper') { isLocked = true; badgeText = '🔒 BUTUH PRIME'; alertText = 'Silakan upgrade ke lisensi PRIME.'; }
+                            else if (evt.mode === 'collage') { isLocked = true; badgeText = '🔒 BUTUH PLUS'; alertText = 'Silakan upgrade ke lisensi PLUS.'; }
+                            else if (evt.payment === 'with_payment') { isLocked = true; badgeText = '🔒 BUTUH PLUS'; alertText = 'Silakan upgrade ke lisensi PLUS.'; }
                         } else if (tier === 'plus' || tier === 'basic') {
-                            if (evt.mode === 'newspaper') { isLocked = true; requiredTier = 'PRIME'; }
+                            if (evt.mode === 'newspaper') { isLocked = true; badgeText = '🔒 BUTUH PRIME'; alertText = 'Silakan upgrade ke lisensi PRIME.'; }
                         }
                         
                         const card = document.createElement('div'); 
@@ -684,18 +720,19 @@
                             
                             card.innerHTML = `
                                 <div class="event-info" style="position: relative; opacity: 0.7;">
-                                    <div style="position:absolute; top:-28px; left:0; background:#ef4444; color:white; font-size:0.75rem; padding:4px 10px; border-radius:10px; border:2px solid var(--ink); font-weight:bold; box-shadow:2px 2px 0px var(--ink); z-index:10;">🔒 BUTUH ${requiredTier}</div>
+                                    <div style="position:absolute; top:-28px; left:0; background:#ef4444; color:white; font-size:0.75rem; padding:4px 10px; border-radius:10px; border:2px solid var(--ink); font-weight:bold; box-shadow:2px 2px 0px var(--ink); z-index:10;">${badgeText}</div>
                                     <div class="event-badge" style="background: ${badgeModeColor}; border-color: #999; color: #555;">${modeTeks}</div>
                                     <div class="event-badge" style="background: ${badgePayColor}; border-color: #999; color: #555;">${payTeks}</div>
                                     <div class="event-title" style="color: #777;">${evt.judul}</div>
                                     <div class="event-desc" style="color: #888;">${evt.deskripsi || 'Tidak ada deskripsi.'}</div>
                                 </div>
                                 <div class="action-group">
-                                    <button class="btn-launch" style="background: #e5e7eb; color: #9ca3af; border-color: #d1d5db; box-shadow: none; cursor: not-allowed;" onclick="alert('🔒 EVENT TERKUNCI!\\n\\nEvent ini menggunakan fitur Premium. Silakan upgrade ke lisensi ${requiredTier} untuk dapat meluncurkan event ini lagi.')">🔒 KUNCI</button>
+                                    <button class="btn-launch" style="background: #e5e7eb; color: #9ca3af; border-color: #d1d5db; box-shadow: none; cursor: not-allowed;" onclick="alert('${alertText}')">🔒 KUNCI</button>
                                     <button class="btn-delete" onclick="hapusEvent('${evt.id}', event)" title="Hapus Event">🗑</button>
                                 </div>
                             `;
                         } else {
+                            // ... Lanjutan kode normal di bawahnya tetap sama ...
                             // UI EVENT NORMAL
                             card.innerHTML = `
                                 <div class="event-info">

@@ -222,7 +222,7 @@
 </head>
 <body>
 
-    <div onclick="window.location.href='/idle.html'" style="position: fixed; top: 0; left: 0; width: 60px; height: 60px; z-index: 9999999; cursor: pointer;" title="Admin Exit"></div>
+    <div id="btn-rahasia" style="position: fixed; top: 0; left: 0; width: 80px; height: 80px; z-index: 9999999; cursor: pointer;" title="Tahan 2 detik untuk Admin Exit"></div>
 
     <div id="sessionTimerDisplay">
         <span>⏱️</span>
@@ -648,9 +648,9 @@
                 const el = document.getElementById(id);
                 if (el) {
                     el.classList.remove('mirrored');
-                    el.style.position = "absolute"; el.style.top = "50%"; el.style.left = "50%";         
+                    el.style.position = "absolute"; el.style.top = "50%"; el.style.left = "50%" ;        
                     el.style.width = w; el.style.height = h; el.style.objectFit = "cover";  
-                    el.style.imageOrientation = "none"; el.style.transform = transformCSSLive;
+                    el.style.imageOrientation = "none"; el.style.transform = transformCSSLive ;
                 }
             });
 
@@ -846,43 +846,105 @@
 
         async function akhiriSesiKameraLanjut() {
             bukaPanel('panel-template'); mulaiHitungMundurGlobal("post-camera", true); 
-            const container = document.getElementById('list-template'); container.innerHTML = "";
-            if(!databaseTemplate["6"] || databaseTemplate["6"].length === 0) return container.innerHTML = "<h3 style='font-family: Fredoka;'>Oops! Belum ada template 6 foto nih.</h3>";
-            databaseTemplate["6"].forEach((t, index) => {
-                if(index === 0 && !templateTerpilih) { templateTerpilih = t.id; }
-                const namaBingkai = t.name ? t.name : 'Bingkai ' + (index + 1); 
-                container.innerHTML += `<div class="card-doodle card-template ${index === 0 ? 'selected' : ''}" id="tpl_${t.id}" onclick="pilihTemplate('${t.id}')"><img src="${t.img}"><div class="nama-template">${namaBingkai}</div></div>`;
+            const container = document.getElementById('list-template'); 
+            container.innerHTML = "";
+            
+            // [PERBAIKAN] Pastikan list-template tampil secara kolom, bukan grid langsung
+            container.style.display = "flex";
+            container.style.flexDirection = "column";
+            container.style.gap = "20px";
+            
+            const formats = ["1", "2", "4", "6", "8"];
+            let hasTemplates = false;
+            let isFirst = true;
+
+            formats.forEach(fmt => {
+                if (databaseTemplate[fmt] && databaseTemplate[fmt].length > 0) {
+                    hasTemplates = true;
+                    
+                    // Buat wrapper untuk satu kategori format
+                    let groupHtml = `<div style="width: 100%;">
+                        <div style="border-bottom: 2px dashed var(--ink); margin-bottom: 15px; text-align: left;">
+                            <h3 style="color: var(--ink); font-family: 'Caveat', cursive; font-size: 2.2rem; margin-bottom: 5px;">Bingkai ${fmt} Foto</h3>
+                        </div>
+                        <div class="grid-template" style="display: grid; gap: 20px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); width: 100%; justify-content: center;">`;
+
+                    databaseTemplate[fmt].forEach(t => {
+                        if(isFirst && !templateTerpilih) { templateTerpilih = t.id; targetJepretan = parseInt(fmt); isFirst = false; }
+                        const namaBingkai = t.nama ? t.nama : 'Bingkai ' + t.id; 
+                        
+                        groupHtml += `<div class="card-doodle card-template" id="tpl_${t.id}" onclick="pilihTemplate('${t.id}', ${fmt})"><img src="${t.img}"><div class="nama-template">${namaBingkai}</div></div>`;
+                    });
+                    
+                    groupHtml += `</div></div>`;
+                    container.innerHTML += groupHtml;
+                }
             });
+
+            if(!hasTemplates) {
+                container.innerHTML = "<h3 style='font-family: Fredoka;'>Oops! Belum ada template nih.</h3>";
+            }
         }
 
-        function pilihTemplate(idTemplate) {
-            templateTerpilih = idTemplate; currentCustomOffsets = {}; 
+       // Menangkap parameter jumlah slot dari klik bingkai
+        function pilihTemplate(idTemplate, jumlahSlot) {
+            templateTerpilih = idTemplate; 
+            targetJepretan = parseInt(jumlahSlot); // Set target foto secara otomatis
+            currentCustomOffsets = {}; 
+            
             document.querySelectorAll('.card-template').forEach(c => c.classList.remove('selected'));
             document.getElementById(`tpl_${idTemplate}`).classList.add('selected'); 
+            
+            // Ubah teks judul secara dinamis di layar Pilih Foto
+            const judulPilihFoto = document.querySelector('#panel-pilih-foto .judul-interaktif');
+            if (judulPilihFoto) judulPilihFoto.innerText = `Pilih ${targetJepretan} Foto Cetar! ⭐`;
+
             setTimeout(() => { bukaPanel('panel-pilih-foto'); muatGaleriMentah(); }, 400);
         }
 
         async function muatGaleriMentah() {
-            const data = await (await fetch('/api/photobox-raws')).json(); const container = document.getElementById('list-foto'); container.innerHTML = ""; fotoTerpilih = []; updateTeksJumlah();
+            const data = await (await fetch('/api/photobox-raws')).json(); 
+            const container = document.getElementById('list-foto'); 
+            container.innerHTML = ""; 
+            fotoTerpilih = []; 
+            updateTeksJumlah();
+            
             const fotoSesiIni = data.files.filter(f => f.mtime >= waktuMulaiSesiTimestamp);
             if (fotoSesiIni.length === 0) return container.innerHTML = "<h3 style='font-family: Fredoka;'>Yah, belum ada foto yang terjepret dari sesi ini!</h3>";
+            
+            // --- PERBAIKAN: Ubah proporsi kotak galeri sesuai orientasi fisik kamera ---
+            // Jika potret, buat fotonya tinggi menjulang (240px). Jika lanskap, buat melebar (135px).
+            let imgStyle = orientasiKamera === 'potret' 
+                ? "height: 240px; width: 100%; object-fit: cover; border-radius: 10px;" 
+                : "height: 135px; width: 100%; object-fit: cover; border-radius: 10px;";
+
             fotoSesiIni.forEach(f => {
                 const idDiv = `foto_${f.name.replace('.jpg','')}`;
-                container.innerHTML += `<div class="card-doodle card-foto" id="${idDiv}" data-filename="${f.name}" onclick="tambahPilihanFoto('${f.name}')"><img src="${f.file}"><div class="badge-count" id="badge_${f.name}">0</div></div>`;
+                // Terapkan imgStyle langsung ke dalam tag <img>
+                container.innerHTML += `<div class="card-doodle card-foto" id="${idDiv}" data-filename="${f.name}" onclick="tambahPilihanFoto('${f.name}')">
+                    <img src="${f.file}" style="${imgStyle}">
+                    <div class="badge-count" id="badge_${f.name}">0</div>
+                </div>`;
             });
         }
         
-        function tambahPilihanFoto(namaFile) { if (fotoTerpilih.length < 6) { fotoTerpilih.push(namaFile); updateTeksJumlah(); } }
+        function tambahPilihanFoto(namaFile) { 
+            if (fotoTerpilih.length < targetJepretan) { 
+                fotoTerpilih.push(namaFile); 
+                updateTeksJumlah(); 
+            } 
+        }
+        
         function resetPilihanFoto() { fotoTerpilih = []; currentCustomOffsets = {}; updateTeksJumlah(); }
         
         function updateTeksJumlah() {
-            document.getElementById('teks-jumlah-foto').innerText = `Terpilih: ${fotoTerpilih.length} / 6`;
+            document.getElementById('teks-jumlah-foto').innerText = `Terpilih: ${fotoTerpilih.length} / ${targetJepretan}`;
             document.querySelectorAll('.card-foto').forEach(card => {
                 const fName = card.getAttribute('data-filename'); const hit = fotoTerpilih.filter(name => name === fName).length; const badge = card.querySelector('.badge-count');
                 if (hit > 0) { card.classList.add('selected'); badge.style.display = 'flex'; badge.innerText = hit; } 
                 else { card.classList.remove('selected'); badge.style.display = 'none'; }
             });
-            if(fotoTerpilih.length === 6) { document.getElementById('btn-lanjut-rakit').style.display = 'block'; } 
+            if(fotoTerpilih.length === targetJepretan) { document.getElementById('btn-lanjut-rakit').style.display = 'block'; } 
             else { document.getElementById('btn-lanjut-rakit').style.display = 'none'; }
         }
 
@@ -890,27 +952,43 @@
             bukaPanel('panel-efek');
             const previewContainer = document.getElementById('effectPreviewContainer');
             previewContainer.innerHTML = '<p style="color:var(--ink); font-weight:bold;">Menyiapkan preview...</p>';
-            const templateInfo = databaseTemplate["6"].find(t => t.id === templateTerpilih);
+            
+            // [PERBAIKAN] Pastikan membaca array sesuai targetJepretan
+            const templateTersedia = databaseTemplate[targetJepretan.toString()];
+            if (!templateTersedia) return previewContainer.innerHTML = "Template tidak ditemukan!";
+            
+            const templateInfo = templateTersedia.find(t => t.id === templateTerpilih);
+            if (!templateInfo) return previewContainer.innerHTML = "Data bingkai rusak!";
+
             const frameUrl = `/frames/${templateTerpilih}.png`; 
-            const frameImg = new Image(); frameImg.src = frameUrl;
+            const frameImg = new Image(); 
+            frameImg.src = frameUrl;
             
             frameImg.onload = () => {
-                const canvasW = frameImg.naturalWidth; const canvasH = frameImg.naturalHeight;
-                let htmlDom = `<div style="width: auto; aspect-ratio: ${canvasW} / ${canvasH}; position: relative; border-radius: 12px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); overflow: hidden; background: white;"><div id="filterTarget" style="position: absolute; top:0; left:0; width:100%; height:100%; transition: filter 0.3s ease;">`;
+               const canvasW = frameImg.naturalWidth; const canvasH = frameImg.naturalHeight;
                 
+                // [PERBAIKAN] Gunakan lebar 100% dengan batas maksimal yang dikalkulasi berdasar rasio asli (anti-gepeng)
+                let htmlDom = `<div style="width: 100%; max-width: calc(55vh * (${canvasW} / ${canvasH})); height: auto; aspect-ratio: ${canvasW} / ${canvasH}; position: relative; border-radius: 12px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); overflow: hidden; background: white; margin: 0 auto;"><div id="filterTarget" style="position: absolute; top:0; left:0; width:100%; height:100%; transition: filter 0.3s ease;">`;
+                    
                 if (Object.keys(currentCustomOffsets).length === 0) {
                     fotoTerpilih.forEach((_, i) => currentCustomOffsets[i] = {x: 50, y: 50});
                 }
                 
                 fotoTerpilih.forEach((fotoName, i) => {
+                    // Cek batas koordinat agar tidak error jika jumlah foto > jumlah koordinat bingkai
+                    if (!templateInfo.layout.coords[i]) return;
+
                     const coord = templateInfo.layout.coords[i];
                     const leftPct = (coord.x / canvasW) * 100; const topPct = (coord.y / canvasH) * 100;
                     const fWidth = coord.width || templateInfo.layout.width; const fHeight = coord.height || templateInfo.layout.height;
                     const wPct = (fWidth / canvasW) * 100; const hPct = (fHeight / canvasH) * 100;
                     const off = currentCustomOffsets[i] || {x: 50, y: 50};
                     
-                    // Gunakan tag img standar tanpa rotasi CSS karena fisik file sudah portrait
-                    htmlDom += `<img src="/uploads/${currentSessionId}/${fotoName}" data-index="${i}" class="drag-img" style="position: absolute; left: ${leftPct}%; top: ${topPct}%; width: ${wPct}%; height: ${hPct}%; object-fit: cover; object-position: ${off.x}% ${off.y}%; z-index: 2; cursor: grab; touch-action: none;">`;
+                    // [PERBAIKAN] Hilangkan putaran rotasi CSS (gambar asli sudah diputar)
+                    let cssWrap = `position: absolute; left: ${leftPct}%; top: ${topPct}%; width: ${wPct}%; height: ${hPct}%; overflow: hidden; z-index: 2;`;
+                    let cssImg = `position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; object-position: ${off.x}% ${off.y}%; cursor: grab; touch-action: none;`;
+                    
+                    htmlDom += `<div style="${cssWrap}"><img src="/uploads/${currentSessionId}/${fotoName}" data-index="${i}" class="drag-img" style="${cssImg}"></div>`;
                 });
                 
                 htmlDom += `</div><img src="${frameUrl}" style="position: absolute; top:0; left:0; width:100%; height:100%; z-index: 10; pointer-events: none;"></div>`;
@@ -975,15 +1053,19 @@
         }
 
         async function autoRakitOtomatis() {
-            if (!templateTerpilih) { if(databaseTemplate["6"] && databaseTemplate["6"].length > 0) templateTerpilih = databaseTemplate["6"][0].id; }
+            if (!templateTerpilih) { 
+                if(databaseTemplate[targetJepretan.toString()] && databaseTemplate[targetJepretan.toString()].length > 0) {
+                    templateTerpilih = databaseTemplate[targetJepretan.toString()][0].id; 
+                }
+            }
             const data = await (await fetch('/api/photobox-raws')).json(); const fotoSesiIni = data.files.filter(f => f.mtime >= waktuMulaiSesiTimestamp);
             if (fotoSesiIni.length === 0) { window.location.href = '/idle.html'; return; }
-            let idx = 0; while(fotoTerpilih.length < 6) { fotoTerpilih.push(fotoSesiIni[idx % fotoSesiIni.length].name); idx++; }
+            let idx = 0; while(fotoTerpilih.length < targetJepretan) { fotoTerpilih.push(fotoSesiIni[idx % fotoSesiIni.length].name); idx++; }
             validasiDanRakit(true);
         }
 
         async function validasiDanRakit(isAuto = false) {
-            if(fotoTerpilih.length < 6) return;
+            if(fotoTerpilih.length < targetJepretan) return;
             const btn = document.getElementById('btn-rakit');
             if(!isAuto) { btn.innerText = "⏳ Merakit..."; btn.disabled = true; }
             if(isAuto) { document.getElementById('loadingTeks').innerText = "Waktu Habis! Merakit Otomatis..."; document.getElementById('loadingTeks').style.display = 'block'; }
@@ -1255,6 +1337,36 @@
         }
     });
 </script>
+<!-- SCRIPT TOMBOL RAHASIA (TAHAN 2 DETIK) -->
+    <script>
+        const btnRahasia = document.getElementById('btn-rahasia');
+        let holdTimerRahasia;
+
+        if (btnRahasia) {
+            // Fungsi mulai menghitung 2 detik
+            const startHold = (e) => {
+                if (e.cancelable) e.preventDefault(); 
+                holdTimerRahasia = setTimeout(() => {
+                    window.location.href = '/idle.html'; // Pindah halaman setelah 2 detik
+                }, 2000); 
+            };
+
+            // Fungsi membatalkan hitungan jika jari dilepas
+            const cancelHold = () => {
+                clearTimeout(holdTimerRahasia);
+            };
+
+            // Sensor untuk Mouse (Klik di PC)
+            btnRahasia.addEventListener('mousedown', startHold);
+            btnRahasia.addEventListener('mouseup', cancelHold);
+            btnRahasia.addEventListener('mouseleave', cancelHold);
+
+            // Sensor untuk Layar Sentuh (Touchscreen)
+            btnRahasia.addEventListener('touchstart', startHold, { passive: false });
+            btnRahasia.addEventListener('touchend', cancelHold);
+            btnRahasia.addEventListener('touchcancel', cancelHold);
+        }
+    </script>
 </body>
 <script>
     // Timpa fungsi alert bawaan Windows agar menggunakan animasi UI yang aman

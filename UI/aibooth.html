@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lacasaphoto - AI Booth</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/theme.css">
+    <style>
+        html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; position: fixed; touch-action: none; user-select: none; }
+        body { background-color: var(--bg-color); color: var(--ink); text-align: center; font-family: 'Fredoka', sans-serif; background-image: radial-gradient(var(--dot-color) 2px, transparent 2px); background-size: 40px 40px; }
+        
+        .secret-back-btn { position: fixed; top: 0; left: 0; width: 90px; height: 90px; z-index: 9999999; cursor: pointer; background: transparent; }
+        #sessionTimerDisplay { position: fixed; top: 30px; left: 50%; transform: translateX(-50%); background: var(--paper-white); color: var(--ink); padding: 10px 25px; border-radius: 15px; font-size: 1.2rem; font-weight: 700; z-index: 99999999; border: 3px solid var(--ink); box-shadow: 4px 4px 0px var(--ink); display: flex; align-items: center; gap: 10px; }
+
+        .panel { display: none; flex-direction: column; align-items: center; justify-content: flex-start; width: 100%; height: 100%; overflow-y: auto; overflow-x: hidden; padding: 100px 20px 50px 20px; box-sizing: border-box; position: relative; z-index: 10; }
+        .active-panel { display: flex !important; animation: doodlePop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes doodlePop { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+
+        .judul-interaktif { font-family: 'Caveat', cursive; font-size: 4.5rem; color: var(--ink); margin-bottom: 5px; font-weight: 700; line-height: 1; }
+        .sub-judul { font-size: 1.1rem; color: #555; margin-bottom: 30px; font-weight: 500; }
+
+        .nav-bar { position: fixed; top: 30px; left: 40px; right: 40px; display: flex; justify-content: space-between; z-index: 1000; pointer-events: none; align-items: center; }
+        .btn-doodle { pointer-events: auto; background: var(--paper-white); color: var(--ink); border: var(--doodle-border); padding: 12px 25px; font-size: 1rem; cursor: pointer; border-radius: 50px; font-weight: 600; transition: 0.2s; box-shadow: 4px 4px 0px var(--ink); }
+        .btn-doodle:hover { background: var(--yellow); transform: translateY(-3px); box-shadow: 6px 6px 0px var(--ink); }
+
+        /* GRID STYLE AI */
+        .style-grid { display: flex; gap: 25px; justify-content: center; flex-wrap: wrap; max-width: 1000px; margin-top: 10px; }
+        .card-style { background: var(--paper-white); border-radius: 20px; cursor: pointer; border: 4px solid var(--ink); text-align: center; transition: 0.2s; padding: 15px; width: 220px; box-shadow: 6px 6px 0px var(--ink); display: flex; flex-direction: column; align-items: center;}
+        .card-style:hover { transform: translateY(-5px); background: var(--yellow); box-shadow: 8px 8px 0px var(--ink); }
+        .card-style img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 12px; border: 2px solid var(--ink); margin-bottom: 15px; }
+        .card-style h3 { margin: 0; font-size: 1.5rem; font-family: 'Fredoka', sans-serif; font-weight: 700; color: var(--ink); line-height: 1.2; }
+
+        /* KAMERA UI */
+        #kamera-container { padding: 0; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #e5e5e5; overflow: hidden; z-index: 50; display: none; flex-direction: column; align-items: center; justify-content: center; }
+        #liveView { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1; }
+        #previewImage { display: none; width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 2; }
+        
+        .kamera-ui-bottom { position: absolute; bottom: 35px; left: 0; width: 100vw; z-index: 10; display: flex; align-items: center; justify-content: center; gap: 15px; }
+        .btn-diafragma { background: var(--paper-white); color: var(--ink); border: 4px solid var(--ink); border-radius: 50%; width: 90px; height: 90px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 5px 5px 0px var(--ink); transition: 0.2s; pointer-events: auto; }
+        .btn-diafragma:hover:not(:disabled) { transform: scale(1.1); background: var(--pink); }
+
+        .retake-floating-panel { display: none; background: var(--paper-white); padding: 15px 35px; border-radius: 50px; box-shadow: 6px 6px 0px var(--ink); align-items: center; gap: 20px; border: 3px solid var(--ink); pointer-events: auto; }
+        .btn-aksi { background: var(--ink); color: white; padding: 12px 30px; font-size: 1rem; border: 2px solid var(--ink); border-radius: 50px; cursor: pointer; font-weight: 600; box-shadow: 4px 4px 0px rgba(0,0,0,0.3); }
+
+        #jepretCountdown { display: none; flex-direction: column; align-items: center; justify-content: center; position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); color: white; font-weight: 700; z-index: 20; text-shadow: 3px 3px 0px var(--ink), -2px -2px 0px var(--ink); font-size: 15rem; line-height: 1; }
+
+        /* LOADING AI MAGIS */
+        #aiLoadingOverlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg-color); z-index: 999999; flex-direction: column; justify-content: center; align-items: center; }
+        .magic-spinner { font-size: 6rem; animation: spinMagis 2s linear infinite, floatMagis 1s ease-in-out infinite alternate; }
+        @keyframes spinMagis { 100% { transform: rotate(360deg); } }
+        @keyframes floatMagis { 0% { transform: translateY(0px) rotate(0deg); } 100% { transform: translateY(-20px) rotate(15deg); } }
+        .ai-loading-text { font-family: 'Caveat', cursive; font-size: 3.5rem; color: var(--ink); font-weight: 700; margin-top: 20px; animation: pulseText 1.5s infinite; }
+        @keyframes pulseText { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+        /* FINAL PREVIEW */
+        #finalPreviewOverlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; overflow: hidden; background: var(--bg-color); z-index: 99999; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
+        .card-hasil { background: var(--paper-white); padding: 20px; border-radius: 30px; border: 3px solid var(--ink); box-shadow: 8px 10px 0px var(--ink); width: 100%; max-width: 380px; text-align: center; box-sizing: border-box; }
+        .qr-box { background: var(--bg-color); padding: 12px 15px; border-radius: 20px; margin-top: 10px; border: 3px dashed var(--ink); display: flex; flex-direction: column; align-items: center;}
+    </style>
+</head>
+<body>
+
+    <div id="btn-rahasia" class="secret-back-btn"></div>
+    <div id="sessionTimerDisplay"><span>⏱️</span><span id="sessionTimerText">--:--</span></div>
+
+    <!-- PANEL 1: PILIH STYLE AI -->
+    <div id="panel-pilih-style" class="panel active-panel" style="justify-content: center;">
+        <div class="nav-bar" style="justify-content: flex-start;">
+            <button class="btn-doodle" onclick="window.location.href='/idle.html'">‹ KEMBALI</button>
+        </div>
+        <h1 class="judul-interaktif">AI Magic Booth ✨</h1>
+        <p class="sub-judul">Pilih keajaiban AI yang ingin kamu gunakan ke fotomu!</p>
+        
+        <div class="style-grid">
+            <div class="card-style" onclick="masukKamera('anime_3d')">
+                <div style="font-size: 4rem; margin-bottom:10px;">🦄</div>
+                <h3>3D Anime Pixar</h3>
+            </div>
+            <div class="card-style" onclick="masukKamera('comic_book')">
+                <div style="font-size: 4rem; margin-bottom:10px;">💥</div>
+                <h3>Comic Book</h3>
+            </div>
+            <div class="card-style" onclick="masukKamera('vintage_90s')">
+                <div style="font-size: 4rem; margin-bottom:10px;">📼</div>
+                <h3>Vintage 90s</h3>
+            </div>
+            <div class="card-style" onclick="masukKamera('cyberpunk')">
+                <div style="font-size: 4rem; margin-bottom:10px;">🤖</div>
+                <h3>Cyberpunk</h3>
+            </div>
+            <!-- ✨ GAYA BARU DITAMBAHKAN DI SINI ✨ -->
+            <div class="card-style" onclick="masukKamera('clay_3d')">
+                <div style="font-size: 4rem; margin-bottom:10px;">🧱</div>
+                <h3>Claymation 3D</h3>
+            </div>
+            <div class="card-style" onclick="masukKamera('watercolor')">
+                <div style="font-size: 4rem; margin-bottom:10px;">🎨</div>
+                <h3>Watercolor Art</h3>
+            </div>
+            <div class="card-style" onclick="masukKamera('gta_style')">
+                <div style="font-size: 4rem; margin-bottom:10px;">🕶️</div>
+                <h3>GTA V Style</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANEL 2: KAMERA 1 JEPETAN -->
+    <div id="kamera-container">
+        <img id="liveView" src="">
+        <video id="webcam-view" autoplay playsinline style="display: none; z-index: 1;"></video>
+        <img id="previewImage" src="">
+        <div id="jepretCountdown"></div>
+
+        <div class="nav-bar" style="justify-content: space-between; align-items: flex-start;">
+            <button class="btn-doodle" onclick="kembaliKeStyle()">‹ KEMBALI</button>
+            <div style="display: flex; gap: 10px;">
+                <select id="timer-setting" class="btn-doodle" style="appearance: none; font-weight: bold;">
+                    <option value="3">⏱️ 3 Detik</option>
+                    <option value="5" selected>⏱️ 5 Detik</option>
+                    <option value="10">⏱️ 10 Detik</option>
+                </select>
+                <button class="btn-doodle" onclick="toggleMirror()" id="btn-mirror" style="background: var(--yellow);">🪞 Cermin: ON</button>
+            </div>
+        </div>
+
+        <div class="kamera-ui-bottom">
+            <div id="mode-jepret-manual">
+                <button id="btn-jepret-manual" onclick="jepretSatuFoto()" class="btn-diafragma">
+                    <svg viewBox="0 0 24 24" width="40" height="40" stroke="currentColor" stroke-width="2.5" fill="none"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>
+                </button>
+            </div>
+            
+            <div id="mode-retake-manual" class="retake-floating-panel">
+                <div style="display: flex; flex-direction: column; align-items: flex-start; margin-right: 15px;">
+                    <h3 style="margin: 0; font-family: 'Caveat'; font-size: 1.8rem;">Yakin dengan fotonya?</h3>
+                    <span id="info-sisa-retake" style="font-size: 0.85rem; color: #ef4444; font-weight: 700;">Sisa retake: 3 kali</span>
+                </div>
+                <button id="btn-retake-action" onclick="opsiRetake()" class="btn-aksi" style="background: var(--pink);">🔄 Ulangi</button>
+                <button onclick="prosesFotoAI()" class="btn-aksi" style="background: var(--blue); color: var(--ink);">✨ Sulap Sekarang!</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANEL 3: LOADING AI -->
+    <div id="aiLoadingOverlay">
+        <div class="magic-spinner">🪄</div>
+        <div class="ai-loading-text">Tunggu ya, sedang disulap AI...</div>
+        <p style="font-weight: bold; color: #666;">Proses ini memakan waktu sekitar 10-15 detik.</p>
+    </div>
+
+    <!-- PANEL 4: HASIL AKHIR & DOWNLOAD -->
+    <div id="finalPreviewOverlay">
+        <h1 class="judul-interaktif" style="margin-top: 10px; margin-bottom: 20px;">Tadaaa! Ini Hasilnya ✨</h1>
+        
+        <div style="display: flex; gap: 40px; align-items: center; justify-content: center; flex-wrap: nowrap; width: 100%; max-width: 1000px; height: 100%;">
+            
+            <!-- Foto Hasil AI -->
+            <div style="flex: 1; display: flex; justify-content: center; height: 100%;">
+                <img id="finalImageResult" src="" style="max-height: 75vh; max-width: 100%; object-fit: contain; border-radius: 20px; border: 4px solid var(--ink); box-shadow: 10px 10px 0px rgba(0,0,0,0.1); background: var(--paper-white);">
+            </div>
+            
+            <!-- Kontrol Cetak & WA -->
+            <div class="card-hasil" style="flex: 0 0 350px;">
+                <h2 style="font-family: 'Caveat', cursive; font-size: 2.2rem; margin-top: 0; margin-bottom: 10px;">Selesai! 🎉</h2>
+                
+                <button id="btn-action-cetak" onclick="cetakHasil()" class="btn-doodle" style="background: var(--blue); width: 100%; padding: 10px; justify-content: center; margin-bottom: 10px;">🖨️ Cetak Foto</button>
+                
+                <div class="qr-box">
+                    <div id="qrCodeContainer" style="padding: 5px; background: white; border: 2px solid var(--ink); border-radius: 10px;"></div>
+                    <p style="font-weight: 700; margin-top: 5px; margin-bottom: 5px; font-size: 0.9rem;">Scan QR untuk Unduh 📲</p>
+                    <hr style="width: 100%; border: 0; border-top: 2px dashed var(--ink); margin: 5px 0;">
+                    <p style="font-weight: 700; font-size: 0.85rem; margin: 5px 0;">Atau Kirim Link via WA</p>
+                    <div style="display: flex; width: 100%; gap: 8px; margin-top: 5px;">
+                        <input type="text" id="inputWA" placeholder="Contoh: 0812..." style="flex: 1; padding: 8px; border-radius: 10px; border: 2px solid var(--ink); font-weight: 600;">
+                        <button id="btnKirimWA" onclick="kirimWA()" style="background: var(--pink); color: var(--ink); border: 2px solid var(--ink); padding: 8px 15px; border-radius: 10px; font-weight: bold; cursor: pointer;">Kirim</button>
+                    </div>
+                </div>
+                
+                <button onclick="window.location.href='/idle.html'" class="btn-doodle" style="width: 100%; justify-content: center; margin-top: 15px; background: #ef4444; color: white;">Keluar 👋</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT LOGIKA UTAMA -->
+    <script>
+        let styleAITerpilih = "";
+        let sisaRetake = 3;
+        let isMirror = true;
+        let isPortrait = false;
+        let currentSessionId = 'AIBOOTH-' + Date.now();
+        let fotoMentahName = "";
+        let driveLinkAkhir = "";
+
+        // Fungsi Tombol Rahasia Tahan 2 Detik
+        const btnRahasia = document.getElementById('btn-rahasia');
+        let holdTimer;
+        if (btnRahasia) {
+            const startHold = (e) => { if(e.cancelable) e.preventDefault(); holdTimer = setTimeout(() => { window.location.href='/idle.html'; }, 2000); };
+            const cancelHold = () => { clearTimeout(holdTimer); };
+            btnRahasia.addEventListener('mousedown', startHold); btnRahasia.addEventListener('mouseup', cancelHold); btnRahasia.addEventListener('mouseleave', cancelHold);
+            btnRahasia.addEventListener('touchstart', startHold, {passive:false}); btnRahasia.addEventListener('touchend', cancelHold); btnRahasia.addEventListener('touchcancel', cancelHold);
+        }
+
+        async function muatAwal() {
+            await fetch('/api/start-session', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ sessionId: currentSessionId }) });
+            fetch('/api/settings').then(res=>res.json()).then(data=>{
+                if(data.global?.cameraOrientation === 'portrait') isPortrait = true;
+                if(data.global?.theme) document.body.className = data.global.theme;
+            }).catch(()=>{});
+        }
+        muatAwal();
+
+        function masukKamera(styleId) {
+            styleAITerpilih = styleId;
+            sisaRetake = 3; updateRetakeUI();
+            
+            document.getElementById('panel-pilih-style').classList.remove('active-panel');
+            document.getElementById('kamera-container').style.display = 'flex';
+            
+            document.getElementById('mode-retake-manual').style.display = 'none';
+            document.getElementById('mode-jepret-manual').style.display = 'block';
+            document.getElementById('previewImage').style.display = 'none';
+            
+            // Nyalakan Live View
+            fetch('/toggle-liveview', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ state: true }) });
+            jalankanLiveViewAman();
+            terapkanVisualKamera();
+        }
+
+        function kembaliKeStyle() {
+            document.getElementById('kamera-container').style.display = 'none';
+            document.getElementById('panel-pilih-style').classList.add('active-panel');
+            fetch('/toggle-liveview', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ state: false }) });
+        }
+
+        function toggleMirror() { 
+            isMirror = !isMirror; 
+            document.getElementById('btn-mirror').innerText = isMirror ? "🪞 Cermin: ON" : "🪞 Cermin: OFF";
+            terapkanVisualKamera(); 
+        }
+
+        function terapkanVisualKamera() {
+            let w = "100vw", h = "100vh";
+            let transLive = "translate(-50%, -50%) ";
+            if (isPortrait) { transLive += "rotate(90deg) "; w = "100vh"; h = "100vw"; }
+            if (isMirror) transLive += "scaleX(-1) ";
+            
+            const live = document.getElementById('liveView');
+            live.style.cssText = `position:absolute; top:50%; left:50%; width:${w}; height:${h}; object-fit:cover; transform:${transLive};`;
+            
+            const prev = document.getElementById('previewImage');
+            prev.style.cssText = `position:absolute; top:50%; left:50%; width:${w}; height:${h}; object-fit:cover; transform:translate(-50%, -50%); transition:none;`;
+        }
+
+        function jalankanLiveViewAman() {
+            const imgEl = document.getElementById('liveView'); 
+            if(document.getElementById('kamera-container').style.display === 'none') return;
+            const tempImg = new Image();
+            tempImg.onload = () => { imgEl.src = tempImg.src; setTimeout(jalankanLiveViewAman, 40); };
+            tempImg.onerror = () => { setTimeout(jalankanLiveViewAman, 500); };
+            tempImg.src = `/liveview.jpg?t=${Date.now()}`;
+        }
+
+        async function jepretSatuFoto() {
+            document.getElementById('btn-jepret-manual').disabled = true;
+            document.getElementById('mode-jepret-manual').style.display = 'none';
+            
+            let detik = parseInt(document.getElementById('timer-setting').value) || 5;
+            const cd = document.getElementById('jepretCountdown');
+            cd.style.display = 'flex';
+            
+            for (let i = detik; i > 0; i--) { cd.innerText = i; await new Promise(r => setTimeout(r, 1000)); }
+            cd.style.display = 'none';
+            
+            // Animasi Flash Putih
+            const flash = document.createElement('div'); flash.style.cssText = "position:fixed;top:0;left:0;width:100vw;height:100vh;background:white;z-index:9999;opacity:1;transition:0.4s ease-out;"; document.body.appendChild(flash);
+            setTimeout(() => flash.style.opacity = '0', 50); setTimeout(() => flash.remove(), 500);
+
+            // Minta Backend Jepret
+            await fetch('/capture', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ mode: 'aibooth', mirror: isMirror, lvActive: true }) });
+            
+            // Tunggu file masuk
+            let waktuTunggu = 0; let fileDitemukan = false;
+            while (!fileDitemukan && waktuTunggu < 10000) {
+                await new Promise(r => setTimeout(r, 500)); waktuTunggu += 500;
+                try {
+                    const resCek = await fetch('/api/photobox-raws'); const dataCek = await resCek.json();
+                    if (dataCek.success && dataCek.files.length > 0) {
+                        fotoMentahName = dataCek.files[0].name;
+                        fileDitemukan = true;
+                    }
+                } catch(e){}
+            }
+
+            if(fileDitemukan) {
+                document.getElementById('liveView').style.display = 'none';
+                document.getElementById('previewImage').src = `/uploads/${currentSessionId}/${fotoMentahName}?t=${Date.now()}`;
+                document.getElementById('previewImage').style.display = 'block';
+                document.getElementById('mode-retake-manual').style.display = 'flex';
+            } else {
+                alert("Gagal memotret, coba lagi.");
+                document.getElementById('btn-jepret-manual').disabled = false;
+                document.getElementById('mode-jepret-manual').style.display = 'block';
+            }
+        }
+
+        function updateRetakeUI() {
+            const info = document.getElementById('info-sisa-retake');
+            const btnR = document.getElementById('btn-retake-action');
+            info.innerText = `Sisa retake: ${sisaRetake} kali`;
+            if(sisaRetake <= 0) { btnR.disabled = true; btnR.innerText = "Batas Habis"; } else { btnR.disabled = false; btnR.innerText = "🔄 Ulangi"; }
+        }
+
+        function opsiRetake() {
+            if(sisaRetake <= 0) return;
+            sisaRetake--; updateRetakeUI();
+            document.getElementById('mode-retake-manual').style.display = 'none';
+            document.getElementById('previewImage').style.display = 'none';
+            document.getElementById('liveView').style.display = 'block';
+            document.getElementById('mode-jepret-manual').style.display = 'block';
+            document.getElementById('btn-jepret-manual').disabled = false;
+        }
+
+        // ===============================================
+        // MENGIRIM KE API BACKEND UNTUK PROSES AI
+        // ===============================================
+        async function prosesFotoAI() {
+            document.getElementById('kamera-container').style.display = 'none';
+            document.getElementById('aiLoadingOverlay').style.display = 'flex';
+
+            try {
+                // KITA AKAN BUAT ENDPOINT INI DI TAHAP 2 (index.js)
+                const response = await fetch('/api/generate-ai', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sessionId: currentSessionId,
+                        fileName: fotoMentahName,
+                        styleId: styleAITerpilih
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('aiLoadingOverlay').style.display = 'none';
+                    document.getElementById('finalPreviewOverlay').style.display = 'flex';
+                    
+                    document.getElementById('finalImageResult').src = result.fileUrl + "?t=" + Date.now();
+                    
+                    if(result.driveLink) {
+                        driveLinkAkhir = result.driveLink;
+                        const qrContainer = document.getElementById('qrCodeContainer');
+                        qrContainer.innerHTML = ''; 
+                        new QRCode(qrContainer, { text: driveLinkAkhir, width: 110, height: 110 });
+                    }
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch (error) {
+                alert("❌ Gagal memproses AI: " + error.message);
+                document.getElementById('aiLoadingOverlay').style.display = 'none';
+                document.getElementById('kamera-container').style.display = 'flex'; // Kembali ke kamera
+            }
+        }
+
+        // Fungsi Cetak
+        async function cetakHasil() {
+            const btn = document.getElementById('btn-action-cetak');
+            btn.disabled = true; btn.innerText = "⏳ Sedang Mencetak...";
+            try {
+                await fetch('/api/print', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ fileName: `ai_hasil_${activeSessionId}.jpg`, mode: 'collage' }) });
+                btn.innerText = "✅ Perintah Cetak Terkirim";
+                setTimeout(() => { btn.disabled = false; btn.innerText = "🖨️ Cetak Foto"; }, 3000);
+            } catch(e) { alert("Gagal mencetak!"); btn.disabled = false; btn.innerText = "🖨️ Cetak Foto"; }
+        }
+
+        // Fungsi WA
+        async function kirimWA() {
+            const input = document.getElementById('inputWA');
+            const btn = document.getElementById('btnKirimWA');
+            if(input.value.length < 9) return;
+            btn.disabled = true; btn.innerText = "⏳";
+            try {
+                const res = await fetch('/api/send-wa', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ nomorWa: input.value, linkFoto: driveLinkAkhir }) });
+                if(res.ok) { btn.innerText = "Terkirim"; btn.style.background = "var(--green)"; } else { throw new Error(); }
+            } catch(e) { btn.innerText = "Gagal"; }
+            setTimeout(() => { btn.disabled = false; btn.innerText = "Kirim"; btn.style.background = "var(--pink)"; input.value=""; }, 3000);
+        }
+    </script>
+</body>
+</html>

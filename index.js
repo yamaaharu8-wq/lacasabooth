@@ -111,7 +111,9 @@ if (!fs.existsSync(dbPath)) {
             console.log("✅ Database frame bawaan berhasil disalin ke PC Klien.");
         } else {
             // Jaga-jaga jika file asli terhapus, buat struktur kosong
-            fs.writeFileSync(dbPath, JSON.stringify({ "1": [], "2": [], "4": [], "6": [] }, null, 4));
+            // [PERBAIKAN] Tambahkan slot "8": [] ke dalam kerangka dasar JSON
+            // Jaga-jaga jika file asli terhapus, buat struktur kosong lengkap dengan slot 8
+            fs.writeFileSync(dbPath, JSON.stringify({ "1": [], "2": [], "4": [], "6": [], "8": [], "news-1": [], "news-2": [], "news-3": [], "news-4": [] }, null, 4));
             console.log("⚠️ Database frame kosong baru dibuat.");
         }
     } catch (err) {
@@ -1129,14 +1131,24 @@ expressApp.get('/api/auth-google-callback', async (req, res) => {
 // TEMPLATE & QRIS
 // =======================================================
 expressApp.get('/api/frames', (req, res) => {
-    
     if (fs.existsSync(dbPath)) {
         let db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+        
+        // [PERBAIKAN] Otomatis tambahkan array kosong jika format baru (seperti "8" atau "news") belum ada di file database lama
+        const formatStandar = ["1", "2", "4", "6", "8", "news-1", "news-2", "news-3", "news-4"];
+        formatStandar.forEach(fmt => {
+            if (!db[fmt]) db[fmt] = [];
+        });
+
         if (req.query.all !== 'true') {
-            for (let format in db) db[format] = db[format].filter(t => t.isHidden !== true);
+            for (let format in db) {
+                if (db[format]) db[format] = db[format].filter(t => t.isHidden !== true);
+            }
         }
         res.json(db);
-    } else res.json({ "1": [], "2": [], "4": [], "6": [] });
+    } else {
+        res.json({ "1": [], "2": [], "4": [], "6": [], "8": [], "news-1": [], "news-2": [], "news-3": [], "news-4": [] });
+    }
 });
 
 expressApp.post('/api/delete-template', (req, res) => {
@@ -1438,6 +1450,124 @@ expressApp.get('/api/photobox-raws', (req, res) => {
             
         res.json({ success: true, files: files });
     } catch (err) { res.json({ success: false, message: err.message }); }
+});
+/// =======================================================
+// 🎭 API AI FACE SWAP (FAL.AI) - KUALITAS ENTERPRISE
+// =======================================================
+expressApp.post('/api/generate-ai', async (req, res) => {
+    try {
+        const { sessionId, fileName, styleId } = req.body;
+        if (!sessionId || !fileName || !styleId) throw new Error("Data tidak lengkap!");
+
+        const sessionDir = path.join(uploadDir, sessionId);
+        const inputPath = path.join(sessionDir, fileName); // Wajah asli dari webcam
+
+        if (!fs.existsSync(inputPath)) throw new Error("Foto mentah tidak ditemukan!");
+
+        // 1. Tentukan Template Dasar (Body) berdasarkan Style yang dipilih
+        let templateFileName = "";
+        if (styleId === 'anime_3d') {
+            templateFileName = "anime.jpg";
+        } else if (styleId === 'comic_book') {
+            templateFileName = "comic.jpg";
+        } else if (styleId === 'vintage_90s') {
+            templateFileName = "vintage.jpg";
+        } else if (styleId === 'cyberpunk') {
+            templateFileName = "cyberpunk.jpg";
+        } else if (styleId === 'gta_style') {
+            templateFileName = "gta.jpg";
+        } else {
+            templateFileName = "default.jpg";
+        }
+
+        // Pastikan folder 'templates' ada di root project kamu
+        const templatePath = path.join(__dirname, 'templates', templateFileName);
+        if (!fs.existsSync(templatePath)) {
+            throw new Error(`File template ${templateFileName} tidak ditemukan di folder /templates!`);
+        }
+
+        // 2. Konversi Kedua Gambar ke Base64
+        // Gambar A: Template Badan (Base Image)
+        const templateBuffer = fs.readFileSync(templatePath);
+        const templateBase64 = `data:image/jpeg;base64,${templateBuffer.toString('base64')}`;
+        
+        // Gambar B: Wajah Pelanggan (Swap Image)
+        const faceBuffer = fs.readFileSync(inputPath);
+        const faceBase64 = `data:image/jpeg;base64,${faceBuffer.toString('base64')}`;
+
+        console.log(`[AI BOOTH] Mengirim instruksi Face Swap ke Fal.ai untuk template ${templateFileName}...`);
+        const falApiKey = "fal_sk_c88a3db8c7a3425f950e08818408c3a5:4a0b04e304e924a1c94f54e749c72aab"; 
+        
+        // 3. TEMBAK API FAL.AI (Menggunakan Endpoint Face Swap)
+        const response = await fetch('https://fal.run/fal-ai/face-swap', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Key ${falApiKey}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                base_image_url: templateBase64, // Tubuh target
+                swap_image_url: faceBase64      // Wajah yang akan ditempel
+            })
+        });
+
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error("Ditolak oleh Server AI: " + errText);
+        }
+
+        const falData = await response.json();
+        if (!falData.image || !falData.image.url) throw new Error("AI gagal mengembalikan gambar Face Swap.");
+
+        const resultImageUrl = falData.image.url;
+        console.log("[AI BOOTH] Face Swap Berhasil! Mengunduh hasil dari server...");
+
+        // 4. Unduh & Simpan Hasil Akhir
+        const outputName = `ai_hasil_${sessionId}.jpg`;
+        const outputPath = path.join(sessionDir, outputName);
+        
+        const imgRes = await fetch(resultImageUrl);
+        const imgResBuffer = await imgRes.arrayBuffer();
+        fs.writeFileSync(outputPath, Buffer.from(imgResBuffer));
+
+        // 5. Integrasi GDrive (Sama seperti sebelumnya)
+        let isOnlineMode = true; 
+        try {
+            const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+            if (settings.global && settings.global.cloudStorage !== undefined) isOnlineMode = settings.global.cloudStorage;
+        } catch (e) {}
+
+        let linkShareAkhir = "";
+        if (isOnlineMode && typeof uploadToDrive === 'function') {
+            let parentFolderId = "1scPtcs7JaGmnF4TYfpUL2DIcN_7iU9DB"; 
+            try {
+                const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+                if (settings.global && settings.global.driveParentFolderId) parentFolderId = settings.global.driveParentFolderId; 
+            } catch(e) {}
+            
+            try {
+                const driveFolderName = `AIBooth_${sessionId}`;
+                const uploadedUrl = await uploadToDrive(outputPath, driveFolderName, parentFolderId);
+                if (uploadedUrl) linkShareAkhir = uploadedUrl;
+            } catch (err) {
+                const ipLokal = getLocalIP();
+                linkShareAkhir = `http://${ipLokal}:3000/uploads/${sessionId}/${outputName}`;
+            }
+        } else {
+            const ipLokal = getLocalIP();
+            linkShareAkhir = `http://${ipLokal}:3000/uploads/${sessionId}/${outputName}`;
+        }
+
+        res.json({ 
+            success: true, 
+            fileUrl: `/uploads/${sessionId}/${outputName}`,
+            driveLink: linkShareAkhir
+        });
+
+    } catch (error) {
+        console.error("Error Generate AI:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
 });
 
 expressApp.post('/api/generate-photobox', async (req, res) => {
