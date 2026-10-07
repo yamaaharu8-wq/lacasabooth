@@ -493,6 +493,10 @@ autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = true;
 
 electronApp.whenReady().then(() => {
+    
+    // ✨ [BARU] Trik Anti-Blokir Google: Menyamar sebagai Chrome Asli versi 120
+    electronApp.userAgentFallback = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+
     // --- BYPASS IZIN WEBCAM ELECTRON (TETAP DIPERTAHANKAN) ---
     session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
         if (permission === 'media') {
@@ -513,9 +517,8 @@ electronApp.whenReady().then(() => {
     if (electronApp.isPackaged) {
         setTimeout(() => {
             console.log("🔍 Mengecek pembaruan aplikasi utama dari GitHub Releases...");
-            // (DIUBAH) Pakai checkForUpdates biasa, jangan AndNotify
             autoUpdater.checkForUpdates(); 
-        }, 5000); // Beri jeda 5 detik setelah aplikasi nyala agar tidak berat
+        }, 5000); 
     }
 });
 
