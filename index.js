@@ -2465,6 +2465,29 @@ process.on('exit', () => {
     exec('taskkill /f /im cloudflared.exe', () => {});
 });
 // =======================================================
+// API MATIKAN SISTEM DARI UI (FORCE QUIT)
+// =======================================================
+expressApp.post('/api/shutdown-system', (req, res) => {
+    res.json({ success: true, message: "Mematikan sistem..." });
+    
+    setTimeout(() => {
+        console.log("🛑 Mematikan sistem secara paksa...");
+        
+        // Coba bersihkan background (jika nyangkut, akan dilewati)
+        try { 
+            if (typeof matikanSistem === 'function') matikanSistem(); 
+        } catch(e) {}
+        
+        // JURUS PAMUNGKAS: Langsung bunuh proses Node.js & Electron!
+        setTimeout(() => {
+            const { app } = require('electron');
+            app.exit(0); // Paksa tutup jendela Windows tanpa basa-basi
+            process.exit(0); // Bunuh proses backend di RAM
+        }, 1000);
+        
+    }, 500);
+});
+// =======================================================
 // 12. AKTIVASI EXPRESS SERVER LOKAL (PORT 3000)
 // =======================================================
 server.listen(3000, '0.0.0.0', () => {

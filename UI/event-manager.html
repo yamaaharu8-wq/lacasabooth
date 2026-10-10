@@ -817,24 +817,46 @@ const credential = GoogleAuthProvider.credential(data.tokens.idToken, data.token
 <!-- SCRIPT PENUTUP SISTEM -->
 <script>
     function tutupAplikasi() {
-        // Panggil Custom Confirm yang sudah kita buat sebelumnya
-        showCustomConfirm(
-            "Matikan Sistem?", 
-            "Aplikasi Lacasabooth akan dimatikan sepenuhnya. Lanjutkan?", 
-            "🛑", 
-            () => {
-                try {
-                    // Tarik modul Electron secara dinamis agar tidak crash
-                    const { ipcRenderer } = require('electron');
-                    ipcRenderer.send('app-quit');
-                } catch (error) {
-                    alert("❌ Modul sistem gagal dimuat. Pastikan nodeIntegration: true di start.js aktif.");
-                    console.error("Gagal menutup:", error);
-                }
-            }
-        );
+        try {
+            // 1. Buka modal konfirmasi secara paksa (bypass fungsi eksternal)
+            const modalConfirm = document.getElementById('customConfirmModal');
+            document.getElementById('confirm-title').innerText = "Matikan Sistem?";
+            document.getElementById('confirm-message').innerHTML = "Aplikasi Lacasabooth akan dimatikan sepenuhnya. Lanjutkan?";
+            document.getElementById('confirm-icon').innerText = "🛑";
+            
+            // 2. Reset tombol "Ya" agar tidak bentrok dengan perintah lain
+            const oldBtn = document.getElementById('confirm-yes-btn');
+            const newBtn = oldBtn.cloneNode(true);
+            oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+            
+            // 3. Eksekusi jika tombol "Ya" diklik
+            newBtn.addEventListener('click', () => {
+                modalConfirm.style.display = 'none'; // Sembunyikan modal
+                
+                // Ubah seluruh layar menjadi putih sebagai transisi
+                document.body.innerHTML = '<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; background:#fff; color:#333; z-index:9999999; position:fixed; width:100%; top:0; left:0;">' +
+                    '<div style="font-size:5rem; margin-bottom:15px;">🔌</div>' +
+                    '<h2 style="font-family:\'Fredoka\', sans-serif; margin:0; font-size: 2.5rem;">Mematikan Sistem...</h2>' +
+                '</div>';
+                
+                // Tembak API Force Quit di backend (index.js)
+                fetch('/api/shutdown-system', { method: 'POST' }).catch(e => console.log(e));
+                
+                // Tutup paksa jendela UI setelah 1.5 detik
+                setTimeout(() => { 
+                    window.close(); 
+                }, 1500);
+            });
+            
+            // Munculkan UI Modal
+            modalConfirm.style.display = 'flex';
+            
+        } catch (err) {
+            // 4. FALLBACK BRUTAL: Jika UI error, sistem tetap dimatikan langsung
+            fetch('/api/shutdown-system', { method: 'POST' }).catch(e => console.log(e));
+            setTimeout(() => { window.close(); }, 500);
+        }
     }
-    
 </script>
 <!-- SCRIPT AUTO UPDATER -->
 <script>
