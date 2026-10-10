@@ -1082,50 +1082,66 @@ expressApp.post('/api/disconnect-drive', (req, res) => {
     }
 });
 
+// Variabel penampung token KEDUANYA (ID dan Access)
+let tempSaaSTokens = null; 
+
 expressApp.get('/api/auth-google', (req, res) => {
     try {
         if (!oauth2Client) return res.send('File oauth_credentials.json belum dikonfigurasi. Silakan upload melalui Dashboard.');
 
+        tempSaaSTokens = null; // Reset token setiap kali mulai login
+
         const authUrl = oauth2Client.generateAuthUrl({
             access_type: 'offline',
-            scope: ['https://www.googleapis.com/auth/drive'],
+            scope: ['openid', 'profile', 'email', 'https://www.googleapis.com/auth/drive'],
             prompt: 'consent select_account' 
         });
         
-        res.redirect(authUrl);
+        require('electron').shell.openExternal(authUrl);
+        res.json({ success: true, message: "Browser utama telah dibuka." });
     } catch (e) {
-        res.send("Error: " + e.message);
+        res.status(500).json({ success: false, message: e.message });
     }
 });
 
 expressApp.get('/api/auth-google-callback', async (req, res) => {
     const code = req.query.code;
     
-    if (!oauth2Client) {
-        return res.status(500).send("Gagal: oauth2Client belum siap. Pastikan credentials valid.");
-    }
-
-    if (!code) {
-        return res.status(400).send("Gagal: Tidak ada kode otorisasi dari Google.");
-    }
+    if (!oauth2Client || !code) return res.status(400).send("Gagal: Kredensial tidak valid.");
     
     try {
         const { tokens } = await oauth2Client.getToken(code);
         oauth2Client.setCredentials(tokens);
         
         fs.writeFileSync(TOKEN_PATH, JSON.stringify(tokens));
-        console.log("🟢 Token G-Drive berhasil disimpan di:", TOKEN_PATH);
+        console.log("🟢 Token G-Drive berhasil disimpan!");
+        
+        // Simpan KEDUA token agar bisa dipakai Firebase tanpa error
+        tempSaaSTokens = {
+            idToken: tokens.id_token,
+            accessToken: tokens.access_token
+        };
         
         res.send(`
             <div style="font-family: sans-serif; text-align: center; margin-top: 50px;">
                 <h2 style="color: #10b981;">✅ Sukses Terhubung!</h2>
-                <p>Akun Google Drive Anda sudah terhubung ke sistem Lacasabooth.</p>
-                <p>Silakan tutup jendela ini dan kembali ke Dashboard.</p>
+                <p>Akun Google Anda berhasil disambungkan.</p>
+                <p>Silakan tutup tab browser ini dan kembali ke aplikasi Lacasabooth.</p>
             </div>
+            <script>setTimeout(() => window.close(), 3000);</script>
         `);
     } catch (error) {
         console.error("🔴 Error saat menyimpan token:", error);
-        res.status(500).send("Gagal menyimpan token. Silakan cek terminal/CMD Node.js Anda untuk melihat detail error.");
+        res.status(500).send("Gagal menyimpan token.");
+    }
+});
+
+expressApp.get('/api/check-saas-token', (req, res) => {
+    if (tempSaaSTokens) {
+        res.json({ success: true, tokens: tempSaaSTokens });
+        tempSaaSTokens = null; // Segera hapus demi keamanan
+    } else {
+        res.json({ success: false });
     }
 });
 
@@ -1454,8 +1470,8 @@ expressApp.get('/api/photobox-raws', (req, res) => {
         res.json({ success: true, files: files });
     } catch (err) { res.json({ success: false, message: err.message }); }
 });
-/// =======================================================
-// 🎭 API AI FACE SWAP (FAL.AI) - KUALITAS ENTERPRISE
+// =======================================================
+// 🪄 API AI STYLE TRANSFER (FAST-SDXL - MURAH & AKURAT)
 // =======================================================
 expressApp.post('/api/generate-ai', async (req, res) => {
     try {
@@ -1463,54 +1479,77 @@ expressApp.post('/api/generate-ai', async (req, res) => {
         if (!sessionId || !fileName || !styleId) throw new Error("Data tidak lengkap!");
 
         const sessionDir = path.join(uploadDir, sessionId);
-        const inputPath = path.join(sessionDir, fileName); // Wajah asli dari webcam
+        const inputPath = path.join(sessionDir, fileName);
 
         if (!fs.existsSync(inputPath)) throw new Error("Foto mentah tidak ditemukan!");
 
-        // 1. Tentukan Template Dasar (Body) berdasarkan Style yang dipilih
-        let templateFileName = "";
-        if (styleId === 'anime_3d') {
-            templateFileName = "anime.jpg";
-        } else if (styleId === 'comic_book') {
-            templateFileName = "comic.jpg";
-        } else if (styleId === 'vintage_90s') {
-            templateFileName = "vintage.jpg";
-        } else if (styleId === 'cyberpunk') {
-            templateFileName = "cyberpunk.jpg";
-        } else if (styleId === 'gta_style') {
-            templateFileName = "gta.jpg";
-        } else {
-            templateFileName = "default.jpg";
-        }
-
-        // Pastikan folder 'templates' ada di root project kamu
-        const templatePath = path.join(__dirname, 'templates', templateFileName);
-        if (!fs.existsSync(templatePath)) {
-            throw new Error(`File template ${templateFileName} tidak ditemukan di folder /templates!`);
-        }
-
-        // 2. Konversi Kedua Gambar ke Base64
-        // Gambar A: Template Badan (Base Image)
-        const templateBuffer = fs.readFileSync(templatePath);
-        const templateBase64 = `data:image/jpeg;base64,${templateBuffer.toString('base64')}`;
+        // 1. MANTRA ANTI-BALITA / ANTI-GENDER SWAP
+        let aiPrompt = "";
         
-        // Gambar B: Wajah Pelanggan (Swap Image)
-        const faceBuffer = fs.readFileSync(inputPath);
-        const faceBase64 = `data:image/jpeg;base64,${faceBuffer.toString('base64')}`;
+        // Aturan keras agar AI tidak mengubah umur, gender, atau kumis
+        const strictRules = "adult person, strictly keep original age, gender, facial hair, and identity. highly detailed face";
+        
+        if (styleId === 'anime_3d') {
+            aiPrompt = `3D animation style, masterpiece, smooth 3D render, vibrant colors, ${strictRules}`;
+            
+        } else if (styleId === 'comic_book') {
+            aiPrompt = `Comic book style illustration, pop art, heavy ink lines, dynamic lighting, ${strictRules}`;
+            
+        } else if (styleId === 'vintage_90s') {
+            aiPrompt = `1990s vintage anime style, retro aesthetic, pastel colors, cel shading, ${strictRules}`;
+            
+        } else if (styleId === 'cyberpunk') {
+            aiPrompt = `Cyberpunk style, neon lights, futuristic sci-fi, glowing elements, dramatic lighting, ${strictRules}`;
+            
+        } else if (styleId === 'clay_3d') {
+            // Catatan: Kata "cute" dihilangkan agar AI tidak memicu gambar anak kecil
+            aiPrompt = `Claymation style, plasticine modeling, stop motion photography, highly detailed 3D clay, ${strictRules}`;
+            
+        } else if (styleId === 'watercolor') {
+            aiPrompt = `Watercolor painting style, soft edges, expressive brush strokes, traditional art masterpiece, ${strictRules}`;
+            
+        } else if (styleId === 'gta_style') {
+            aiPrompt = `Grand Theft Auto V loading screen art style, digital painting, cell shaded, thick outlines, ${strictRules}`;
+            
+        } else {
+            // Default jika tidak ada yang cocok
+            aiPrompt = `High quality masterpiece painting, ${strictRules}`;
+        }
 
-        console.log(`[AI BOOTH] Mengirim instruksi Face Swap ke Fal.ai untuk template ${templateFileName}...`);
+        // 2. DETEKSI ORIENTASI FOTO (Menolak Foto Gepeng)
+        let isPortraitMode = false;
+        try {
+            const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+            if (settings.global && settings.global.cameraOrientation === 'portrait') {
+                isPortraitMode = true;
+            }
+        } catch (e) {}
+        
+        let imageSizeParam = isPortraitMode ? "portrait_4_3" : "landscape_4_3";
+
+        // 3. Konversi gambar asli ke Base64
+        const imgBuffer = fs.readFileSync(inputPath);
+        const base64Image = imgBuffer.toString('base64');
+        const dataUrl = `data:image/jpeg;base64,${base64Image}`;
+
+        console.log(`[AI BOOTH] Mengirim foto ke Fal.ai (FAST-SDXL) untuk style ${styleId}...`);
         const falApiKey = "fal_sk_c88a3db8c7a3425f950e08818408c3a5:4a0b04e304e924a1c94f54e749c72aab"; 
         
-        // 3. TEMBAK API FAL.AI (Menggunakan Endpoint Face Swap)
-        const response = await fetch('https://fal.run/fal-ai/face-swap', {
+        // 4. TEMBAK API FAST-SDXL (Super Murah & Cepat)
+        const response = await fetch('https://fal.run/fal-ai/fast-sdxl/image-to-image', {
             method: 'POST',
             headers: {
                 'Authorization': `Key ${falApiKey}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                base_image_url: templateBase64, // Tubuh target
-                swap_image_url: faceBase64      // Wajah yang akan ditempel
+                image_url: dataUrl,
+                prompt: aiPrompt,
+                strength: 0.35, // 🔥 KUNCI UTAMA: 0.35 akan mempertahankan 65% kemiripan wajah & tubuhmu!
+                guidance_scale: 7.5,
+                num_inference_steps: 25,
+                image_size: imageSizeParam, 
+                enable_safety_checker: false
             })
         });
 
@@ -1520,12 +1559,11 @@ expressApp.post('/api/generate-ai', async (req, res) => {
         }
 
         const falData = await response.json();
-        if (!falData.image || !falData.image.url) throw new Error("AI gagal mengembalikan gambar Face Swap.");
+        if (!falData.images || falData.images.length === 0) throw new Error("AI gagal mengembalikan gambar.");
 
-        const resultImageUrl = falData.image.url;
-        console.log("[AI BOOTH] Face Swap Berhasil! Mengunduh hasil dari server...");
+        const resultImageUrl = falData.images[0].url;
+        console.log("[AI BOOTH] Transformasi Berhasil! Mengunduh hasil dari server...");
 
-        // 4. Unduh & Simpan Hasil Akhir
         const outputName = `ai_hasil_${sessionId}.jpg`;
         const outputPath = path.join(sessionDir, outputName);
         
@@ -1533,7 +1571,7 @@ expressApp.post('/api/generate-ai', async (req, res) => {
         const imgResBuffer = await imgRes.arrayBuffer();
         fs.writeFileSync(outputPath, Buffer.from(imgResBuffer));
 
-        // 5. Integrasi GDrive (Sama seperti sebelumnya)
+        // 5. Integrasi GDrive
         let isOnlineMode = true; 
         try {
             const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));

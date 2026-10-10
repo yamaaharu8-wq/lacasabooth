@@ -432,8 +432,8 @@
    <!-- FIREBASE SAAS LOGIC -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-    // [DITAMBAHKAN] updateDoc dan deleteField untuk fitur reset device
+import { getAuth, signInWithCredential, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+  // [DITAMBAHKAN] updateDoc dan deleteField untuk fitur reset device
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteField } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -516,38 +516,59 @@
         }
     });
 
-    // ==== TOMBOL LOGIN GOOGLE ====
+// ==== TOMBOL LOGIN GOOGLE (METODE LOOPBACK AMAN) ====
     const btnLoginGoogle = document.getElementById('btn-saas-login-google');
     btnLoginGoogle.addEventListener('click', async () => {
         try {
             btnLoginGoogle.disabled = true; 
-            statusText.innerText = "⏳ Memproses...";
-            await signInWithPopup(auth, provider);
+            statusText.innerText = "⏳ Cek Browser Utama Anda...";
+            
+            // 1. Perintahkan Node.js membuka Google Chrome asli di PC
+            await fetch('/api/auth-google');
+
+            // 2. Lakukan pengecekan ke server lokal setiap 2 detik
+            const checkInterval = setInterval(async () => {
+                try {
+                    const res = await fetch('/api/check-saas-token');
+                    const data = await res.json();
+
+                    if (data.success && data.tokens) {
+                        clearInterval(checkInterval);
+                        statusText.innerText = "🔐 Mendaftarkan sesi ke Server...";
+
+                        // 3. GUNAKAN KEDUA TOKEN (ID Token untuk Firebase, Access Token untuk Google)
+const credential = GoogleAuthProvider.credential(data.tokens.idToken, data.tokens.accessToken);
+
+                        try {
+                            await signInWithCredential(auth, credential);
+                            statusText.innerText = "✅ Berhasil Login!";
+                            // Paksa refresh UI agar langsung masuk ke Dashboard
+                            setTimeout(() => { window.location.reload(); }, 1000);
+                        } catch (firebaseErr) {
+                            console.error("Firebase Auth Error:", firebaseErr);
+                            statusText.innerText = "❌ Firebase menolak akses. Cek Console (F12).";
+                            btnLoginGoogle.disabled = false;
+                        }
+                    }
+                } catch (err) {
+                    // Abaikan error fetch saat sedang menunggu klien login di browser
+                }
+            }, 2000);
+
+            // 3. Beri batas waktu tunggu 2 menit
+            setTimeout(() => {
+                clearInterval(checkInterval);
+                if(btnLoginGoogle.disabled) {
+                    btnLoginGoogle.disabled = false;
+                    statusText.innerText = "⚠️ Waktu login habis. Silakan klik kembali.";
+                }
+            }, 120000);
+
         } catch (error) { 
-            statusText.innerText = "❌ Gagal login Google."; 
+            statusText.innerText = "❌ Gagal menyambungkan ke sistem."; 
             btnLoginGoogle.disabled = false; 
         }
     });
-
-    // Fungsi untuk Pemanggilan Custom Confirm
-    let pendingConfirmAction = null;
-
-    window.showCustomConfirm = function(title, message, icon, onConfirm) {
-        document.getElementById('confirm-title').innerText = title;
-        document.getElementById('confirm-message').innerHTML = message;
-        document.getElementById('confirm-icon').innerText = icon;
-        pendingConfirmAction = onConfirm;
-        document.getElementById('customConfirmModal').style.display = 'flex';
-    };
-
-    // Pasang event listener hanya jika tombol ada
-    const confirmYesBtn = document.getElementById('confirm-yes-btn');
-    if (confirmYesBtn) {
-        confirmYesBtn.addEventListener('click', () => {
-            if (pendingConfirmAction) pendingConfirmAction();
-            document.getElementById('customConfirmModal').style.display = 'none';
-        });
-    }
 
     // ==== [DIPERBARUI] CEK LISENSI & HARDWARE BINDING ====
     async function checkUserLicense(user) {
