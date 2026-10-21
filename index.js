@@ -355,7 +355,11 @@ const EdsGetChildCount = edsdk.func('EdsError EdsGetChildCount(EdsBaseRef inRef,
 const EdsGetChildAtIndex = edsdk.func('EdsError EdsGetChildAtIndex(EdsBaseRef inRef, int32 inIndex, _Out_ EdsBaseRef* outChildRef)');
 const EdsOpenSession = edsdk.func('EdsError EdsOpenSession(EdsBaseRef inCameraRef)');
 const EdsSendCommand = edsdk.func('EdsError EdsSendCommand(EdsBaseRef inCameraRef, uint32 inCommand, int32 inParam)');
-const EdsSetPropertyData = edsdk.func('EdsError EdsSetPropertyData(EdsBaseRef inRef, uint32 inPropertyID, int32 inParam, uint32 inPropertySize, const void* inPropertyData)');
+const EdsSetPropertyData = edsdk.func('EdsError EdsSetPropertyData(EdsBaseRef inRef, uint32 inPropertyID, int32 inParam, uint32 inPropertySize, void* inPropertyData)');
+const EdsGetPropertyData = edsdk.func('EdsError EdsGetPropertyData(EdsBaseRef inRef, uint32 inPropertyID, int32 inParam, uint32 inPropertySize, void* outPropertyData)');
+// [BARU] FUNGSI KHUSUS POINTER ANGKA (MENCEGAH ERROR 64)
+const EdsSetPropertyDataUInt32 = edsdk.func('EdsError EdsSetPropertyData(EdsBaseRef inRef, uint32 inPropertyID, int32 inParam, uint32 inPropertySize, uint32* inPropertyData)');
+const EdsGetPropertyDataUInt32 = edsdk.func('EdsError EdsGetPropertyData(EdsBaseRef inRef, uint32 inPropertyID, int32 inParam, uint32 inPropertySize, _Out_ uint32* outPropertyData)');
 const EdsSendStatusCommand = edsdk.func('EdsError EdsSendStatusCommand(EdsBaseRef inCameraRef, uint32 inStatusCommand, int32 inParam)');
 const EdsSetCapacity = edsdk.func('EdsError EdsSetCapacity(EdsBaseRef inCameraRef, EdsCapacity inCapacity)'); 
 const EdsCreateFileStream = edsdk.func('EdsError EdsCreateFileStream(const char* inFileName, int32 inCreateDisposition, int32 inDesiredAccess, _Out_ EdsBaseRef* outStream)');
@@ -409,6 +413,26 @@ function hubungkanKamera() {
         // 3. [BARU] Buka Kunci Tombol Bodi Kamera (UI Unlock = 1)
         EdsSendStatusCommand(activeCamera, 1, 0); 
         
+        // [BARU] 3.5 Terapkan Setting Segitiga Exposure otomatis saat USB dicolok
+        try {
+            if (fs.existsSync(settingsPath)) {
+                const dbSet = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+                if (dbSet.global) {
+                    const setExp = (propId, valHex) => {
+                        if (valHex && valHex !== "auto") {
+                            // Siapkan keranjang memori persis 4-byte
+                            let buf = Buffer.alloc(4);
+                            buf.writeUInt32LE(parseInt(valHex, 16), 0);
+                            EdsSetPropertyData(activeCamera, propId, 0, 4, buf);
+                        }
+                    };
+                    // Terapkan perlahan agar prosesor kamera tidak nge-hang
+                    setTimeout(() => setExp(0x00000002, dbSet.global.canonIso), 100);
+                    setTimeout(() => setExp(0x00000006, dbSet.global.canonTv), 300);
+                    setTimeout(() => setExp(0x00000007, dbSet.global.canonAv), 500);
+                }
+            }
+        } catch(e) { console.log("Gagal menerapkan exposure bawaan:", e.message); }
         // 4. Pasang pendengar jepretan
         EdsSetObjectEventHandler(activeCamera, 0x0200, callbackPenarikFoto, null);
     } else {
@@ -1258,6 +1282,58 @@ expressApp.get('/api/get-qris', (req, res) => {
 // =======================================================
 // 7. 📸 KONTROL KAMERA (API JEPRET & LIVE VIEW)
 // =======================================================
+// =======================================================
+// [BARU] API KONTROL SEGITIGA EXPOSURE KAMERA (ANTI-ERR:64)
+// =======================================================
+expressApp.post('/api/camera-exposure', (req, res) => {
+    if (!activeCamera) return res.json({ success: false, message: "Kamera belum terhubung" });
+    const { iso, tv, av } = req.body;
+    let debugLog = [];
+    try {
+        const setProp = (propId, valHex, name) => {
+            if (valHex && valHex !== "auto") {
+                let buf = Buffer.alloc(4);
+                buf.writeUInt32LE(parseInt(valHex, 16), 0);
+                let err = EdsSetPropertyData(activeCamera, propId, 0, 4, buf);
+                if (err !== 0) debugLog.push(`${name} Err:${err.toString(16)}`);
+            }
+        };
+        setProp(0x00000002, iso, "ISO");
+        setProp(0x00000006, tv, "Tv");
+        setProp(0x00000007, av, "Av");
+        res.json({ success: true, debug: debugLog.join(' | ') });
+    } catch (err) {
+        res.json({ success: false, message: "Gagal menyetel kamera" });
+    }
+});
+
+expressApp.get('/api/sync-camera', (req, res) => {
+    if (!activeCamera) return res.json({ success: false, message: "Kamera belum terhubung / mati" });
+    try {
+        let debugLog = [];
+        const getProp = (propId, name) => {
+            // Berikan keranjang memori 4-byte yang pasti
+            let buf = Buffer.alloc(4);
+            let err = EdsGetPropertyData(activeCamera, propId, 0, 4, buf);
+            if (err === 0) {
+                return buf.readUInt32LE(0).toString(16).toLowerCase();
+            }
+            debugLog.push(`${name} Err:${err.toString(16)}`);
+            return "auto";
+        };
+        
+        res.json({ 
+            success: true, 
+            iso: getProp(0x00000002, "ISO"), 
+            tv: getProp(0x00000006, "Tv"), 
+            av: getProp(0x00000007, "Av"),
+            debug: debugLog.join(' | ')
+        });
+    } catch (err) {
+        res.json({ success: false, message: "Gagal membaca mesin dari kamera" });
+    }
+});
+
 expressApp.post('/toggle-liveview', (req, res) => {
     const { state } = req.body;
     if (state) startLiveView();

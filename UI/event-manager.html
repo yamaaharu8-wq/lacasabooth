@@ -432,8 +432,8 @@
    <!-- FIREBASE SAAS LOGIC -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getAuth, signInWithCredential, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-  // [DITAMBAHKAN] updateDoc dan deleteField untuk fitur reset device
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+ // [DITAMBAHKAN] updateDoc dan deleteField untuk fitur reset device
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteField } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -469,32 +469,33 @@ import { getAuth, signInWithCredential, GoogleAuthProvider, onAuthStateChanged, 
     });
 
     // ==== [BARU] LOGIKA RESET PERANGKAT ====
-    window.bukaModalResetDevice = function() {
-        window.showCustomConfirm(
-            "Lepas Perangkat?", 
+    window.bukaModalResetDevice = async function() {
+        const setuju = await window.customConfirm(
             "Akun ini akan dilepas dari komputer ini agar bisa digunakan di PC lain. Anda akan otomatis Logout. Lanjutkan?", 
-            "🔄", 
-            async () => {
-                const user = auth.currentUser;
-                if(user) {
-                    try {
-                        const userRef = doc(db, "users", user.uid);
-                        // Hapus data deviceId di Firebase
-                        await updateDoc(userRef, { deviceId: deleteField() });
-                        
-                        // Eksekusi Logout
-                        await signOut(auth);
-                        localStorage.removeItem('saas_user_tier');
-                        sessionStorage.removeItem('app_has_launched');
-                        
-                        window.alert("✅ Perangkat berhasil dilepas! Silakan login di komputer baru.");
-                        window.location.reload();
-                    } catch (e) {
-                        window.alert("❌ Gagal melepas perangkat. Pastikan internet stabil.");
-                    }
+            "Lepas Perangkat?", 
+            "🔄"
+        );
+        
+        if (setuju) {
+            const user = auth.currentUser;
+            if(user) {
+                try {
+                    const userRef = doc(db, "users", user.uid);
+                    // Hapus data deviceId di Firebase
+                    await updateDoc(userRef, { deviceId: deleteField() });
+                    
+                    // Eksekusi Logout
+                    await signOut(auth);
+                    localStorage.removeItem('saas_user_tier');
+                    sessionStorage.removeItem('app_has_launched');
+                    
+                    window.alert("✅ Perangkat berhasil dilepas! Silakan login di komputer baru.");
+                    window.location.reload();
+                } catch (e) {
+                    window.alert("❌ Gagal melepas perangkat. Pastikan internet stabil.");
                 }
             }
-        );
+        }
     };
 
     // ==== PANTAU STATUS LOGIN ====
@@ -516,57 +517,39 @@ import { getAuth, signInWithCredential, GoogleAuthProvider, onAuthStateChanged, 
         }
     });
 
-// ==== TOMBOL LOGIN GOOGLE (METODE LOOPBACK AMAN) ====
+// ==== TOMBOL LOGIN GOOGLE (METODE POPUP ELECTRON AMAN) ====
     const btnLoginGoogle = document.getElementById('btn-saas-login-google');
+
     btnLoginGoogle.addEventListener('click', async () => {
         try {
+            // Kunci tombol agar tidak diklik dua kali
             btnLoginGoogle.disabled = true; 
-            statusText.innerText = "⏳ Cek Browser Utama Anda...";
+            statusText.innerText = "⏳ Membuka jendela login Google...";
+            statusText.style.color = "var(--ink)";
             
-            // 1. Perintahkan Node.js membuka Google Chrome asli di PC
-            await fetch('/api/auth-google');
-
-            // 2. Lakukan pengecekan ke server lokal setiap 2 detik
-            const checkInterval = setInterval(async () => {
-                try {
-                    const res = await fetch('/api/check-saas-token');
-                    const data = await res.json();
-
-                    if (data.success && data.tokens) {
-                        clearInterval(checkInterval);
-                        statusText.innerText = "🔐 Mendaftarkan sesi ke Server...";
-
-                        // 3. GUNAKAN KEDUA TOKEN (ID Token untuk Firebase, Access Token untuk Google)
-const credential = GoogleAuthProvider.credential(data.tokens.idToken, data.tokens.accessToken);
-
-                        try {
-                            await signInWithCredential(auth, credential);
-                            statusText.innerText = "✅ Berhasil Login!";
-                            // Paksa refresh UI agar langsung masuk ke Dashboard
-                            setTimeout(() => { window.location.reload(); }, 1000);
-                        } catch (firebaseErr) {
-                            console.error("Firebase Auth Error:", firebaseErr);
-                            statusText.innerText = "❌ Firebase menolak akses. Cek Console (F12).";
-                            btnLoginGoogle.disabled = false;
-                        }
-                    }
-                } catch (err) {
-                    // Abaikan error fetch saat sedang menunggu klien login di browser
-                }
-            }, 2000);
-
-            // 3. Beri batas waktu tunggu 2 menit
-            setTimeout(() => {
-                clearInterval(checkInterval);
-                if(btnLoginGoogle.disabled) {
-                    btnLoginGoogle.disabled = false;
-                    statusText.innerText = "⚠️ Waktu login habis. Silakan klik kembali.";
-                }
-            }, 120000);
-
-        } catch (error) { 
-            statusText.innerText = "❌ Gagal menyambungkan ke sistem."; 
-            btnLoginGoogle.disabled = false; 
+            // Gunakan Popup bawaan yang akan menunggu tanpa batas waktu (Tanpa Timeout)
+            const result = await signInWithPopup(auth, provider);
+            
+            // Jika berhasil memilih akun dan popup tertutup
+            if (result && result.user) {
+                statusText.innerText = "✅ Berhasil Login! Menyiapkan lisensi...";
+                statusText.style.color = "#10b981";
+                // Catatan: Anda tidak perlu menulis kode pindah halaman di sini, 
+                // karena fungsi onAuthStateChanged di atas akan otomatis menyembunyikan layar login.
+            }
+            
+        } catch (error) {
+            console.error("Firebase Auth Error:", error);
+            
+            // Jika klien sengaja menutup paksa popup (Cancel) atau internet putus
+            if (error.code === 'auth/popup-closed-by-user') {
+                statusText.innerText = "⚠️ Login dibatalkan oleh pengguna.";
+            } else {
+                statusText.innerText = "❌ Gagal login. Periksa koneksi internet Anda.";
+            }
+            
+            statusText.style.color = "#ef4444";
+            btnLoginGoogle.disabled = false; // Buka kunci tombol agar bisa diklik lagi
         }
     });
 
@@ -654,6 +637,7 @@ const credential = GoogleAuthProvider.credential(data.tokens.idToken, data.token
 </script>
 
     <!-- CORE SCRIPTS -->
+<!-- CORE SCRIPTS -->
     <script>
         window.alert = function(pesan) {
             let container = document.getElementById('custom-toast-container');
@@ -670,7 +654,52 @@ const credential = GoogleAuthProvider.credential(data.tokens.idToken, data.token
             requestAnimationFrame(() => { toast.style.opacity = '1'; toast.style.transform = 'translateY(0)'; });
             setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateY(20px)'; setTimeout(() => toast.remove(), 300); }, 3500);
         };
-        const fungsiConfirmAsli = window.confirm; window.confirm = function(pesan) { const hasil = fungsiConfirmAsli(pesan); setTimeout(() => { window.focus(); document.body.focus(); }, 50); return hasil; };
+
+        const fungsiConfirmAsli = window.confirm; 
+        window.confirm = function(pesan) { 
+            const hasil = fungsiConfirmAsli(pesan); 
+            setTimeout(() => { window.focus(); document.body.focus(); }, 50); 
+            return hasil; 
+        };
+
+        // === FUNGSI KONFIRMASI CUSTOM (Bebas Bug Focus & ID Mismatch) ===
+        window.customConfirm = function(pesan, judul = "Konfirmasi Aksi", ikon = "⚠️") {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('customConfirmModal');
+                
+                const titleEl = document.getElementById('confirm-title');
+                const msgEl = document.getElementById('confirm-message');
+                const iconEl = document.getElementById('confirm-icon');
+                
+                // Clone tombol agar event listener lama terhapus (mencegah klik ganda)
+                const oldBtnOk = document.getElementById('confirm-yes-btn');
+                const btnOk = oldBtnOk.cloneNode(true);
+                oldBtnOk.parentNode.replaceChild(btnOk, oldBtnOk);
+
+                // Ambil tombol Batal
+                const btnCancel = modal.querySelector('button[onclick*="none"]');
+
+                titleEl.innerText = judul;
+                msgEl.innerHTML = pesan.replace(/\n/g, '<br>');
+                iconEl.innerText = ikon;
+                
+                modal.style.display = 'flex';
+                window.focus();
+
+                const handleOk = () => {
+                    modal.style.display = 'none';
+                    resolve(true); 
+                };
+
+                const handleCancel = () => {
+                    modal.style.display = 'none';
+                    resolve(false); 
+                };
+
+                btnOk.addEventListener('click', handleOk);
+                btnCancel.addEventListener('click', handleCancel);
+            });
+        };
 
         const layouts = { num: ['1','2','3','4','5','6','7','8','9','0'], r1: ['q','w','e','r','t','y','u','i','o','p'], r2: ['a','s','d','f','g','h','j','k','l'], r3: ['z','x','c','v','b','n','m', '-', '&'] };
         let isShift = false; let activeInput = null;
@@ -690,14 +719,11 @@ const credential = GoogleAuthProvider.credential(data.tokens.idToken, data.token
             element.classList.add('selected'); element.querySelector('input').checked = true;
         }
 
-       
-        
         async function muatDaftarEvent() {
             try {
                 const res = await fetch('/api/events'); const data = await res.json();
                 const container = document.getElementById('eventList');
                 
-                // Hapus event lama dari layar (tapi biarkan tombol "Buat Event Baru" tetap ada)
                 document.querySelectorAll('.card-event, .empty-state').forEach(e => e.remove());
                 
                 if (data.success && data.events && data.events.length > 0) {
@@ -708,20 +734,17 @@ const credential = GoogleAuthProvider.credential(data.tokens.idToken, data.token
                         let badgeModeColor = evt.mode === 'collage' ? 'var(--blue)' : evt.mode === 'photobox' ? 'var(--pink)' : evt.mode === 'aibooth' ? '#a855f7' : 'var(--yellow)';
                         let badgePayColor = evt.payment === 'with_payment' ? 'var(--green)' : 'var(--paper-white)';
                         
-                        // --- LOGIKA SILENT KILLER UNTUK EVENT YANG SUDAH TERBUAT ---
                         let isLocked = false;
                         let badgeText = "";
                         let alertText = "";
                         
                        const isAdmin = window.auth && window.auth.currentUser && window.auth.currentUser.email === 'adenakbar455@gmail.com';
                        
-                        // Kunci Permanen AI Booth Sementara (KECUALI ADMIN)
                         if (evt.mode === 'aibooth' && !isAdmin) {
                             isLocked = true;
                             badgeText = "🚧 TAHAP PENGEMBANGAN";
                             alertText = "Fitur AI Booth sedang dalam tahap perbaikan dan pengembangan. Segera hadir kembali!";
                         } 
-                        // Kunci Tier Biasa
                         else if (tier === 'free') {
                             if (evt.mode === 'newspaper') { isLocked = true; badgeText = '🔒 BUTUH PRIME'; alertText = 'Silakan upgrade ke lisensi PRIME.'; }
                             else if (evt.mode === 'collage') { isLocked = true; badgeText = '🔒 BUTUH PLUS'; alertText = 'Silakan upgrade ke lisensi PLUS.'; }
@@ -734,7 +757,6 @@ const credential = GoogleAuthProvider.credential(data.tokens.idToken, data.token
                         card.className = 'card-event';
                         
                         if (isLocked) {
-                            // UI EVENT TERKUNCI
                             card.style.background = 'rgba(253, 251, 247, 0.6)';
                             card.style.borderStyle = 'dashed';
                             card.style.borderColor = '#999';
@@ -753,8 +775,6 @@ const credential = GoogleAuthProvider.credential(data.tokens.idToken, data.token
                                 </div>
                             `;
                         } else {
-                            // ... Lanjutan kode normal di bawahnya tetap sama ...
-                            // UI EVENT NORMAL
                             card.innerHTML = `
                                 <div class="event-info">
                                     <div class="event-badge" style="background: ${badgeModeColor};">${modeTeks}</div>
@@ -793,15 +813,28 @@ const credential = GoogleAuthProvider.credential(data.tokens.idToken, data.token
             btn.innerText = "✅ Buat Event"; btn.disabled = false;
         }
 
-       function hapusEvent(id, e) {
-    e.stopPropagation();
-    document.getElementById('logoutModal').style.display = 'none';
-    showCustomConfirm("Hapus Event?", "Yakin ingin menghapus event ini secara permanen?", "🗑️", async () => {
-        await fetch(`/api/events/${id}`, { method: 'DELETE' });
-        muatDaftarEvent();
-    });
-}
- async function luncurkanEvent(id) {
+        async function hapusEvent(id, e) {
+            e.stopPropagation();
+            
+            // Karena fungsi kita jadikan bagian dari objek window, panggil via window
+            const setuju = await window.customConfirm(
+                "Yakin ingin menghapus event ini secara permanen?", 
+                "Hapus Event?", 
+                "🗑️"
+            );
+            
+            if (setuju) {
+                try {
+                    await fetch(`/api/events/${id}`, { method: 'DELETE' });
+                    muatDaftarEvent();
+                    alert("✅ Event berhasil dihapus.");
+                } catch (err) {
+                    alert("❌ Gagal menghapus event.");
+                }
+            }
+        }
+
+        async function luncurkanEvent(id) {
             try {
                 const res = await fetch('/api/events'); const data = await res.json(); const eventDipilih = data.events.find(e => e.id === id);
                 if(eventDipilih) { const launchRes = await fetch('/api/launch-event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ event: eventDipilih }) }); const launchData = await launchRes.json(); if(launchData.success) { window.location.href = launchData.url; } }

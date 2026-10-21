@@ -11,12 +11,44 @@
     <style>
         html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; position: fixed; touch-action: none; user-select: none; font-family: 'Poppins', sans-serif; background-color: var(--bg-color); background-image: radial-gradient(var(--dot-color) 2px, transparent 2px); background-size: 40px 40px; color: var(--ink); text-align: center; }
         .secret-back-btn { position: fixed; top: 0; left: 0; width: 90px; height: 90px; z-index: 9999999; cursor: pointer; background: transparent; }
-        #sessionTimerDisplay { position: fixed; top: 30px; left: 50%; transform: translateX(-50%); background: var(--paper-white); color: var(--ink); padding: 10px 25px; border-radius: 15px; font-size: 1.2rem; font-weight: 700; z-index: 99999999; border: 3px solid var(--ink); box-shadow: 4px 4px 0px var(--ink); transition: all 0.3s ease; display: flex; align-items: center; gap: 10px; }
+        #sessionTimerDisplay { 
+            position: fixed; 
+            top: 25px; 
+            right: 30px; /* Posisi default di pojok kanan atas */
+            left: auto;
+            transform: none; 
+            background: rgba(253, 251, 247, 0.7); /* Transparan estetik */
+            backdrop-filter: blur(10px); /* Efek kaca (Glassmorphism) */
+            -webkit-backdrop-filter: blur(10px);
+            color: var(--ink); 
+            padding: 8px 20px; 
+            border-radius: 50px; 
+            font-size: 1.1rem; 
+            font-weight: 700; 
+            z-index: 99999999; 
+            border: 2px solid rgba(0,0,0,0.05); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08); 
+            transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); 
+            display: flex; align-items: center; gap: 8px; 
+        }
         
-        .panel { display: none; flex-direction: column; align-items: center; justify-content: flex-start; width: 100%; height: 100%; overflow-y: auto; overflow-x: hidden; padding: 100px 20px 50px 20px; box-sizing: border-box; position: relative; z-index: 10; }
+        /* Class ini akan dipanggil JS saat masuk ke mode Kamera */
+        #sessionTimerDisplay.center-mode {
+            right: auto;
+            left: 50%;
+            top: 30px;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.5); /* Gelap transparan agar kontras dengan kamera */
+            color: #ffffff;
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        
+        /* Mengurangi padding atas karena timer sudah pindah ke kanan */
+        .panel { display: none; flex-direction: column; align-items: center; justify-content: flex-start; width: 100%; height: 100%; overflow-y: hidden; overflow-x: hidden; padding: 40px 20px 20px 20px; box-sizing: border-box; position: relative; z-index: 10; }
         .active-panel { display: flex !important; animation: popIn 0.4s ease forwards; }
         @keyframes popIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
-        
+
         .judul-interaktif { font-size: 3rem; color: var(--ink); margin-bottom: 5px; font-weight: 700; line-height: 1.2; position: relative; z-index: 10; }
         .sub-judul { font-size: 1.1rem; color: var(--ink); opacity: 0.8; margin-bottom: 40px; font-weight: 500; position: relative; z-index: 10;}
         .nav-bar { position: fixed; top: 30px; left: 40px; right: 40px; display: flex; justify-content: space-between; z-index: 1000; pointer-events: none; align-items: center; }
@@ -28,12 +60,33 @@
         .btn-format span { font-size: 2rem; background: var(--pink); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid var(--ink); transition: 0.3s; }
         .btn-format:hover { background: var(--yellow); transform: translate(-3px, -3px); box-shadow: 9px 9px 0px var(--ink); }
         
-        .template-grid { display: flex; gap: 25px; justify-content: center; flex-wrap: wrap; max-width: 1200px; margin-top: 10px; z-index: 10; padding-bottom: 50px;}
-        .card { background: var(--paper-white); border-radius: 15px; cursor: pointer; border: 3px solid var(--ink); text-align: center; transition: 0.2s; padding: 20px; width: 240px; box-shadow: 6px 6px 0px var(--ink); }
-        .card:hover { transform: translate(-3px, -3px); background: var(--yellow); box-shadow: 9px 9px 0px var(--ink); }
-        .card img { width: 100%; height: auto; border-radius: 8px; background: var(--bg-color); object-fit: contain; max-height: 280px; border: 2px solid var(--ink); }
-        .card h3 { margin: 15px 0 5px 0; font-size: 1.2rem; color: var(--ink); font-weight: 700; }
+       /* === TAMPILAN TAB KIRI KANAN (MINIMALIST & AESTHETIC) === */
+        .template-layout { display: flex; width: 100%; max-width: 1400px; gap: 40px; margin: 0 auto; height: calc(100vh - 160px); text-align: left; z-index: 10; position: relative;}
+        
+        .format-sidebar { display: flex; flex-direction: column; gap: 10px; width: 240px; flex-shrink: 0; overflow-y: auto; padding-right: 10px; }
+        
+        .format-tab { background: transparent; border: 2px solid transparent; color: var(--ink); padding: 12px 15px; border-radius: 16px; font-weight: 600; font-size: 1.1rem; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 15px; text-align: left; font-family: 'Poppins', sans-serif; opacity: 0.6;}
+        .format-tab span { font-size: 1.4rem; background: var(--paper-white); width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05); transition: 0.3s ease; }
+        
+        /* Efek Tab Saat Aktif */
+        .format-tab.active { background: var(--paper-white); border: 2px solid rgba(0,0,0,0.1); opacity: 1; box-shadow: 0 8px 25px rgba(0,0,0,0.05); transform: translateX(10px); }
+        .format-tab.active span { background: var(--yellow); }
+        .format-tab:hover:not(.active) { background: rgba(255,255,255,0.4); opacity: 1; transform: translateX(5px); }
+        
+        .template-content { flex: 1; overflow-y: auto; background: transparent; border: none; padding: 10px 10px 50px 10px; display: flex; flex-wrap: wrap; gap: 25px; align-content: flex-start; justify-content: flex-start;}
+        
+        .card { background: var(--paper-white); border-radius: 16px; cursor: pointer; border: 2px solid rgba(0,0,0,0.05); text-align: center; transition: 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); padding: 15px; width: 220px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); display: flex; flex-direction: column; }
+        .card:hover { transform: translateY(-8px); box-shadow: 0 15px 35px rgba(0,0,0,0.15); border-color: var(--ink); }
+        .card img { width: 100%; height: auto; border-radius: 10px; background: #f8fafc; object-fit: contain; aspect-ratio: 2/3; }
+        .card h3 { margin: 15px 0 5px 0; font-size: 1.1rem; color: var(--ink); font-weight: 700; line-height: 1.2;}
 
+        @media (max-width: 850px), (orientation: portrait) {
+            .template-layout { flex-direction: column; height: 75vh; }
+            .format-sidebar { flex-direction: row; width: 100%; overflow-x: auto; padding-bottom: 10px; }
+            .format-tab { flex: 0 0 auto; padding: 10px 15px; font-size: 1.1rem; }
+            .format-tab span { width: 35px; height: 35px; font-size: 1.3rem; }
+            .card { width: 160px; padding: 10px; }
+        }
         #kamera-container { padding: 0; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg-color); overflow: hidden; z-index: 50; display: none; flex-direction: column; align-items: center; justify-content: center; }
        #liveView { object-fit: cover; position: absolute; top: 50%; left: 50%; z-index: 1; transition: filter 0.3s; }
 #previewImage { display: none; object-fit: cover; position: absolute; top: 50%; left: 50%; z-index: 2; }
@@ -190,24 +243,21 @@
     <div class="secret-back-btn" id="btn-rahasia" title="Tahan 2 detik untuk keluar"></div>
     <div id="sessionTimerDisplay"><span>⏱️</span><span id="sessionTimerText">--:--</span></div>
 
-    <div id="panel-sub-mode" class="panel active-panel" style="justify-content: center;">
-        <div class="nav-bar" style="justify-content: flex-start;"><button onclick="toggleMirror()" class="btn-mirror">🪞 Cermin: ON</button></div>
-        <h1 class="judul-interaktif">Pilih Format Collage</h1>
-        <p class="sub-judul">Tentukan jumlah foto yang ingin kamu abadikan dalam satu lembar.</p>
-        <div class="grid-format">
-            <button class="btn-format" onclick="bukaPilihanTemplate(1)"><span>📸</span> 1 Foto</button>
-            <button class="btn-format" onclick="bukaPilihanTemplate(2)"><span>🔥</span> 2 Foto</button>
-            <button class="btn-format" onclick="bukaPilihanTemplate(4)"><span>👑</span> 4 Foto</button>
-            <button class="btn-format" onclick="bukaPilihanTemplate(6)"><span>✨</span> 6 Foto</button>
-            <button class="btn-format" onclick="bukaPilihanTemplate(8)"><span>💎</span> 8 Foto</button>
-        </div>
-    </div>
-
-    <div id="panel-template" class="panel">
-        <div class="nav-bar"><button onclick="kembaliKeFormat()">‹ GANTI FORMAT</button></div>
+<div id="panel-template" class="panel active-panel">
         <h1 class="judul-interaktif">Pilih Desain Frame</h1>
-        <p class="sub-judul" style="margin-bottom: 25px;">Silakan pilih template untuk <span id="label-format-terpilih" style="font-weight: 700; color: var(--ink); background: var(--yellow); padding: 2px 10px; border: 2px solid var(--ink); border-radius: 8px;"></span></p>
-        <div id="template-list" class="template-grid"></div>
+        <p class="sub-judul" style="margin-bottom: 25px;">Pilih format dan bingkai foto yang kamu suka.</p>
+        
+        <div class="template-layout">
+            <!-- TAB SEBELAH KIRI -->
+            <div class="format-sidebar" id="format-sidebar">
+                <!-- Otomatis diisi oleh JavaScript -->
+            </div>
+            
+            <!-- KONTEN TEMPLATE SEBELAH KANAN -->
+            <div class="template-content" id="template-list">
+                <!-- Otomatis diisi oleh JavaScript -->
+            </div>
+        </div>
     </div>
 
     <div id="kamera-container">
@@ -443,14 +493,71 @@
                 const resEvent = await fetch(`/api/current-event?t=${Date.now()}`); 
                 const dataEvent = await resEvent.json();
                 if (dataEvent.success && dataEvent.event && dataEvent.event.payment === 'with_payment') { isEventBerbayar = true; }
+                // Panggil tab setup setelah databaseTemplate selesai di-fetch
                 const resTpl = await fetch('/api/frames'); databaseTemplate = await resTpl.json();
+                inisialisasiTabFormat(); // <--- TAMBAHKAN BARIS INI
             } catch (error) {}
             mulaiHitungMundurSesi();
         }
         muatPengaturanDanTemplate();
+function inisialisasiTabFormat() {
+            const formats = [1, 2, 3, 4, 6, 8];
+            const sidebar = document.getElementById('format-sidebar');
+            sidebar.innerHTML = '';
+            
+            let maxCount = -1;
+            let defaultFormat = 4;
+            let tabHtml = '';
+            
+            formats.forEach(f => {
+                const formatData = databaseTemplate[f.toString()] || [];
+                // Hanya hitung template yang TIDAK disembunyikan
+                const visibleTemplates = formatData.filter(t => t.isHidden !== true);
+                const count = visibleTemplates.length;
+                
+                // Cari format mana yang punya template terbanyak untuk dijadikan tab default pertama
+                if (count > maxCount) {
+                    maxCount = count;
+                    defaultFormat = f;
+                }
+                
+                // Jika format ini memiliki setidaknya 1 template, tampilkan tombol tab-nya
+                if (count > 0) {
+                    let icon = '📸';
+                    if(f==2) icon='🔥'; if(f==3) icon='🌟'; if(f==4) icon='👑'; if(f==6) icon='✨'; if(f==8) icon='💎';
+                    tabHtml += `<button class="format-tab" id="tab-format-${f}" onclick="pilihFormat(${f})"><span>${icon}</span> ${f} Foto</button>`;
+                }
+            });
+            
+            sidebar.innerHTML = tabHtml;
+            
+            // Tampilkan tab yang paling banyak isinya secara otomatis
+            if (maxCount === -1 || maxCount === 0) {
+                document.getElementById('template-list').innerHTML = `<h3 style="color: #ef4444; width:100%; text-align:center; margin-top:50px;">Template belum tersedia. Hubungi Admin.</h3>`;
+            } else {
+                pilihFormat(defaultFormat);
+            }
+        }
 
-        function bukaPilihanTemplate(jumlah) { targetJepretan = jumlah; document.getElementById('panel-sub-mode').classList.remove('active-panel'); document.getElementById('panel-template').classList.add('active-panel'); document.getElementById('label-format-terpilih').innerText = `${jumlah} Foto`; const templateList = document.getElementById('template-list'); templateList.innerHTML = ''; const daftarTersedia = databaseTemplate[jumlah.toString()]; if (!daftarTersedia || daftarTersedia.length === 0) { templateList.innerHTML = `<h3 style="color: #ef4444;">Template belum tersedia.</h3>`; return; } daftarTersedia.forEach(t => { templateList.innerHTML += `<div class="card" onclick="masukKeKamera('${t.id}')"><img src="${t.img}"><h3>${t.nama}</h3></div>`; }); }
-        function kembaliKeFormat() { document.getElementById('panel-template').classList.remove('active-panel'); document.getElementById('panel-sub-mode').classList.add('active-panel'); }
+        function pilihFormat(jumlah) {
+            targetJepretan = jumlah; // Kunci sistem untuk menentukan berapa kali kamera menjepret
+            
+            // Ganti warna tab aktif
+            document.querySelectorAll('.format-tab').forEach(t => t.classList.remove('active'));
+            const activeTab = document.getElementById(`tab-format-${jumlah}`);
+            if(activeTab) activeTab.classList.add('active');
+            
+            // Muat gambar ke layar kanan
+            const templateList = document.getElementById('template-list');
+            templateList.innerHTML = '';
+            
+            const daftarTersedia = databaseTemplate[jumlah.toString()] || [];
+            const visibleTemplates = daftarTersedia.filter(t => t.isHidden !== true);
+            
+            visibleTemplates.forEach(t => {
+                templateList.innerHTML += `<div class="card" onclick="masukKeKamera('${t.id}')"><img src="${t.img}"><h3>${t.nama}</h3></div>`;
+            });
+        }
         function toggleMirror() { 
             isMirror = !isMirror; 
             terapkanVisualKamera();
@@ -490,6 +597,10 @@
         async function kembaliKeTemplate() { 
             document.getElementById('kamera-container').style.display = 'none'; 
             document.getElementById('panel-template').classList.add('active-panel'); 
+            
+            // [BARU] Kembalikan Timer ke pojok kanan
+            document.getElementById('sessionTimerDisplay').classList.remove('center-mode');
+
             isLiveViewRunning = false; 
             await fetch('/toggle-liveview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: false }) }); 
             const vid = document.getElementById('poseVideoPlayer'); 
@@ -500,6 +611,10 @@
         function masukKeKamera(idTemplate) {
             templateTerpilih = idTemplate; fotoTerpilih = []; indexFotoSaatIni = 1; retakeCounts = new Array(targetJepretan).fill(settingMaxRetake);
             document.getElementById('panel-template').classList.remove('active-panel'); document.getElementById('kamera-container').style.display = 'flex';
+            
+            // [BARU] Pindahkan Timer ke tengah saat layar kamera
+            document.getElementById('sessionTimerDisplay').classList.add('center-mode');
+
             siapkanMiniGallery(); document.getElementById('mode-jepret').style.display = 'flex'; document.getElementById('mode-retake').style.display = 'none'; document.getElementById('previewImage').style.display = 'none'; document.getElementById('liveView').style.display = 'block';
             terapkanVisualKamera(); document.getElementById('liveView').style.filter = `brightness(${settingKecerahanLV}%)`;
             if (activeCameraMode === 'webcam') {
@@ -680,11 +795,34 @@
             } }); }, 800); 
         }
 
-        async function bukaPanelEfek() {
+      async function bukaPanelEfek() {
+            // [BARU] Kembalikan Timer ke pojok kanan di layar perakitan
+            document.getElementById('sessionTimerDisplay').classList.remove('center-mode');
+
             const vid = document.getElementById('poseVideoPlayer'); if(vid) vid.pause();
             document.getElementById('kamera-container').style.display = 'none'; document.getElementById('effectOverlay').style.display = 'flex'; isLiveViewRunning = false; await fetch('/toggle-liveview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: false }) });
             const previewContainer = document.getElementById('effectPreviewContainer'); previewContainer.innerHTML = '<p style="color:var(--ink); font-weight:bold;">Menyiapkan preview...</p>';
-            const templateTersedia = databaseTemplate[targetJepretan.toString()]; const templateInfo = templateTersedia.find(t => t.id === templateTerpilih); const frameUrl = `/frames/${templateTerpilih}.png`; const frameImg = new Image(); frameImg.src = frameUrl;
+            
+            const templateTersedia = databaseTemplate[targetJepretan.toString()]; 
+            const templateInfo = templateTersedia.find(t => t.id === templateTerpilih); 
+            
+            // =======================================================
+            // [BARU] LOGIKA PENGGANDAAN OTOMATIS (DUPLIKAT KOTAK)
+            // =======================================================
+            // Jika jumlah kotak koordinat di template (misal 6) lebih banyak 
+            // dari jumlah jepretan asli klien (misal 2), maka duplikat fotonya!
+            if (fotoTerpilih.length === targetJepretan && templateInfo.layout.coords.length > targetJepretan) {
+                let arrayFotoDigandakan = [];
+                for (let i = 0; i < templateInfo.layout.coords.length; i++) {
+                    // Rumus Modulo (%) akan melooping array secara otomatis: 0, 1, 0, 1, 0, 1
+                    arrayFotoDigandakan.push(fotoTerpilih[i % targetJepretan]);
+                }
+                // Timpa array foto asli dengan array yang sudah digandakan agar backend membacanya penuh
+                fotoTerpilih = arrayFotoDigandakan;
+            }
+            // =======================================================
+
+            const frameUrl = `/frames/${templateTerpilih}.png`; const frameImg = new Image(); frameImg.src = frameUrl;
             
             frameImg.onload = () => {
                 const canvasW = frameImg.naturalWidth; const canvasH = frameImg.naturalHeight; let htmlDom = `<div style="height: 55vh; max-width: 100%; aspect-ratio: ${canvasW} / ${canvasH}; position: relative; border-radius: 12px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); overflow: hidden; background: white;"><div id="filterTarget" style="position: absolute; top:0; left:0; width:100%; height:100%; transition: filter 0.3s ease;">`;
@@ -703,11 +841,6 @@
                     const wPct = (fWidth / canvasW) * 100; const hPct = (fHeight / canvasH) * 100; 
                     const off = currentCustomOffsets[i] || {x: 50, y: 50};
 
-                    // [PERBAIKAN] Hitung rotasi dinamis untuk efek preview
-                    let rotasiEfek = (isPortrait && isMirror) ? 'rotate(-90deg)' : (isPortrait ? 'rotate(90deg)' : '');
-                    
-                   // Hapus rotate dan tidak perlu lagi unit 100cqh/100cqw karena gambar sudah natural potret!
-                    // Hapus CSS rotate dan kembalikan ke format 100% standar
                     let cssWrap = `position: absolute; left: ${leftPct}%; top: ${topPct}%; width: ${wPct}%; height: ${hPct}%; overflow: hidden; z-index: 2;`;
                     let cssImg = `position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; object-position: ${off.x}% ${off.y}%; cursor: grab; touch-action: none;`;
                     htmlDom += `<div style="${cssWrap}"><img src="${urlFoto}" data-index="${i}" class="drag-img" style="${cssImg}"></div>`;

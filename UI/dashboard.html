@@ -229,6 +229,7 @@
         <nav class="nav-menu">
             <a class="nav-item" onclick="bukaTab('tab-timer', this)"><span>⏱️</span> Pengaturan Waktu</a>
             <a class="nav-item" onclick="bukaTab('tab-hardware', this)"><span>🖥️</span> Hardware & Printer</a>
+            <a class="nav-item" onclick="bukaTab('tab-kamera-pro', this)"><span>📸</span> Kamera Pro (Canon)</a>
             <a class="nav-item" onclick="bukaTab('tab-template', this)"><span>🖼️</span> Kelola Template</a>
             <a class="nav-item" onclick="bukaTab('tab-tema', this)"><span>🎨</span> Tema & Tampilan</a>
         </nav>
@@ -430,6 +431,137 @@
                 </div>
             </div>
         </div>
+        <!-- TAB KAMERA PRO (CANON EDSDK) -->
+        <div id="tab-kamera-pro" class="tab-panel">
+            <div class="top-bar">
+                <h2>Kamera Pro (Canon) 📸</h2>
+                <p class="tab-desc">Atur segitiga exposure secara remote. Pastikan dial fisik di bodi kamera berada di mode <b>M (Manual)</b>.</p>
+            </div>
+            
+            <div class="grid-2">
+                <!-- KOTAK KIRI: LIVE VIEW PREVIEW -->
+                <div class="card" style="background: #1e293b; border-color: var(--ink); padding: 15px; display: flex; flex-direction: column;">
+                    <div style="position: relative; width: 100%; aspect-ratio: 3/2; background: #000; border-radius: 10px; border: 3px solid #334155; overflow: hidden; margin-bottom: 15px;">
+                        <img id="dashLiveView" src="" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                        <div id="dashLvPlaceholder" style="color: #94a3b8; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; font-weight: 600;">
+                            <span style="font-size: 3rem; display: block; margin-bottom: 10px;">👁️</span> Live View Mati
+                        </div>
+                    </div>
+                    <button id="btn-dash-lv" onclick="toggleDashLiveView()" class="btn-primary" style="background: var(--blue); color: var(--ink); width: 100%; margin-top: auto;">Nyalakan Preview Layar</button>
+                </div>
+
+                <!-- KOTAK KANAN: KONTROL SEGITIGA EXPOSURE -->
+                <div class="card" style="background: var(--yellow);">
+                    <div class="card-header" style="border-bottom-color: var(--ink);">⚙️ Pengaturan Manual (M)</div>
+                    
+                    <div class="form-group">
+                        <label>ISO Speed</label>
+                        <div style="display: flex; align-items: center; background: #fff; border: 2px solid var(--ink); border-radius: 10px; overflow: hidden;">
+                            <button type="button" onclick="stepExposure('sys-canonIso', -1)" style="padding: 10px 18px; font-size: 1.2rem; font-weight: bold; background: var(--pink); border:none; border-right: 2px solid var(--ink); cursor: pointer;">-</button>
+                            <select id="sys-canonIso" style="flex: 1; border: none; outline: none; font-weight: bold; text-align: center; text-align-last: center; appearance: none; background: transparent; padding: 10px; font-size: 1rem;" onchange="tembakKameraSilent()">
+                                <option value="auto">Auto</option>
+                                <option value="48">ISO 100</option>
+                                <option value="4b">ISO 125</option>
+                                <option value="4d">ISO 160</option>
+                                <option value="50">ISO 200</option>
+                                <option value="53">ISO 250</option>
+                                <option value="55">ISO 320</option>
+                                <option value="58">ISO 400</option>
+                                <option value="5b">ISO 500</option>
+                                <option value="5d">ISO 640</option>
+                                <option value="60">ISO 800</option>
+                                <option value="63">ISO 1000</option>
+                                <option value="65">ISO 1250</option>
+                                <option value="68">ISO 1600</option>
+                                <option value="6b">ISO 2000</option>
+                                <option value="6d">ISO 2500</option>
+                                <option value="70">ISO 3200</option>
+                                <option value="73">ISO 4000</option>
+                                <option value="75">ISO 5000</option>
+                                <option value="78">ISO 6400</option>
+                            </select>
+                            <button type="button" onclick="stepExposure('sys-canonIso', 1)" style="padding: 10px 18px; font-size: 1.2rem; font-weight: bold; background: var(--green); border:none; border-left: 2px solid var(--ink); cursor: pointer;">+</button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label style="display: flex; justify-content: space-between;">
+                            Shutter Speed (Tv)
+                            <a href="javascript:void(0)" onclick="sinkronDariKamera()" style="color: var(--blue); font-size: 0.85rem;">🔄 Sinkronkan Kamera</a>
+                        </label>
+                        <div style="display: flex; align-items: center; background: #fff; border: 2px solid var(--ink); border-radius: 10px; overflow: hidden;">
+                            <button type="button" onclick="stepExposure('sys-canonTv', -1)" style="padding: 10px 18px; font-size: 1.2rem; font-weight: bold; background: var(--pink); border:none; border-right: 2px solid var(--ink); cursor: pointer;">-</button>
+                            <select id="sys-canonTv" style="flex: 1; border: none; outline: none; font-weight: bold; text-align: center; text-align-last: center; appearance: none; background: transparent; padding: 10px; font-size: 1rem;" onchange="tembakKameraSilent()">
+                                <option value="auto">Auto</option>
+                                <option value="40">1/15</option>
+                                <option value="43">1/20</option>
+                                <option value="45">1/25</option>
+                                <option value="48">1/30</option>
+                                <option value="4b">1/40</option>
+                                <option value="4d">1/50</option>
+                                <option value="50">1/60</option>
+                                <option value="53">1/80</option>
+                                <option value="55">1/100</option>
+                                <option value="58">1/125</option>
+                                <option value="5b">1/160</option>
+                                <option value="5d">1/200</option>
+                                <option value="60">1/250</option>
+                                <option value="63">1/320</option>
+                                <option value="65">1/400</option>
+                                <option value="68">1/500</option>
+                                <option value="6b">1/640</option>
+                                <option value="6d">1/800</option>
+                                <option value="70">1/1000</option>
+                                <option value="73">1/1250</option>
+                                <option value="75">1/1600</option>
+                                <option value="78">1/2000</option>
+                                <option value="7b">1/2500</option>
+                                <option value="7d">1/3200</option>
+                                <option value="80">1/4000</option>
+                            </select>
+                            <button type="button" onclick="stepExposure('sys-canonTv', 1)" style="padding: 10px 18px; font-size: 1.2rem; font-weight: bold; background: var(--green); border:none; border-left: 2px solid var(--ink); cursor: pointer;">+</button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Aperture (Av) / Diafragma</label>
+                        <div style="display: flex; align-items: center; background: #fff; border: 2px solid var(--ink); border-radius: 10px; overflow: hidden;">
+                            <button type="button" onclick="stepExposure('sys-canonAv', -1)" style="padding: 10px 18px; font-size: 1.2rem; font-weight: bold; background: var(--pink); border:none; border-right: 2px solid var(--ink); cursor: pointer;">-</button>
+                            <select id="sys-canonAv" style="flex: 1; border: none; outline: none; font-weight: bold; text-align: center; text-align-last: center; appearance: none; background: transparent; padding: 10px; font-size: 1rem;" onchange="tembakKameraSilent()">
+                                <option value="auto">Auto</option>
+                                <option value="15">f/1.8</option>
+                                <option value="18">f/2.0</option>
+                                <option value="1b">f/2.2</option>
+                                <option value="1d">f/2.5</option>
+                                <option value="20">f/2.8</option>
+                                <option value="23">f/3.2</option>
+                                <option value="25">f/3.5</option>
+                                <option value="28">f/4.0</option>
+                                <option value="2b">f/4.5</option>
+                                <option value="2d">f/5.0</option>
+                                <option value="30">f/5.6</option>
+                                <option value="33">f/6.3</option>
+                                <option value="35">f/7.1</option>
+                                <option value="38">f/8.0</option>
+                                <option value="3b">f/9.0</option>
+                                <option value="3d">f/10</option>
+                                <option value="40">f/11</option>
+                                <option value="43">f/13</option>
+                                <option value="45">f/14</option>
+                                <option value="48">f/16</option>
+                                <option value="4b">f/18</option>
+                                <option value="4d">f/20</option>
+                                <option value="50">f/22</option>
+                            </select>
+                            <button type="button" onclick="stepExposure('sys-canonAv', 1)" style="padding: 10px 18px; font-size: 1.2rem; font-weight: bold; background: var(--green); border:none; border-left: 2px solid var(--ink); cursor: pointer;">+</button>
+                        </div>
+                    </div>
+                    
+                    <button type="button" class="btn-primary" style="background: var(--ink); color: white; margin-top: 15px; width: 100%;" onclick="simpanDanTerapkanExposure()">💾 Simpan Setelan Permanen</button>
+                </div>
+            </div>
+        </div>
+
 
         <div id="tab-tema" class="tab-panel">
             <div class="top-bar">
@@ -1123,7 +1255,104 @@
                 if (warningBox) warningBox.style.display = 'none';
             }
         }
+        // --- LOGIKA KAMERA PRO (STEPPER & LIVE VIEW) ---
+        let dashLvInterval = null;
+        let isDashLvOn = false;
 
+        async function toggleDashLiveView() {
+            const btn = document.getElementById('btn-dash-lv');
+            const img = document.getElementById('dashLiveView');
+            const ph = document.getElementById('dashLvPlaceholder');
+            
+            if (!isDashLvOn) {
+                btn.innerText = "⏳ Menyalakan..."; btn.disabled = true;
+                await fetch('/toggle-liveview', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({state:true})});
+                isDashLvOn = true;
+                btn.innerText = "🛑 Matikan Preview Layar"; btn.disabled = false; btn.style.background = "#ef4444"; btn.style.color = "white";
+                ph.style.display = "none"; img.style.display = "block";
+                
+                const updateFrame = () => {
+                    if(!isDashLvOn) return;
+                    const tempImg = new Image();
+                    tempImg.onload = () => { if(isDashLvOn) { img.src = tempImg.src; setTimeout(updateFrame, 50); } };
+                    tempImg.onerror = () => { if(isDashLvOn) setTimeout(updateFrame, 500); };
+                    tempImg.src = `/liveview.jpg?t=${Date.now()}`;
+                };
+                updateFrame();
+            } else {
+                isDashLvOn = false;
+                await fetch('/toggle-liveview', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({state:false})});
+                btn.innerText = "Nyalakan Preview Layar"; btn.style.background = "var(--blue)"; btn.style.color = "var(--ink)";
+                ph.style.display = "block"; img.style.display = "none"; img.src = "";
+            }
+        }
+
+        // --- KONTROL EXPOSURE BEBAS SPAM ---
+        function stepExposure(selectId, direction) {
+            const select = document.getElementById(selectId);
+            let idx = select.selectedIndex + direction;
+            if (idx < 0) idx = 0;
+            if (idx >= select.options.length) idx = select.options.length - 1;
+            select.selectedIndex = idx;
+            tembakKameraSilent(); // Eksekusi diam-diam
+        }
+
+        function tembakKameraSilent() {
+            const iso = document.getElementById('sys-canonIso').value;
+            const tv = document.getElementById('sys-canonTv').value;
+            const av = document.getElementById('sys-canonAv').value;
+            
+            fetch('/api/camera-exposure', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ iso, tv, av })
+            }).catch(e => console.error(e));
+        }
+
+        async function simpanDanTerapkanExposure() {
+            tembakKameraSilent();
+            await simpanPengaturan(); 
+        }
+
+        // Sinkronisasi otomatis tarik data dari bodi kamera fisik
+        async function sinkronDariKamera() {
+            try {
+                const res = await fetch('/api/sync-camera');
+                const data = await res.json();
+                
+                if (data.success) {
+                    let isoDitemukan = false, tvDitemukan = false, avDitemukan = false;
+                    
+                    const setSelect = (id, valHex) => {
+                        if (!valHex || valHex === "auto" || valHex === "0") return false;
+                        const sel = document.getElementById(id);
+                        for(let i = 0; i < sel.options.length; i++) {
+                            if(sel.options[i].value.toLowerCase() === valHex.toLowerCase()) {
+                                sel.selectedIndex = i;
+                                return true;
+                            }
+                        }
+                        return false;
+                    };
+
+                    isoDitemukan = setSelect('sys-canonIso', data.iso);
+                    tvDitemukan = setSelect('sys-canonTv', data.tv);
+                    avDitemukan = setSelect('sys-canonAv', data.av);
+                    
+                    if (isoDitemukan || tvDitemukan || avDitemukan) {
+                        alert("✅ Berhasil menarik Setelan Exposure dari Bodi Kamera!");
+                    } else {
+                        console.warn(`[SYNC] Nilai Hex tidak dikenal -> ISO: ${data.iso}, Tv: ${data.tv}, Av: ${data.av}`);
+                        alert(`⚠️ DIAGNOSTIK KAMERA:\n\nAngka dari mesin kamera Anda:\nISO: ${data.iso}\nShutter (Tv): ${data.tv}\nAperture (Av): ${data.av}\n\nStatus Error Mesin: ${data.debug || 'Tidak ada error'}\n\n*Jika Anda melihat Err:80, Pindahkan Dial Mode di bodi kamera Anda ke M (Manual)*`);
+                    }
+                } else {
+                    alert("⚠️ " + data.message);
+                }
+            } catch(e) {
+                alert("❌ Gagal menyinkronkan data.");
+            }
+        }
+        
         // --- SISTEM PENGATURAN API ---
         async function muatPengaturan() {
             try {
@@ -1152,7 +1381,9 @@
                 togglePinInput();
 
                 document.getElementById('sys-cameraEngine').value = data.global?.cameraEngine || "canon";
-                
+                document.getElementById('sys-canonIso').value = data.global?.canonIso || "auto";
+document.getElementById('sys-canonTv').value = data.global?.canonTv || "auto";
+document.getElementById('sys-canonAv').value = data.global?.canonAv || "auto";
                 // --- LOAD TAKE FROM REMOTE ---
                 if (document.getElementById('sys-takeFromRemote')) {
                     document.getElementById('sys-takeFromRemote').value = data.global?.takeFromRemote ? "true" : "false";
@@ -1206,15 +1437,17 @@ document.getElementById('sys-brightness').value = data.global?.liveViewBrightnes
                 // 2. Fungsi cerdas pengambil nilai dari HTML (AMAN):
                 const getVal = (id, fallback) => {
                     const el = document.getElementById(id);
-                    if (!el) return fallback; // Jika kotak tidak ada, pakai data lama
+                    if (!el) return fallback; 
                     
-                    // Cegah settingan Dropdown (seperti Printer) terhapus 
-                    // jika alat sedang offline dan tidak muncul di daftar HTML
+                    // JIKA INI DROPDOWN PRINTER (Mencegah fallback menimpa pilihan kosong)
+                    if (el.tagName === 'SELECT' && (id === 'sys-printer4R' || id === 'sys-printerA4')) {
+                        return el.value; // Selalu kembalikan nilai asli dropdown (meski kosong "")
+                    }
+                    
                     if (el.tagName === 'SELECT' && el.value === "" && fallback) {
                         return fallback;
                     }
-                    
-                    return el.value; // Jika input teks dikosongkan, tetap simpan kosong
+                    return el.value; 
                 };
 
                 const getCheck = (id, fallback) => {
@@ -1258,9 +1491,13 @@ document.getElementById('sys-brightness').value = data.global?.liveViewBrightnes
                         livePhotoEnabled: getVal('sys-livePhoto', currentData.global?.livePhotoEnabled ? 'true' : 'false') === "true",
                         cloudStorage: getVal('sys-cloudStorage', currentData.global?.cloudStorage !== false ? 'true' : 'false') === "true",
                         driveParentFolderId: getVal('driveParentFolderId', currentData.global?.driveParentFolderId || ''),
-                        printer4R: getVal('sys-printer4R', currentData.global?.printer4R || ''),  
-                        printerA4: getVal('sys-printerA4', currentData.global?.printerA4 || ''),
+                        printer4R: document.getElementById('sys-printer4R') ? document.getElementById('sys-printer4R').value : (currentData.global?.printer4R || ''),  
+                        printerA4: document.getElementById('sys-printerA4') ? document.getElementById('sys-printerA4').value : (currentData.global?.printerA4 || ''),
+                        canonIso: getVal('sys-canonIso', currentData.global?.canonIso || 'auto'),
+canonTv: getVal('sys-canonTv', currentData.global?.canonTv || 'auto'),
+canonAv: getVal('sys-canonAv', currentData.global?.canonAv || 'auto'),
                         cloudflareToken: getVal('input-cf-token', currentData.global?.cloudflareToken || '') 
+                        
                     },
                     waMessage: getVal('wa-message-text', currentData.waMessage || '')
                 };
@@ -1290,13 +1527,38 @@ document.getElementById('sys-brightness').value = data.global?.liveViewBrightnes
             } catch (e) {}
         }
         setInterval(loadDashboardStats, 5000); loadDashboardStats();
+        async function terapkanExposureLangsung() {
+    const iso = document.getElementById('sys-canonIso').value;
+    const tv = document.getElementById('sys-canonTv').value;
+    const av = document.getElementById('sys-canonAv').value;
 
+    try {
+        // Simpan permanen ke file JSON terlebih dahulu
+        await simpanPengaturan();
+
+        // Tembak perintah paksa langsung ke bodi kamera (tanpa restart)
+        const res = await fetch('/api/camera-exposure', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ iso, tv, av })
+        });
+        const data = await res.json();
+
+        if (data.success) alert("✅ " + data.message);
+        else alert("❌ " + data.message);
+    } catch (e) {
+        alert("❌ Gagal menghubungi layanan kamera EDSDK.");
+    }
+}
         async function scanKameraUSB() {
             const btn = document.getElementById('btn-scan-kamera');
             btn.innerText = "⏳ Mengecek..."; btn.disabled = true;
             try {
                 const res = await fetch('/api/rescan-camera');
-                const data = await res.json(); alert(data.message); loadDashboardStats();
+                const data = await res.json(); 
+                alert(data.message); 
+                loadDashboardStats();
+                sinkronDariKamera(); // <--- TAMBAHKAN BARIS INI
             } catch (e) {}
             btn.innerText = "🔄 Scan Ulang Kamera"; btn.disabled = false;
         }
@@ -1403,7 +1665,8 @@ document.getElementById('sys-brightness').value = data.global?.liveViewBrightnes
                 btnCollage.className = 'mode-btn active'; btnCollage.style.background = 'var(--blue)';
                 btnNews.className = 'mode-btn inactive'; btnNews.style.background = 'var(--bg-color)';
                 judulForm.innerText = "📤 Tambah Template: Collage & Self Studio";
-                selectFormat.innerHTML = `<option value="1">1 Foto (Single Shot)</option><option value="2">2 Foto (Double Strip)</option><option value="4" selected>4 Foto (Classic Grid)</option><option value="6">6 Foto (Self Studio)</option><option value="8">8 Foto (Super Grid)</option>`;
+                // [BARU] Opsi 3 Foto ditambahkan ke sini:
+                selectFormat.innerHTML = `<option value="1">1 Foto (Single Shot)</option><option value="2">2 Foto (Double Strip)</option><option value="3">3 Foto</option><option value="4" selected>4 Foto (Classic Grid)</option><option value="6">6 Foto (Self Studio)</option><option value="8">8 Foto (Super Grid)</option>`;
             } else {
                 btnNews.className = 'mode-btn active'; btnNews.style.background = 'var(--yellow)';
                 btnCollage.className = 'mode-btn inactive'; btnCollage.style.background = 'var(--bg-color)';
@@ -1470,21 +1733,111 @@ document.getElementById('sys-brightness').value = data.global?.liveViewBrightnes
             return parseInt(formatVal);
         }
 
+        // ==========================================
+        // FITUR BARU: DUPLIKASI KOTAK KOORDINAT
+        // ==========================================
+        function buatBarisKoordinat(prefix, i, container, prepend = false) {
+            // Ambil jumlah slot dasar dari format yang dipilih (misal: 2 Foto)
+            let formatSelectVal = prefix === 'upload' ? document.getElementById('formatFoto').value : document.getElementById('edit-format').value;
+            let baseCount = getJumlahSlot(formatSelectVal);
+            
+            // Rumus melooping angka tampilan (1, 2, 1, 2, dst)
+            let displayNum = ((i - 1) % baseCount) + 1;
+
+            const row = document.createElement('div');
+            row.id = `baris_coord_${prefix}_${i}`;
+            row.style.cssText = "display: flex; gap:5px; margin-bottom:5px; align-items: center;";
+            row.innerHTML = `
+                <span style="background: var(--ink); color:white; padding:8px; border-radius:10px; font-weight:bold; min-width:30px; text-align:center;" title="Diisi oleh jepretan ke-${displayNum}">${displayNum}</span>
+                <input type="number" id="${prefix}_posX_${i}" placeholder="X" required style="width:20%;" onchange="sinkronInputKeVisual('${prefix}')">
+                <input type="number" id="${prefix}_posY_${i}" placeholder="Y" required style="width:20%;" onchange="sinkronInputKeVisual('${prefix}')">
+                <input type="number" id="${prefix}_posW_${i}" placeholder="W" required style="width:20%;" onchange="sinkronInputKeVisual('${prefix}')">
+                <input type="number" id="${prefix}_posH_${i}" placeholder="H" required style="width:20%;" onchange="sinkronInputKeVisual('${prefix}')">
+                <button type="button" onclick="hapusSlotKoordinat('${prefix}', ${i})" style="background:var(--paper-white); border:2px solid var(--ink); border-radius:8px; font-weight:bold; cursor:pointer; width:15%; color:#ef4444;" title="Hapus Kotak">✕</button>
+            `;
+            if (prepend && container.querySelector('button.btn-tambah')) {
+                container.insertBefore(row, container.querySelector('button.btn-tambah'));
+            } else {
+                container.appendChild(row);
+            }
+        }
+
+        function tambahSlotKoordinat(prefix) {
+            const container = document.getElementById(`coordContainer-${prefix}`);
+            const inputs = document.querySelectorAll(`input[id^="${prefix}_posX_"]`);
+            let maxId = 0;
+            inputs.forEach(inp => {
+                const id = parseInt(inp.id.split('_')[2]);
+                if (id > maxId) maxId = id;
+            });
+            const newId = maxId + 1;
+
+            buatBarisKoordinat(prefix, newId, container, true);
+
+            const visualContainer = document.getElementById(`ve-slots-${prefix}`);
+            const img = document.getElementById(`ve-image-${prefix}`);
+            const scaleX = img.clientWidth / img.naturalWidth || 1;
+            const scaleY = img.clientHeight / img.naturalHeight || 1;
+
+            buatVisualSlot(prefix, newId, visualContainer, null, scaleX, scaleY);
+            kalkulasiKoordinatKeInput(prefix);
+        }
+
+        function hapusSlotKoordinat(prefix, i) {
+            const inputs = document.querySelectorAll(`input[id^="${prefix}_posX_"]`);
+            if(inputs.length <= 1) return alert("Minimal harus ada 1 kotak lubang foto!");
+            
+            const baris = document.getElementById(`baris_coord_${prefix}_${i}`);
+            if (baris) baris.remove();
+
+            const slot = document.getElementById(`ve-slot-${prefix}-${i}`);
+            if (slot) slot.remove();
+
+            kalkulasiKoordinatKeInput(prefix);
+        }
+
         function generateVisualEditorAndCoords(prefix) {
             let formatSelectVal = prefix === 'upload' ? document.getElementById('formatFoto').value : document.getElementById('edit-format').value;
             let jumlahSlot = getJumlahSlot(formatSelectVal);
             
             const container = document.getElementById(`coordContainer-${prefix}`); container.innerHTML = ''; 
             for (let i = 1; i <= jumlahSlot; i++) {
-                container.innerHTML += `<div style="display: flex; gap:5px; margin-bottom:5px;">
-                    <span style="background: var(--ink); color:white; padding:10px; border-radius:10px; font-weight:bold;">${i}</span>
-                    <input type="number" id="${prefix}_posX_${i}" placeholder="X (Kiri)" required style="width:20%;" onchange="sinkronInputKeVisual('${prefix}')">
-                    <input type="number" id="${prefix}_posY_${i}" placeholder="Y (Atas)" required style="width:20%;" onchange="sinkronInputKeVisual('${prefix}')">
-                    <input type="number" id="${prefix}_posW_${i}" placeholder="W (Lebar)" required style="width:20%;" onchange="sinkronInputKeVisual('${prefix}')">
-                    <input type="number" id="${prefix}_posH_${i}" placeholder="H (Tinggi)" required style="width:20%;" onchange="sinkronInputKeVisual('${prefix}')">
-                </div>`;
+                buatBarisKoordinat(prefix, i, container);
             }
+            
+            container.innerHTML += `<button type="button" class="btn-tambah" onclick="tambahSlotKoordinat('${prefix}')" style="margin-top:10px; width:100%; padding:10px; border-radius:10px; background:var(--yellow); border:2px dashed var(--ink); font-weight:bold; cursor:pointer; color:var(--ink);">➕ Tambah Kotak (Duplikat)</button>`;
+
             if(prefix === 'upload' && document.getElementById('fileFrameCollage').files.length > 0) { inisialisasiVisualEditor('upload'); }
+        }
+
+        function buatVisualSlot(prefix, i, container, coordData, scaleX, scaleY) {
+            // Ambil jumlah slot dasar dari format yang dipilih
+            let formatSelectVal = prefix === 'upload' ? document.getElementById('formatFoto').value : document.getElementById('edit-format').value;
+            let baseCount = getJumlahSlot(formatSelectVal);
+            
+            // Rumus melooping angka tampilan di kotak merah
+            let displayNum = ((i - 1) % baseCount) + 1;
+
+            const slot = document.createElement('div');
+            slot.className = 've-slot';
+            slot.id = `ve-slot-${prefix}-${i}`;
+            slot.innerHTML = `<span>${displayNum}</span>`;
+
+            if (coordData) {
+                slot.style.left = (coordData.x * scaleX) + 'px';
+                slot.style.top = (coordData.y * scaleY) + 'px';
+                slot.style.width = (coordData.width * scaleX) + 'px';
+                slot.style.height = (coordData.height * scaleY) + 'px';
+            } else {
+                slot.style.left = '10%'; slot.style.top = (5 + ((i-1) * 10)) + '%'; slot.style.width = '30%'; slot.style.height = '20%';
+            }
+
+            slot.dataset.prefix = prefix;
+            slot.addEventListener('mousedown', startDrag);
+            slot.addEventListener('touchstart', startDragTouch, {passive: false});
+            slot.addEventListener('mouseup', () => kalkulasiKoordinatKeInput(prefix));
+            slot.addEventListener('mouseout', () => kalkulasiKoordinatKeInput(prefix));
+            container.appendChild(slot);
         }
 
         function inisialisasiVisualEditor(prefix, imageUrl = null, existingCoords = null) {
@@ -1507,42 +1860,30 @@ document.getElementById('sys-brightness').value = data.global?.liveViewBrightnes
 
         function renderVisualSlots(prefix, existingCoords = null) {
             const container = document.getElementById(`ve-slots-${prefix}`); container.innerHTML = '';
+            
             let formatSelectVal = prefix === 'upload' ? document.getElementById('formatFoto').value : document.getElementById('edit-format').value;
             let jumlah = getJumlahSlot(formatSelectVal);
+            
             const img = document.getElementById(`ve-image-${prefix}`);
             const scaleX = img.clientWidth / img.naturalWidth; const scaleY = img.clientHeight / img.naturalHeight;
             
-            // CEK MEMORI: Apakah ada koordinat yang pernah dipakai sebelumnya untuk format ini?
             let memoriKoordinat = null;
             if (prefix === 'upload') {
                 const saved = localStorage.getItem('memori_koordinat_' + formatSelectVal);
                 if (saved) memoriKoordinat = JSON.parse(saved);
             }
 
+            let sumberCoords = existingCoords ? existingCoords : (memoriKoordinat ? memoriKoordinat : null);
+            if (sumberCoords && sumberCoords.length > 0) {
+                jumlah = sumberCoords.length;
+                const coordContainer = document.getElementById(`coordContainer-${prefix}`);
+                coordContainer.innerHTML = '';
+                for(let i=1; i<=jumlah; i++) buatBarisKoordinat(prefix, i, coordContainer);
+                coordContainer.innerHTML += `<button type="button" class="btn-tambah" onclick="tambahSlotKoordinat('${prefix}')" style="margin-top:10px; width:100%; padding:10px; border-radius:10px; background:var(--yellow); border:2px dashed var(--ink); font-weight:bold; cursor:pointer; color:var(--ink);">➕ Tambah Kotak (Duplikat)</button>`;
+            }
+
             for(let i=1; i<=jumlah; i++) {
-                const slot = document.createElement('div'); slot.className = 've-slot'; slot.innerHTML = `<span>${i}</span>`;
-                
-                if (existingCoords && existingCoords[i-1]) {
-                    // Jika sedang mode EDIT (pakai data dari database server)
-                    slot.style.left = (existingCoords[i-1].x * scaleX) + 'px'; 
-                    slot.style.top = (existingCoords[i-1].y * scaleY) + 'px';
-                    slot.style.width = (existingCoords[i-1].width * scaleX) + 'px'; 
-                    slot.style.height = (existingCoords[i-1].height * scaleY) + 'px';
-                } else if (memoriKoordinat && memoriKoordinat[i-1]) {
-                    // Jika mode UPLOAD dan ADA MEMORI (Otomatis paskan dengan kordinat terakhir kali)
-                    slot.style.left = (memoriKoordinat[i-1].x * scaleX) + 'px'; 
-                    slot.style.top = (memoriKoordinat[i-1].y * scaleY) + 'px';
-                    slot.style.width = (memoriKoordinat[i-1].width * scaleX) + 'px'; 
-                    slot.style.height = (memoriKoordinat[i-1].height * scaleY) + 'px';
-                } else {
-                    // Jika belum pernah sama sekali (Default)
-                    slot.style.left = '10%'; slot.style.top = (5 + ((i-1) * 15)) + '%'; slot.style.width = '30%'; slot.style.height = '20%';
-                }
-                
-                slot.dataset.prefix = prefix;
-                slot.addEventListener('mousedown', startDrag); slot.addEventListener('touchstart', startDragTouch, {passive: false});
-                slot.addEventListener('mouseup', () => kalkulasiKoordinatKeInput(prefix)); slot.addEventListener('mouseout', () => kalkulasiKoordinatKeInput(prefix));
-                container.appendChild(slot);
+                buatVisualSlot(prefix, i, container, sumberCoords ? sumberCoords[i-1] : null, scaleX, scaleY);
             }
             kalkulasiKoordinatKeInput(prefix); 
         }
@@ -1581,16 +1922,12 @@ document.getElementById('sys-brightness').value = data.global?.liveViewBrightnes
             const scaleY = img.naturalHeight / img.clientHeight;
             
             const slots = document.querySelectorAll(`#ve-slots-${prefix} .ve-slot`);
-            slots.forEach((slot, index) => {
-                let i = index + 1;
+            slots.forEach((slot) => {
+                let i = slot.id.split('-')[3];
                 let realX = Math.round(slot.offsetLeft * scaleX); 
                 let realY = Math.round(slot.offsetTop * scaleY);
-                
-                // --- [PERBAIKAN] Gunakan offsetWidth & offsetHeight ---
-                // Agar sistem tidak memotong ukuran border 3px dari kotak
                 let realW = Math.round(slot.offsetWidth * scaleX); 
                 let realH = Math.round(slot.offsetHeight * scaleY);
-                // ------------------------------------------------------
                 
                 if(realX < 0) realX = 0; if(realY < 0) realY = 0;
                 
@@ -1602,15 +1939,20 @@ document.getElementById('sys-brightness').value = data.global?.liveViewBrightnes
                 }
             });
         }
+
         function sinkronInputKeVisual(prefix) {
             const img = document.getElementById(`ve-image-${prefix}`); if(!img || !img.naturalWidth) return;
             const scaleX = img.clientWidth / img.naturalWidth; const scaleY = img.clientHeight / img.naturalHeight;
             const slots = document.querySelectorAll(`#ve-slots-${prefix} .ve-slot`);
-            slots.forEach((slot, index) => {
-                let i = index + 1;
-                const iX = parseInt(document.getElementById(`${prefix}_posX_${i}`).value) || 0; const iY = parseInt(document.getElementById(`${prefix}_posY_${i}`).value) || 0;
-                const iW = parseInt(document.getElementById(`${prefix}_posW_${i}`).value) || 100; const iH = parseInt(document.getElementById(`${prefix}_posH_${i}`).value) || 100;
-                slot.style.left = (iX * scaleX) + 'px'; slot.style.top = (iY * scaleY) + 'px'; slot.style.width = (iW * scaleX) + 'px'; slot.style.height = (iH * scaleY) + 'px';
+            slots.forEach((slot) => {
+                let i = slot.id.split('-')[3];
+                if(document.getElementById(`${prefix}_posX_${i}`)) {
+                    const iX = parseInt(document.getElementById(`${prefix}_posX_${i}`).value) || 0; 
+                    const iY = parseInt(document.getElementById(`${prefix}_posY_${i}`).value) || 0;
+                    const iW = parseInt(document.getElementById(`${prefix}_posW_${i}`).value) || 100; 
+                    const iH = parseInt(document.getElementById(`${prefix}_posH_${i}`).value) || 100;
+                    slot.style.left = (iX * scaleX) + 'px'; slot.style.top = (iY * scaleY) + 'px'; slot.style.width = (iW * scaleX) + 'px'; slot.style.height = (iH * scaleY) + 'px';
+                }
             });
         }
         
@@ -1641,17 +1983,26 @@ document.getElementById('sys-brightness').value = data.global?.liveViewBrightnes
                 const grid = document.createElement('div'); grid.className = 'template-list-grid';
                 dbTemplatesGlobal[format].forEach(t => {
                     let isHidden = t.isHidden === true; 
-                    let opacity = isHidden ? '0.6' : '1'; let hideBtnText = isHidden ? '👁️ Tampilkan' : '🙈 Sembunyikan';
-                    grid.innerHTML += `
-                        <div style="opacity: ${opacity}; background: var(--paper-white); border: 3px solid var(--ink); border-radius: 15px; padding: 15px; box-shadow: 4px 4px 0px var(--ink); display: flex; flex-direction: column; align-items: center;">
-                            <img src="${t.img}" style="width:100%; aspect-ratio: 2/3; object-fit: cover; border-radius:8px; border: 2px solid var(--ink); background: var(--bg-color); margin-bottom: 12px;">
-                            <p style="font-size:1.1rem; font-weight: 700; margin: 0 0 15px 0;">${t.nama}</p>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%;">
-                                <button onclick="toggleVisibility('${format}', '${t.id}', ${!isHidden})" style="background: #fff; border: 2px solid var(--ink); padding: 5px; border-radius: 10px; grid-column: span 2; font-weight:bold; cursor:pointer;">${hideBtnText}</button>
-                                <button onclick="bukaEditModal('${format}', '${t.id}')" style="background: var(--yellow); border: 2px solid var(--ink); padding: 5px; border-radius: 10px; font-weight:bold; cursor:pointer;">✏️ Edit</button>
-                                <button onclick="hapusTemplate('${format}', '${t.id}')" style="background: var(--pink); border: 2px solid var(--ink); padding: 5px; border-radius: 10px; font-weight:bold; cursor:pointer;">🗑️ Hapus</button>
-                            </div>
-                        </div>`;
+                    let opacity = isHidden ? '0.45' : '1'; 
+                let hideBtnText = isHidden ? '👁️ Tampilkan' : '🙈 Sembunyikan';
+                let btnBg = isHidden ? '#10b981' : '#ffffff'; 
+                let btnColor = isHidden ? '#ffffff' : 'var(--ink)';
+                let borderColor = isHidden ? '#10b981' : 'var(--ink)';
+                
+                // Tambahkan Label Merah "Disembunyikan" di sudut gambar jika statusnya Hidden
+                let labelHidden = isHidden ? `<div style="position:absolute; top:-10px; right:-10px; background:#ef4444; color:white; padding:5px 10px; border-radius:10px; font-size:0.75rem; font-weight:bold; box-shadow: 2px 2px 0px var(--ink); z-index: 10; border: 2px solid var(--ink);">Disembunyikan</div>` : '';
+
+                grid.innerHTML += `
+                    <div style="opacity: ${opacity}; position: relative; background: var(--paper-white); border: 3px solid ${borderColor}; border-radius: 15px; padding: 15px; box-shadow: 4px 4px 0px ${borderColor}; display: flex; flex-direction: column; align-items: center; transition: all 0.3s ease;">
+                        ${labelHidden}
+                        <img src="${t.img}" style="width:100%; aspect-ratio: 2/3; object-fit: cover; border-radius:8px; border: 2px solid var(--ink); background: var(--bg-color); margin-bottom: 12px; transition: 0.3s;">
+                        <p style="font-size:1.1rem; font-weight: 700; margin: 0 0 15px 0; transition: 0.3s;">${t.nama}</p>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%;">
+                            <button onclick="toggleVisibility('${format}', '${t.id}', ${!isHidden})" style="background: ${btnBg}; color: ${btnColor}; border: 2px solid ${borderColor}; padding: 8px 5px; border-radius: 10px; grid-column: span 2; font-weight:bold; cursor:pointer; transition: 0.2s;">${hideBtnText}</button>
+                            <button onclick="bukaEditModal('${format}', '${t.id}')" style="background: var(--yellow); border: 2px solid var(--ink); padding: 5px; border-radius: 10px; font-weight:bold; cursor:pointer;">✏️ Edit</button>
+                            <button onclick="hapusTemplate('${format}', '${t.id}')" style="background: var(--pink); border: 2px solid var(--ink); padding: 5px; border-radius: 10px; font-weight:bold; cursor:pointer;">🗑️ Hapus</button>
+                        </div>
+                    </div>`;
                 });
                 container.appendChild(grid);
             }
@@ -1678,19 +2029,20 @@ document.getElementById('sys-brightness').value = data.global?.liveViewBrightnes
         
         async function simpanEditTemplate() {
             const format = document.getElementById('edit-format').value; const id = document.getElementById('edit-id').value;
-            const template = dbTemplatesGlobal[format].find(t => t.id === id); 
             kalkulasiKoordinatKeInput('edit');
             let coords = [];
-            for (let i = 1; i <= template.layout.coords.length; i++) {
+            document.querySelectorAll(`input[id^="edit_posX_"]`).forEach(inp => {
+                let i = inp.id.split('_')[2];
                 coords.push({ 
-                    x: parseInt(document.getElementById(`edit_posX_${i}`).value) || 0, y: parseInt(document.getElementById(`edit_posY_${i}`).value) || 0, 
-                    width: parseInt(document.getElementById(`edit_posW_${i}`).value) || 0, height: parseInt(document.getElementById(`edit_posH_${i}`).value) || 0 
+                    x: parseInt(document.getElementById(`edit_posX_${i}`).value) || 0, 
+                    y: parseInt(document.getElementById(`edit_posY_${i}`).value) || 0, 
+                    width: parseInt(document.getElementById(`edit_posW_${i}`).value) || 0, 
+                    height: parseInt(document.getElementById(`edit_posH_${i}`).value) || 0 
                 });
-            }
+            });
             await fetch('/api/edit-template', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ format, idTemplate: id, nama: document.getElementById('edit-nama').value, coords }) });
             tutupEditModal(); fetchTemplateData();
         }
-
         async function bukaSetupPrinter(ukuran) {
             alert(`PANDUAN SETUP:\n\n1. Gambar acuan akan terbuka.\n2. Tekan CTRL + P (Print).\n3. Pilih Printer, setel kertas & Borderless (jika perlu).\n4. Lakukan "Print" 1x agar profil tersimpan ke sistem.\n\nKlik OK untuk membuka jendela.`);
             await fetch('/api/setup-printer', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ size: ukuran }) });
@@ -1741,16 +2093,19 @@ document.getElementById('sys-brightness').value = data.global?.liveViewBrightnes
             
             kalkulasiKoordinatKeInput('upload');
             const formatFoto = document.getElementById('formatFoto').value; 
-            const jumlahSlot = getJumlahSlot(formatFoto); const koordinat = [];
-            for (let i = 1; i <= jumlahSlot; i++) {
-                koordinat.push({ 
-                    x: parseInt(document.getElementById(`upload_posX_${i}`).value) || 0, y: parseInt(document.getElementById(`upload_posY_${i}`).value) || 0, 
-                    width: parseInt(document.getElementById(`upload_posW_${i}`).value) || 0, height: parseInt(document.getElementById(`upload_posH_${i}`).value) || 0 
-                });
-            }
-            localStorage.setItem('memori_koordinat_' + formatFoto, JSON.stringify(koordinat));
-            // -------------------------------------
+            const koordinat = [];
             
+            // Mengambil semua kotak yang ada di layar, bukan lagi berdasarkan dropdown slot awal
+            document.querySelectorAll(`input[id^="upload_posX_"]`).forEach(inp => {
+                let i = inp.id.split('_')[2];
+                koordinat.push({ 
+                    x: parseInt(document.getElementById(`upload_posX_${i}`).value) || 0, 
+                    y: parseInt(document.getElementById(`upload_posY_${i}`).value) || 0, 
+                    width: parseInt(document.getElementById(`upload_posW_${i}`).value) || 0, 
+                    height: parseInt(document.getElementById(`upload_posH_${i}`).value) || 0 
+                });
+            });
+            localStorage.setItem('memori_koordinat_' + formatFoto, JSON.stringify(koordinat));
             const frameFiles = document.getElementById('fileFrameCollage').files;
             const thumbFiles = document.getElementById('fileThumbCollage').files;
             const baseId = document.getElementById('idFrame').value.replace(/\s+/g, '-').toLowerCase();
@@ -2728,32 +3083,7 @@ document.addEventListener('DOMContentLoaded', loadQrisSettings);
                 console.log("Akses Penuh (Prime) Diaktifkan!");
             }
 
-            // --- SILENT RESTORER UTAMA (BANGKITKAN TEMPLATE OTOMATIS SAAT TIER 3) ---
-            if (tier === 'prime' || tier === 'premium') {
-                try {
-                    fetch('/api/frames?all=true').then(res => res.json()).then(framesData => {
-                        let butuhRefreshUI = false;
-                        const prosesUnHide = [];
-
-                        for (const format in framesData) {
-                            framesData[format].forEach(template => {
-                                if (template.isHidden === true) {
-                                    butuhRefreshUI = true;
-                                    prosesUnHide.push(fetch('/api/toggle-template', { 
-                                        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ format: format, idTemplate: template.id, isHidden: false }) 
-                                    }));
-                                }
-                            });
-                        }
-
-                        if (butuhRefreshUI) {
-                            Promise.all(prosesUnHide).then(() => {
-                                if (typeof fetchTemplateData === "function") fetchTemplateData();
-                            });
-                        }
-                    }).catch(e => console.log(e));
-                } catch(e) {}
-            }
+        
         }
     </script>
     <div class="modal-overlay" id="customConfirmModal" style="z-index: 999999;">

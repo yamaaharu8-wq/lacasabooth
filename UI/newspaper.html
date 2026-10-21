@@ -23,55 +23,70 @@
         }
         
         .secret-back-btn { position: fixed; top: 0; left: 0; width: 90px; height: 90px; z-index: 9999999; cursor: pointer; background: transparent; }
-        #sessionTimerDisplay { position: fixed; top: 30px; left: 50%; transform: translateX(-50%); background: var(--paper-white); color: var(--ink); padding: 10px 25px; border-radius: 15px; font-size: 1.2rem; font-weight: 700; z-index: 99999999; border: 3px solid var(--ink); box-shadow: 4px 4px 0px var(--ink); transition: all 0.3s ease; display: flex; align-items: center; gap: 10px; }
+        #sessionTimerDisplay { 
+            position: fixed; 
+            top: 25px; 
+            right: 30px; 
+            left: auto;
+            transform: none; 
+            background: rgba(253, 251, 247, 0.7); 
+            backdrop-filter: blur(10px); 
+            -webkit-backdrop-filter: blur(10px);
+            color: var(--ink); 
+            padding: 8px 20px; 
+            border-radius: 50px; 
+            font-size: 1.1rem; 
+            font-weight: 700; 
+            z-index: 99999999; 
+            border: 2px solid rgba(0,0,0,0.05); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08); 
+            transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); 
+            display: flex; align-items: center; gap: 8px; 
+        }
+
+        /* Class ini dipanggil JS saat layar kamera aktif */
+        #sessionTimerDisplay.center-mode {
+            right: auto;
+            left: 50%;
+            top: 30px;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.5); 
+            color: #ffffff;
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
 
         /* --- PANEL UTAMA --- */
-        .panel { display: none; flex-direction: column; align-items: center; justify-content: flex-start; width: 100%; height: 100%; overflow-y: auto; overflow-x: hidden; padding: 120px 20px 50px 20px; box-sizing: border-box; position: relative; z-index: 10; }
+        .panel { display: none; flex-direction: column; align-items: center; justify-content: flex-start; width: 100%; height: 100%; overflow-y: hidden; overflow-x: hidden; padding: 40px 20px 20px 20px; box-sizing: border-box; position: relative; z-index: 10; }
         .active-panel { display: flex !important; animation: doodlePop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         @keyframes doodlePop { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
         
         .judul-interaktif { font-family: 'Caveat', cursive; font-size: 4.5rem; color: var(--ink); margin-bottom: 5px; font-weight: 700; line-height: 1; }
-        .sub-judul { font-size: 1.1rem; color: #555; margin-bottom: 40px; font-weight: 500; }
+        .sub-judul { font-size: 1.1rem; color: #555; margin-bottom: 25px; font-weight: 500; }
 
         /* --- NAVIGASI --- */
         .nav-bar { position: fixed; top: 30px; left: 40px; right: 40px; display: flex; justify-content: space-between; z-index: 1000; pointer-events: none; align-items: center; }
-        .btn-doodle { 
-            pointer-events: auto; background: var(--paper-white); color: var(--ink); 
-            border: var(--doodle-border); padding: 12px 25px; font-size: 1rem; 
-            cursor: pointer; border-radius: 50px; font-weight: 600; font-family: 'Fredoka', sans-serif;
-            transition: 0.2s; box-shadow: 4px 4px 0px var(--ink); 
-            display: flex; align-items: center; gap: 8px; justify-content: center;
-        }
+        .btn-doodle { pointer-events: auto; background: var(--paper-white); color: var(--ink); border: var(--doodle-border); padding: 12px 25px; font-size: 1rem; cursor: pointer; border-radius: 50px; font-weight: 600; font-family: 'Fredoka', sans-serif; transition: 0.2s; box-shadow: 4px 4px 0px var(--ink); display: flex; align-items: center; gap: 8px; justify-content: center; }
         .btn-doodle:hover { background: var(--yellow); transform: translateY(-3px); box-shadow: 6px 6px 0px var(--ink); }
 
-        /* --- TOMBOL PILIH FORMAT --- */
-        .grid-format { display: flex; gap: 25px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
-        .btn-format { 
-            background: var(--paper-white); border: var(--doodle-border); color: var(--ink); 
-            padding: 35px 25px; border-radius: var(--doodle-radius); cursor: pointer; 
-            font-size: 1.3rem; transition: all 0.2s ease; width: 220px; 
-            box-shadow: 5px 6px 0px var(--ink); font-weight: 700; font-family: 'Fredoka', sans-serif;
-            display: flex; flex-direction: column; align-items: center; gap: 15px; 
-        }
-        .btn-format span { 
-            font-size: 3rem; background: var(--bg-color); width: 80px; height: 80px; 
-            border-radius: 50%; display: flex; align-items: center; justify-content: center; 
-            border: 3px dashed var(--ink); transition: 0.2s; 
-        }
-        .btn-format:hover { transform: translateY(-5px); background: var(--blue); box-shadow: 8px 8px 0px var(--ink); }
-        .btn-format:hover span { border-style: solid; background: var(--paper-white); transform: scale(1.1) rotate(5deg); }
+        /* === TAMPILAN TAB KIRI KANAN (MINIMALIST & AESTHETIC) === */
+        .template-layout { display: flex; width: 100%; max-width: 1400px; gap: 40px; margin: 0 auto; height: calc(100vh - 160px); text-align: left; z-index: 10; position: relative;}
         
-        /* --- KARTU TEMPLATE --- */
-        .template-grid { display: flex; gap: 30px; justify-content: center; flex-wrap: wrap; max-width: 1200px; margin-top: 10px; }
-        .card { 
-            background: var(--paper-white); border-radius: var(--doodle-radius); cursor: pointer; 
-            border: var(--doodle-border); text-align: center; transition: 0.2s; 
-            padding: 20px; width: 260px; box-shadow: 6px 6px 0px var(--ink); 
-        }
-        .card:hover { transform: translateY(-5px) rotate(-1deg); background: var(--yellow); box-shadow: 8px 8px 0px var(--ink); }
-        .card img { width: 100%; height: auto; border-radius: 10px; border: 2px solid var(--ink); background: var(--bg-color); object-fit: contain; max-height: 280px; pointer-events: none; }
-        .card h3 { margin: 15px 0 5px 0; font-size: 1.5rem; font-family: 'Caveat', cursive; font-weight: 700; color: var(--ink); line-height: 1; }
-
+        .format-sidebar { display: flex; flex-direction: column; gap: 10px; width: 240px; flex-shrink: 0; overflow-y: auto; padding-right: 10px; }
+        
+        .format-tab { background: transparent; border: 2px solid transparent; color: var(--ink); padding: 12px 15px; border-radius: 16px; font-weight: 600; font-size: 1.1rem; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 15px; text-align: left; font-family: 'Fredoka', sans-serif; opacity: 0.6;}
+        .format-tab span { font-size: 1.4rem; background: var(--paper-white); width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05); transition: 0.3s ease; }
+        
+        .format-tab.active { background: var(--paper-white); border: 2px solid rgba(0,0,0,0.1); opacity: 1; box-shadow: 0 8px 25px rgba(0,0,0,0.05); transform: translateX(10px); }
+        .format-tab.active span { background: var(--yellow); }
+        .format-tab:hover:not(.active) { background: rgba(255,255,255,0.4); opacity: 1; transform: translateX(5px); }
+        
+        .template-content { flex: 1; overflow-y: auto; background: transparent; border: none; padding: 10px 10px 50px 10px; display: flex; flex-wrap: wrap; gap: 25px; align-content: flex-start; justify-content: flex-start;}
+        
+        .card { background: var(--paper-white); border-radius: 16px; cursor: pointer; border: 2px solid rgba(0,0,0,0.05); text-align: center; transition: 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); padding: 15px; width: 220px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); display: flex; flex-direction: column; }
+        .card:hover { transform: translateY(-8px); box-shadow: 0 15px 35px rgba(0,0,0,0.15); border-color: var(--ink); }
+        .card img { width: 100%; height: auto; border-radius: 10px; background: #f8fafc; object-fit: contain; aspect-ratio: 2/3; }
+        .card h3 { margin: 15px 0 5px 0; font-size: 1.5rem; font-family: 'Caveat', cursive; font-weight: 700; color: var(--ink); line-height: 1.2;}
         /* --- LIVE VIEW & UI KAMERA --- */
         #kamera-container { padding: 0; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #e5e5e5; overflow: hidden; z-index: 50; display: none; flex-direction: column; align-items: center; justify-content: center; }
         #liveView { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1; transform: scaleX(1); transition: filter 0.3s; }
@@ -163,7 +178,12 @@
         .numpad-grid .btn-close { grid-column: span 3; background: var(--green); }   
         
         /* RESPONSIVE MOBILE & POTRET */
-        @media (max-width: 850px), (orientation: portrait) {
+       @media (max-width: 850px), (orientation: portrait) {
+            .template-layout { flex-direction: column; height: 75vh; }
+            .format-sidebar { flex-direction: row; width: 100%; overflow-x: auto; padding-bottom: 10px; }
+            .format-tab { flex: 0 0 auto; padding: 10px 15px; font-size: 1.1rem; }
+            .format-tab span { width: 35px; height: 35px; font-size: 1.3rem; }
+            .card { width: 160px; padding: 10px; }
             .judul-interaktif { font-size: 2.5rem; }
             .nav-bar { top: 15px; left: 15px; right: 15px; }
             .panel { padding: 80px 15px 30px 15px; }
@@ -228,28 +248,24 @@
     <div class="secret-back-btn" id="btn-rahasia" title="Tahan 2 detik untuk keluar"></div>
     <div id="sessionTimerDisplay"><span>⏱️</span><span id="sessionTimerText">--:--</span></div>
 
-    <div id="panel-sub-mode" class="panel active-panel" style="justify-content: center; padding-top: 20px;">
+    <div id="panel-template" class="panel active-panel">
         <div class="nav-bar" style="justify-content: flex-start;">
             <button class="btn-doodle" onclick="akhiriSesiDanKembali()">‹ KEMBALI</button>
         </div>
-        <h1 class="judul-interaktif">Format Newspaper 📰</h1>
-        <p class="sub-judul">Tentukan jumlah foto untuk desain cetak koran eksklusif A4.</p>
+        <h1 class="judul-interaktif">Pilih Desain Newspaper 📰</h1>
+        <p class="sub-judul">Pilih format dan tata letak koran eksklusif A4 yang kamu suka.</p>
         
-        <div class="grid-format">
-            <button class="btn-format" onclick="bukaPilihanTemplate('news-1')"><span>📰</span> 1 Foto</button>
-            <button class="btn-format" onclick="bukaPilihanTemplate('news-2')"><span>🗞️</span> 2 Foto</button>
-            <button class="btn-format" onclick="bukaPilihanTemplate('news-3')"><span>📸</span> 3 Foto</button>
-            <button class="btn-format" onclick="bukaPilihanTemplate('news-4')"><span>🌟</span> 4 Foto</button>
+        <div class="template-layout">
+            <!-- TAB SEBELAH KIRI -->
+            <div class="format-sidebar" id="format-sidebar">
+                <!-- Otomatis diisi oleh JavaScript -->
+            </div>
+            
+            <!-- KONTEN TEMPLATE SEBELAH KANAN -->
+            <div class="template-content" id="template-list">
+                <!-- Otomatis diisi oleh JavaScript -->
+            </div>
         </div>
-    </div>
-
-    <div id="panel-template" class="panel" style="padding-top: 20px;">
-        <div class="nav-bar" style="justify-content: flex-start;">
-            <button class="btn-doodle" onclick="kembaliKeFormat()">‹ KEMBALI</button>
-        </div>
-        <h1 class="judul-interaktif">Pilih Desain Newspaper 🎨</h1>
-        <p class="sub-judul" style="margin-bottom: 25px;">Silakan pilih tata letak A4 yang kamu inginkan.</p>
-        <div id="template-list" class="template-grid"></div>
     </div>
 
     <div id="kamera-container">
@@ -511,22 +527,72 @@
                 const resEvent = await fetch('/api/current-event'); const dataEvent = await resEvent.json();
                 if (dataEvent.success && dataEvent.event && dataEvent.event.payment === 'with_payment') { isEventBerbayar = true; }
 
+               // Panggil tab setup setelah databaseTemplate selesai di-fetch
                 const resTpl = await fetch('/api/frames'); databaseTemplate = await resTpl.json();
+                inisialisasiTabFormat(); // <--- TAMBAHKAN BARIS INI
             } catch (error) {}
             mulaiHitungMundurSesi();
         }
         muatPengaturanDanTemplate();
 
-        function bukaPilihanTemplate(formatName) {
-            kodeFormat = formatName; targetJepretan = parseInt(formatName.split('-')[1]);
-            document.getElementById('panel-sub-mode').classList.remove('active-panel'); document.getElementById('panel-template').classList.add('active-panel');
-            const templateList = document.getElementById('template-list'); templateList.innerHTML = ''; 
-            const daftarTersedia = databaseTemplate[kodeFormat]; 
-            if (!daftarTersedia || daftarTersedia.length === 0) { templateList.innerHTML = `<h3 style="color: #ef4444; font-family:'Fredoka';">Template belum tersedia.</h3>`; return; }
-            daftarTersedia.forEach(t => { templateList.innerHTML += `<div class="card" onclick="masukKeKamera('${t.id}')"><img src="${t.img}"><h3>${t.nama}</h3></div>`; });
+        function inisialisasiTabFormat() {
+            const formats = ['news-1', 'news-2', 'news-3', 'news-4'];
+            const sidebar = document.getElementById('format-sidebar');
+            sidebar.innerHTML = '';
+            
+            let maxCount = -1;
+            let defaultFormat = 'news-4';
+            let tabHtml = '';
+            
+            formats.forEach(f => {
+                const formatData = databaseTemplate[f] || [];
+                const visibleTemplates = formatData.filter(t => t.isHidden !== true);
+                const count = visibleTemplates.length;
+                
+                // Cari tab dengan template terbanyak untuk dibuka otomatis
+                if (count > maxCount) {
+                    maxCount = count;
+                    defaultFormat = f;
+                }
+                
+                if (count > 0) {
+                    let icon = '📰';
+                    let num = f.split('-')[1];
+                    if(num == 2) icon='🗞️'; if(num == 3) icon='📸'; if(num == 4) icon='🌟';
+                    tabHtml += `<button class="format-tab" id="tab-format-${f}" onclick="pilihFormat('${f}')"><span>${icon}</span> ${num} Foto</button>`;
+                }
+            });
+            
+            sidebar.innerHTML = tabHtml;
+            
+            // Jika kosong melompong
+            if (maxCount === -1 || maxCount === 0) {
+                document.getElementById('template-list').innerHTML = `<h3 style="color: #ef4444; width:100%; text-align:center; margin-top:50px; font-family:'Fredoka';">Template belum tersedia. Hubungi Admin.</h3>`;
+            } else {
+                pilihFormat(defaultFormat);
+            }
         }
 
-        function kembaliKeFormat() { document.getElementById('panel-template').classList.remove('active-panel'); document.getElementById('panel-sub-mode').classList.add('active-panel'); }
+        function pilihFormat(formatName) {
+            kodeFormat = formatName; 
+            targetJepretan = parseInt(formatName.split('-')[1]);
+            
+            // Atur class aktif pada Tab
+            document.querySelectorAll('.format-tab').forEach(t => t.classList.remove('active'));
+            const activeTab = document.getElementById(`tab-format-${formatName}`);
+            if(activeTab) activeTab.classList.add('active');
+            
+            // Render gambar
+            const templateList = document.getElementById('template-list');
+            templateList.innerHTML = '';
+            
+            const daftarTersedia = databaseTemplate[formatName] || [];
+            const visibleTemplates = daftarTersedia.filter(t => t.isHidden !== true);
+            
+            visibleTemplates.forEach(t => {
+                templateList.innerHTML += `<div class="card" onclick="masukKeKamera('${t.id}')"><img src="${t.img}"><h3>${t.nama}</h3></div>`;
+            });
+        }
        function toggleMirror() { 
             isMirror = !isMirror; 
             terapkanVisualKamera();
@@ -575,7 +641,12 @@
          async function kembaliKeTemplate() { 
             document.getElementById('kamera-container').style.display = 'none'; 
             document.getElementById('panel-template').classList.add('active-panel'); 
+            
+            // [BARU] Kembalikan Timer ke Kanan Atas
+            document.getElementById('sessionTimerDisplay').classList.remove('center-mode');
+
             isLiveViewRunning = false;
+            // ...
             await fetch('/toggle-liveview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: false }) }); 
             
             matikanWebcam(); 
@@ -588,6 +659,10 @@
             document.getElementById('panel-template').classList.remove('active-panel'); 
             document.getElementById('kamera-container').style.display = 'flex';
             
+            // [BARU] Pindah Timer ke Tengah Gelap
+            document.getElementById('sessionTimerDisplay').classList.add('center-mode');
+
+            // ... (lanjutan kode asli)
             siapkanMiniGallery(); 
             
             document.getElementById('mode-jepret-manual').style.display = 'flex'; 
@@ -810,8 +885,12 @@
             }, 800);
         }
 
-        async function bukaPanelEfek() {
+       async function bukaPanelEfek() {
+            // [BARU] Kembalikan Timer ke Kanan Atas
+            document.getElementById('sessionTimerDisplay').classList.remove('center-mode');
+
             document.getElementById('kamera-container').style.display = 'none'; document.getElementById('effectOverlay').style.display = 'flex';
+            // ...
             isLiveViewRunning = false; 
             await fetch('/toggle-liveview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: false }) });
             
