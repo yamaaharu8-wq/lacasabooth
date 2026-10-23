@@ -919,13 +919,14 @@
                         <div class="form-group" style="background: rgba(255,255,255,0.5); padding: 15px; border-radius: 10px; border: 2px dashed var(--ink);">
                             <label>Penyedia Layanan:</label>
                             <select id="sys-paymentGateway" style="font-weight: bold; margin-bottom: 15px; font-size: 1rem; width: 100%; padding: 10px; border: 2px solid var(--ink); border-radius: 10px;" onchange="updateLabelGateway(); saveQrisSettings(true);">
-                                <option value="midtrans">Midtrans (Default)</option>
-                                <option value="xendit">Xendit</option>
-                                <option value="tripay">Tripay</option>
-                                <option value="duitku">Duitku</option>
-                                <option value="doku">DOKU</option>
-                                <option value="gobiz">GoBiz</option>
-                            </select>
+    <option value="midtrans">Midtrans (Default)</option>
+    <option value="xendit">Xendit</option>
+    <option value="tripay">Tripay</option>
+    <option value="duitku">Duitku</option>
+    <option value="doku">DOKU</option>
+    <option value="gobiz">GoBiz</option>
+    <option value="neetpay">NeetPay (Non-Custodial)</option> <!-- BARIS BARU -->
+</select>
                             
                             <!-- Kolom Kunci 1 -->
                             <label id="label-key-1" style="font-weight: 600; font-size: 0.9rem; color: var(--ink); margin-top: 15px; display: block;">Server Key:</label>
@@ -2308,6 +2309,9 @@ window.updateLabelGateway = function() {
     } else if (gateway === 'doku') {
         if(label1) label1.innerText = 'Secret Key:';
         if(label2) label2.innerText = 'Client ID:';
+    } else if (gateway === 'neetpay') {
+        if(label1) label1.innerText = 'X-API-KEY NeetPay:';
+        if(label2) label2.innerText = 'Kosongkan kolom ini:'; // NeetPay hanya butuh 1 kunci utama
     }
 };
 

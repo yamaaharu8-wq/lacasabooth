@@ -1138,12 +1138,18 @@
             
             intervalCekPembayaranExtra = setInterval(async () => {
                 try {
-                    const response = await fetch(`/api/payment/check-status/${orderId}`);
+                    // [PERBAIKAN] Menggunakan endpoint Check Status Universal baru dengan Anti-Cache
+                    const response = await fetch(`/api/payment/check-status/${orderId}?t=${Date.now()}`);
                     const data = await response.json();
                     
                     if (data.success && (data.status === 'settlement' || data.status === 'capture')) {
                         clearInterval(intervalCekPembayaranExtra); 
                         simulasikanPaymentSukses(); 
+                    }
+                    else if (data.success && (data.status === 'expire' || data.status === 'cancel')) {
+                        clearInterval(intervalCekPembayaranExtra);
+                        alert("⚠️ Waktu pembayaran QRIS Extra telah habis atau dibatalkan.");
+                        batalkanPaymentExtra(); 
                     }
                 } catch (error) {
                     console.error("Gagal cek status pembayaran extra:", error);

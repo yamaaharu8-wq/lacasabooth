@@ -1199,17 +1199,25 @@
         async function checkExtraPrintStatus() {
             if (!extraPrintOrderId) return;
             try {
-                const res = await fetch(`/api/payment/check-status/${extraPrintOrderId}`); const data = await res.json();
-                if (data.success && data.status === 'settlement') {
+                // [PERBAIKAN] Menggunakan endpoint Universal Check Status dengan Anti-Cache
+                const res = await fetch(`/api/payment/check-status/${extraPrintOrderId}?t=${Date.now()}`); 
+                const data = await res.json();
+                
+                if (data.success && (data.status === 'settlement' || data.status === 'capture')) {
                     clearInterval(extraPrintCheckInterval); 
                     const btnSudahBayar = document.getElementById('payment-buttons').querySelector('button:nth-child(3)');
-                    btnSudahBayar.innerText = "✅ Pembayaran Berhasil!"; btnSudahBayar.style.background = "var(--green)";
+                    btnSudahBayar.innerText = "✅ Pembayaran Berhasil!"; 
+                    btnSudahBayar.style.background = "var(--green)";
                     setTimeout(() => { simulasikanPaymentSukses(); }, 1000);
                 }
                 else if (data.success && (data.status === 'expire' || data.status === 'cancel')) {
-                    clearInterval(extraPrintCheckInterval); alert("⚠️ Waktu pembayaran QRIS telah habis atau dibatalkan."); batalkanPaymentExtra();
+                    clearInterval(extraPrintCheckInterval); 
+                    alert("⚠️ Waktu pembayaran QRIS Extra telah habis atau dibatalkan."); 
+                    batalkanPaymentExtra();
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.error("Gagal cek status pembayaran extra:", e);
+            }
         }
 
         function pilihTunai() {

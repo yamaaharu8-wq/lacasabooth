@@ -261,10 +261,16 @@
 
 // ... (sisa kode di bawahnya biarkan sama) ...
                     const resDynamic = await fetch(`/api/payment/qris-dynamic?t=${Date.now()}`);
-                    if (!resDynamic.ok) throw new Error("API Generate QRIS gagal diakses");
                     
-                    const dataDynamic = await resDynamic.json();
+                    // Baca balasan dari backend terlebih dahulu, apapun statusnya
+                    const dataDynamic = await resDynamic.json().catch(() => ({ success: false, message: "Server tidak merespon" }));
                     
+                    // Jika gagal, lempar pesan error ASLI dari backend/Midtrans ke layar
+                    if (!resDynamic.ok || !dataDynamic.success) {
+                        throw new Error(dataDynamic.message || "API Generate QRIS gagal diakses");
+                    }
+                    
+                    // Jika sukses (QR berhasil dibuat)
                     if (dataDynamic.success) {
                         imgDisplay.src = dataDynamic.qrImage;
                         imgDisplay.style.display = 'block';
@@ -280,7 +286,7 @@
                         document.querySelector('#view-qris .btn-confirm').style.background = "var(--bg-color)";
                         document.querySelector('#view-qris .btn-confirm').style.pointerEvents = "none"; 
                         
-                        autoCheckInterval = setInterval(checkMidtransStatus, 3000);
+                        autoCheckInterval = setInterval(checkUniversalStatus, 3000);
 
                     } else {
                         loadingText.innerText = "❌ Gagal Generate QR";
@@ -291,7 +297,8 @@
                 document.getElementById('qris-loading-text').innerHTML = `<span style='color:red;'>❌ Gagal Koneksi</span><br><br><span style='font-size:0.8rem;'>${err.message}</span>`;
             }
 
-            async function checkMidtransStatus() {
+            // --- PERBAIKAN: GANTI NAMA & LOGIKA MENJADI UNIVERSAL CHECKER ---
+            async function checkUniversalStatus() {
                 if (!currentOrderId) return;
                 try {
                     const res = await fetch(`/api/payment/check-status/${currentOrderId}?t=${Date.now()}`);

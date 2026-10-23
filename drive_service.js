@@ -61,9 +61,20 @@ async function uploadToDrive(filePath, folderName, parentId) {
 
         console.log(`[DRIVE-DEBUG] Mengunggah file ke Google Drive...`);
         const fileName = path.basename(filePath);
+        
+        // --- [PERBAIKAN] Deteksi cerdas ekstensi file agar GIF bisa bergerak ---
+        let fileMimeType = 'image/jpeg'; // Default untuk foto biasa
+        if (fileName.toLowerCase().endsWith('.gif')) {
+            fileMimeType = 'image/gif';
+        } else if (fileName.toLowerCase().endsWith('.mp4')) {
+            fileMimeType = 'video/mp4';
+        } else if (fileName.toLowerCase().endsWith('.png')) {
+            fileMimeType = 'image/png';
+        }
+
         await drive.files.create({
             resource: { name: fileName, parents: [targetFolderId] },
-            media: { mimeType: 'image/jpeg', body: fs.createReadStream(filePath) },
+            media: { mimeType: fileMimeType, body: fs.createReadStream(filePath) },
             fields: 'id'
         });
 

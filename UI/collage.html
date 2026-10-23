@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lacasaphoto - Mode Collage</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/assets/theme.css">
     
@@ -235,6 +236,26 @@
             #inputWA { padding: 8px 12px !important; font-size: 0.9rem !important; flex: 1; border-width: 2px; text-align: left; }
             #btnKirimWA { padding: 8px 15px !important; font-size: 0.9rem !important; margin: 0 !important; border-width: 2px; }
         }
+        /* --- [BARU] ANIMASI & LOADING GIF --- */
+        @keyframes bounceInDoodle {
+            0% { transform: scale(0.1); opacity: 0; }
+            60% { transform: scale(1.05); opacity: 1; }
+            80% { transform: scale(0.95); }
+            100% { transform: scale(1); }
+        }
+        @keyframes pulsePetunjuk {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        .anim-bounce { animation: bounceInDoodle 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        
+        .gif-placeholder {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: var(--paper-white); border: 4px dashed var(--ink); border-radius: 12px;
+            width: 100%; height: 100%; min-width: 150px; min-height: 250px; flex-shrink: 1;
+        }
+        .gif-placeholder span { font-size: 2.5rem; animation: pulsePetunjuk 1.5s infinite; }
     </style>
 </head>
 <body>
@@ -328,7 +349,14 @@
             <!-- Tempat Foto dan GIF (Kiri/Tengah) -->
             <div class="image-showcase">
                 <img id="finalImageResult" src="" alt="Hasil Cetak">
+                <!-- Elemen GIF disembunyikan awalnya -->
                 <img id="img-hasil-gif" src="" style="display: none;" alt="Hasil GIF">
+                
+                <!-- [BARU] Kotak Placeholder yang muncul saat GIF sedang diproses -->
+                <div id="gif-loading-box" class="gif-placeholder" style="display: none;">
+                    <span>🎬</span>
+                    <p style="font-weight: 700; color: var(--ink); margin-top: 10px; font-size: 0.9rem; text-align: center;">Memproses<br>Animasi...</p>
+                </div>
             </div>
 
             <!-- Panel Kontrol (Kanan) -->
@@ -416,6 +444,39 @@
         let activeCameraMode = 'canon'; 
         let webcamStream = null;
         let qrisBase64Tersemat = "";
+        // --- [BARU] PENANGKAP SINYAL GIF DARI BACKGROUND ---
+        const socket = io();
+        socket.on('gif-ready', (data) => {
+            if (data.sessionId === currentSessionId && data.url) {
+                const elemenGif = document.getElementById('img-hasil-gif');
+                const loadingBox = document.getElementById('gif-loading-box');
+                
+                // Hilangkan kotak loading, munculkan GIF dengan animasi memantul
+                loadingBox.style.display = 'none';
+                elemenGif.src = data.url + "?t=" + Date.now();
+                elemenGif.style.display = 'block';
+                elemenGif.classList.add('anim-bounce');
+            }
+        });
+        // --- [BARU] PENANGKAP LINK QR CODE DARI BACKGROUND ---
+        socket.on('qr-ready', (data) => {
+            if (data.sessionId === currentSessionId && data.url) {
+                linkGoogleDriveUnik = data.url;
+                const qrContainer = document.getElementById('qrCodeContainer');
+                if (qrContainer) {
+                    qrContainer.innerHTML = ''; // Hapus jam pasir
+                    new QRCode(qrContainer, { text: data.url, width: 100, height: 100, colorDark : "#1a1b20", colorLight : "#ffffff" });
+                }
+            }
+        });
+        // --- [BARU] PENANGKAP SINYAL JIKA FFMPEG GAGAL / CRASH ---
+        socket.on('gif-failed', (data) => {
+            if (data.sessionId === currentSessionId) {
+                const loadingBox = document.getElementById('gif-loading-box');
+                if(loadingBox) loadingBox.style.display = 'none'; // Sembunyikan kotak agar layar bersih
+                console.log("GIF gagal diproses oleh server.");
+            }
+        });
         
         function formatWaktu(detik) { let m = Math.floor(detik / 60); let s = detik % 60; return (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s); }
         
@@ -974,17 +1035,37 @@ function inisialisasiTabFormat() {
             document.getElementById('finalImageResult').src = urlFotoFinal + "?t=" + Date.now();
             
             const elemenGif = document.getElementById('img-hasil-gif');
-            if (urlGifFinal) {
+            const loadingBox = document.getElementById('gif-loading-box');
+            
+            // Hapus animasi lama jika ada (reset)
+            elemenGif.classList.remove('anim-bounce');
+            
+            if (urlGifFinal === 'processing') {
+                // Tampilkan kotak loading memutar, sembunyikan GIF aslinya
+                elemenGif.style.display = 'none';
+                loadingBox.style.display = 'flex';
+            } else if (urlGifFinal) {
+                // Jika entah kenapa server merakitnya super cepat, langsung tampilkan
+                loadingBox.style.display = 'none';
                 elemenGif.src = urlGifFinal + "?t=" + Date.now();
                 elemenGif.style.display = 'block';
             } else {
+                // Tidak ada permintaan fitur GIF
+                loadingBox.style.display = 'none';
                 elemenGif.style.display = 'none';
                 elemenGif.src = '';
             }
 
             const qrContainer = document.getElementById('qrCodeContainer'); 
             qrContainer.innerHTML = ''; 
-            new QRCode(qrContainer, { text: linkGoogleDriveUnik, width: 100, height: 100, colorDark : "#1a1b20", colorLight : "#ffffff" });
+            
+            if (linkGoogleDriveUnik === "processing") {
+                // Tampilkan Jam Pasir mutar-mutar selagi backend mengambil link G-Drive
+                qrContainer.innerHTML = '<div style="display:flex; justify-content:center; align-items:center; width:100px; height:100px; font-size:2.5rem; animation: pulsePetunjuk 1s infinite;">⏳</div>';
+            } else {
+                new QRCode(qrContainer, { text: linkGoogleDriveUnik, width: 100, height: 100, colorDark : "#1a1b20", colorLight : "#ffffff" });
+            }
+            
             jumlahCetakDipilih = 1; updateUIJumlahCetak();
         }
 
@@ -1047,12 +1128,18 @@ function inisialisasiTabFormat() {
             
             intervalCekPembayaranExtra = setInterval(async () => {
                 try {
-                    const response = await fetch(`/api/payment/check-status/${orderId}`);
+                    // [PERBAIKAN] Menggunakan endpoint Check Status Universal baru dengan Anti-Cache
+                    const response = await fetch(`/api/payment/check-status/${orderId}?t=${Date.now()}`);
                     const data = await response.json();
                     
                     if (data.success && (data.status === 'settlement' || data.status === 'capture')) {
                         clearInterval(intervalCekPembayaranExtra); 
                         simulasikanPaymentSukses(); 
+                    }
+                    else if (data.success && (data.status === 'expire' || data.status === 'cancel')) {
+                        clearInterval(intervalCekPembayaranExtra);
+                        alert("⚠️ Waktu pembayaran QRIS Extra telah habis atau dibatalkan.");
+                        batalkanPaymentExtra(); 
                     }
                 } catch (error) {
                     console.error("Gagal cek status pembayaran extra:", error);

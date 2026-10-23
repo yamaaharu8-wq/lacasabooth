@@ -54,6 +54,7 @@ let isPrinting = false;
 // =======================================================
 let oauth2Client = null;
 
+
 function initGoogleAuth() {
     try {
         if (fs.existsSync(CREDENTIALS_PATH)) {
@@ -260,8 +261,11 @@ const waClient = new Client({
         args: [
             '--no-sandbox', 
             '--disable-setuid-sandbox', 
-            '--disable-gpu', 
-            '--disable-dev-shm-usage',
+            '--disable-dev-shm-usage', // Mencegah crash memori di latar belakang
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--disable-gpu', // Mengurangi beban CPU Mini PC
             '--disable-extensions'
         ]
     },
@@ -288,11 +292,21 @@ waClient.on('authenticated', () => {
     waBotStatus = 'AUTHENTICATED';
 });
 
+// [BARU] Deteksi otomatis jika terputus dari server WhatsApp
 waClient.on('disconnected', (reason) => {
-    console.log('[WA] Terputus:', reason);
+    console.log('⚠️ [BOT WA] Sesi terputus! Alasan:', reason);
     waBotStatus = 'DISCONNECTED';
     waBotQr = '';
-    waClient.initialize(); 
+    
+    // Jika terputus karena aplikasi di HP di-logout atau bentrok sesi
+    if (reason === 'NAVIGATION' || reason === 'CONFLICT' || reason === 'LOGOUT') {
+        console.log('🧹 [BOT WA] Sesi rusak terdeteksi. Menghancurkan memori lama...');
+        waClient.destroy();
+        // User harus klik tombol "Logout / Reset Bot WA" di Dashboard untuk membersihkan foldernya
+    } else {
+        // Jika terputus hanya karena jaringan ngadat sesaat, coba inisialisasi ulang
+        waClient.initialize(); 
+    }
 });
 try {
     const sessionLockPath = path.join(waSessionPath, 'session-lacasabooth-bot', 'SingletonLock');
@@ -1694,9 +1708,11 @@ expressApp.post('/api/generate-ai', async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
-
 expressApp.post('/api/generate-photobox', async (req, res) => {
     try {
+        // 🔥 1. GEMBOK SESI SAAT INI AGAR ANTI-BENTROK DENGAN SESI BERIKUTNYA!
+        const lockedSessionId = activeSessionId;
+
         let db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
         let templateData = null;
         for (let formatKey in db) {
@@ -1705,8 +1721,9 @@ expressApp.post('/api/generate-photobox', async (req, res) => {
         }
         if (!templateData) return res.status(400).json({ success: false, message: "Template tidak ditemukan!" });
         
-        const sessionDir = path.join(uploadDir, activeSessionId);
-        let statusRotasiFoto = []; // Menyimpan status apakah video GIF nanti perlu ikut diputar
+        // GUNAKAN lockedSessionId MULAI DARI SINI SAMPAI BAWAH
+        const sessionDir = path.join(uploadDir, lockedSessionId);
+        let statusRotasiFoto = []; 
         
         const prosesFotoPromises = req.body.selectedPhotos.map(async (fotoName, i) => {
             const coord = templateData.layout.coords[i];
@@ -1721,22 +1738,18 @@ expressApp.post('/api/generate-photobox', async (req, res) => {
             let imgH = meta.height;
             let needsRot = false;
             
-            // 1. LOGIKA ROTASI 
             if (req.body.orientation === 'potret' && imgW > imgH) {
-                imgPipeline = imgPipeline.rotate(90); // <--- UBAH JADI 90
+                imgPipeline = imgPipeline.rotate(90); 
                 needsRot = true;
-                // Balik dimensi untuk perhitungan crop
                 imgW = meta.height;
                 imgH = meta.width; 
             }
             statusRotasiFoto[i] = needsRot;
 
-            // 2. LOGIKA PERGESERAN DRAG & DROP (CUSTOM OFFSETS SHARP)
             const scale = Math.max(w / imgW, h / imgH);
             const scaledW = Math.round(imgW * scale);
             const scaledH = Math.round(imgH * scale);
 
-            // Baca koordinat (Default 50 = Center)
             let offX = 50, offY = 50;
             if (req.body.customOffsets && req.body.customOffsets[i]) {
                 offX = parseFloat(req.body.customOffsets[i].x);
@@ -1745,11 +1758,9 @@ expressApp.post('/api/generate-photobox', async (req, res) => {
                 if (isNaN(offY)) offY = 50;
             }
 
-            // Hitung crop berdasarkan nilai persentase area yang dibuang (scaledW - w)
             let cropX = Math.round((scaledW - w) * (offX / 100));
             let cropY = Math.round((scaledH - h) * (offY / 100));
 
-            // Kunci agar tidak keluar batas error
             cropX = Math.max(0, Math.min(cropX, scaledW - w));
             cropY = Math.max(0, Math.min(cropY, scaledH - h));
 
@@ -1769,197 +1780,182 @@ expressApp.post('/api/generate-photobox', async (req, res) => {
         komposisi.push({ input: path.join(frameDir, `${req.body.templateId}.png`), top: 0, left: 0 });
         
         const frameMeta = await sharp(path.join(frameDir, `${req.body.templateId}.png`)).metadata();
-        const outputName = `foto_${activeSessionId}_hasil.jpg`;
+        const outputName = `foto_${lockedSessionId}_hasil.jpg`;
         const outputPath = path.join(sessionDir, outputName);
 
-        // 🖼️ RENDER GAMBAR FOTO
+        // 🖼️ RENDER GAMBAR FOTO JPG
         await sharp({ create: { width: frameMeta.width || 1200, height: frameMeta.height || 1800, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } } })
         .composite(komposisi)
         .jpeg({ quality: 90, mozjpeg: true })
         .toFile(outputPath);
 
         // ==========================================
-        // 🎬 FFMPEG: GIF LIVE PHOTO MULTI-GRID
+        // 2. PERSIAPAN DATA BACKGROUND (DENGAN LOCK)
         // ==========================================
-        let urlLivePhoto = null;
-        let pathGif = null;
-        
-        let isLivePhotoOn = false;
-        try {
-            const dbSet = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
-            if (dbSet.global && (dbSet.global.livePhotoEnabled === true || dbSet.global.livePhotoEnabled === "true")) {
-    isLivePhotoOn = true;
-}
-        } catch(e) {}
+        const savedLiveFrames = global.liveFramesByPhoto ? Object.assign({}, global.liveFramesByPhoto) : {};
+        global.liveFramesByPhoto = {}; 
 
-        if (isLivePhotoOn && req.body.selectedPhotos && req.body.selectedPhotos.length > 0) {
-            const namaGif = `live_${activeSessionId}.gif`;
-            pathGif = path.join(sessionDir, namaGif);
-            
-            const wAsli = frameMeta.width || 1200;
-            const hAsli = frameMeta.height || 1800;
-            const sf = 600 / wAsli; 
-            const canvasW = 600;
-            const canvasH = Math.round(hAsli * sf);
-
-            let ffmpegInputs = `-i "${path.join(frameDir, `${req.body.templateId}.png`).replace(/\\/g, '/')}" `;
-            let filterComplex = `color=c=white:s=${canvasW}x${canvasH}:d=2.5[bg0];`; 
-            let overlayChain = ``;
-            let foldersToClean = [];
-
-            req.body.selectedPhotos.forEach((fotoName, i) => {
-                const slotDir = path.join(tempDir, `frames_${activeSessionId}_slot_${i}`);
-                if (!fs.existsSync(slotDir)) fs.mkdirSync(slotDir, { recursive: true });
-                foldersToClean.push(slotDir);
-
-                let frameData = global.liveFramesByPhoto ? global.liveFramesByPhoto[fotoName] : null;
-                let framesBuffer = frameData ? frameData.buffer : null;
-                let isMirrored = frameData ? frameData.isMirrored : false;
-                let isFallback = false;
-                
-                if (!framesBuffer || framesBuffer.length === 0) {
-                    const fallbackImg = fs.readFileSync(path.join(sessionDir, fotoName));
-                    framesBuffer = Array(50).fill(fallbackImg);
-                    isFallback = true; 
-                }
-
-                framesBuffer.forEach((buf, idx) => {
-                    fs.writeFileSync(path.join(slotDir, `frame_${String(idx).padStart(3, '0')}.jpg`), buf);
-                });
-
-                // Tambahkan -framerate tepat SEBELUM input frame_%03d.jpg
-ffmpegInputs += `-framerate 20 -i "${path.join(slotDir, 'frame_%03d.jpg').replace(/\\/g, '/')}" `;
-
-                const coord = templateData.layout.coords[i];
-                const sw = Math.round((coord.width || templateData.layout.width) * sf);
-                const sh = Math.round((coord.height || templateData.layout.height) * sf);
-                const sx = Math.round(coord.x * sf);
-                const sy = Math.round(coord.y * sf);
-
-                const mirrorFilter = (isMirrored && !isFallback) ? 'hflip,' : '';
-                
-                // [BARU] Filter putar video jika fotonya tadi diputar di Sharp
-                const rotFilter = statusRotasiFoto[i] ? 'transpose=1,' : '';
-
-                // [BARU] Hitung titik crop FFmpeg dari Drag & Drop berdasarkan 0-100%
-let offX = 50, offY = 50;
-if (req.body.customOffsets && req.body.customOffsets[i]) {
-    offX = parseFloat(req.body.customOffsets[i].x);
-    offY = parseFloat(req.body.customOffsets[i].y);
-    if (isNaN(offX)) offX = 50;
-    if (isNaN(offY)) offY = 50;
-}
-
-// Kunci nilai offX dan offY agar selalu aman di antara 0 sampai 100 menggunakan JavaScript
-offX = Math.max(0, Math.min(100, offX));
-offY = Math.max(0, Math.min(100, offY));
-
-// in_w = lebar asli video; sw = lebar cetak. 
-// in_w - sw adalah sisa area yang bisa digeser
-// HAPUS PENGGUNAAN MAX/MIN DI FFMPEG KARENA TANDA KOMA MERUSAK SYNTAX FILTER
-const cx = `(in_w-${sw})*(${offX}/100)`;
-const cy = `(in_h-${sh})*(${offY}/100)`;
-
-                // Aplikasikan rotasi dan kustom koordinat pada ffmpeg
-                filterComplex += `[${i+1}:v]${mirrorFilter}${rotFilter}scale=${sw}:${sh}:force_original_aspect_ratio=increase,crop=${sw}:${sh}:${cx}:${cy}[v${i+1}];`;
-                overlayChain += `[bg${i}][v${i+1}]overlay=x=${sx}:y=${sy}[bg${i+1}];`;
-            });
-
-            filterComplex += `[0:v]scale=${canvasW}:${canvasH}[frame];`;
-            filterComplex += overlayChain;
-            const jumlahSlot = req.body.selectedPhotos.length;
-            filterComplex += `[bg${jumlahSlot}][frame]overlay=0:0,split[s0][s1];[s0]palettegen=stats_mode=diff[p];[s1][p]paletteuse=dither=bayer:bayer_scale=5`;
-            
-            const outputPattern = pathGif.replace(/\\/g, '/');
-            const ffmpegPath = path.join(__dirname, 'ffmpeg.exe').replace('app.asar', 'app.asar.unpacked');
-            const ffmpegCmd = `"${ffmpegPath}" -y ${ffmpegInputs} -filter_complex "${filterComplex}" -loop 0 "${outputPattern}"`;
-
-            await new Promise((resolve) => {
-                exec(ffmpegCmd, (error, stdout, stderr) => {
-    if (!error) {
-        urlLivePhoto = `/uploads/${activeSessionId}/${namaGif}`;
-        console.log(`✅ Live Photo berhasil dibuat: ${namaGif}`);
-    } else {
-        console.error("❌ [FFMPEG ERROR] Gagal membuat Live Photo:", error.message);
-        console.error("Detail Error:", stderr);
-    }
-    foldersToClean.forEach(folder => {
-        try { fs.rmSync(folder, { recursive: true, force: true }); } catch(e){}
-    });
-    resolve();
-});
-            });
-            
-            global.liveFramesByPhoto = {}; 
-        }
-
-        // ==========================================
-        // SISTEM UPLOAD DRIVE (LOGIKA ASLI DIBIARKAN)
-        // ==========================================
         let isOnlineMode = true; 
+        let parentFolderId = "1scPtcs7JaGmnF4TYfpUL2DIcN_7iU9DB"; 
+        let urlLivePhoto = 'processing';
+        let isLivePhotoOn = false;
+
         try {
             if (fs.existsSync(settingsPath)) {
                 const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
-                if (settings.global && settings.global.cloudStorage !== undefined) {
-                    isOnlineMode = settings.global.cloudStorage;
-                }
+                if (settings.global && settings.global.cloudStorage !== undefined) isOnlineMode = settings.global.cloudStorage;
+                if (settings.global && settings.global.driveParentFolderId) parentFolderId = settings.global.driveParentFolderId;
+                if (settings.global && (settings.global.livePhotoEnabled === true || settings.global.livePhotoEnabled === "true")) isLivePhotoOn = true;
             }
         } catch (e) {}
 
-        let linkShareAkhir = "";
+        if (!isLivePhotoOn) urlLivePhoto = null;
 
-        if (isOnlineMode) {
-            let parentFolderId = "1scPtcs7JaGmnF4TYfpUL2DIcN_7iU9DB"; 
-            try {
-                if (fs.existsSync(settingsPath)) {
-                    const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
-                    if (settings.global && settings.global.driveParentFolderId) {
-                        parentFolderId = settings.global.driveParentFolderId; 
-                    }
-                }
-            } catch(e) {}
-            
-            linkShareAkhir = `https://drive.google.com/drive/folders/${parentFolderId}`; 
-            
-            if (typeof uploadToDrive === 'function') {
-                try {
-                    const datePrefix = new Date().toISOString().replace(/T/, '_').replace(/\..+/, '').replace(/:/g, '-');
-                    const driveFolderName = `${datePrefix}_${activeSessionId}`;
-                    const uploadedUrl = await uploadToDrive(outputPath, driveFolderName, parentFolderId);
-                    
-                    if (uploadedUrl) { linkShareAkhir = uploadedUrl; }
-
-                    (async () => {
-                        if (urlLivePhoto && fs.existsSync(pathGif)) {
-                            try { await uploadToDrive(pathGif, driveFolderName, parentFolderId); } catch(err) {}
-                        }
-                        const allRawFiles = fs.readdirSync(sessionDir).filter(f => f.endsWith('_mentah.jpg'));
-                        for (let fotoName of allRawFiles) {
-                            const rawPath = path.join(sessionDir, fotoName);
-                            if (fs.existsSync(rawPath)) {
-                                try { await uploadToDrive(rawPath, driveFolderName, parentFolderId); } catch(err) {}
-                            }
-                        }
-                    })();
-                } catch (err) {
-                    const ipLokal = getLocalIP();
-                    linkShareAkhir = `http://${ipLokal}:3000/uploads/${activeSessionId}/${outputName}`;
-                }
-            }
-        } else {
-            const ipLokal = getLocalIP();
-            linkShareAkhir = `http://${ipLokal}:3000/uploads/${activeSessionId}/${outputName}`;
-        }
-
-       res.json({ 
+        // 🚀 3. KIRIM BALASAN KE LAYAR KLIEN DETIK INI JUGA!
+        res.json({ 
             success: true, 
-            file: `/uploads/${activeSessionId}/${outputName}`, 
-            driveLink: linkShareAkhir,
+            file: `/uploads/${lockedSessionId}/${outputName}`, 
+            driveLink: "processing", 
             livePhoto: urlLivePhoto 
         });
+
+        // ==========================================
+        // 👻 4. BACKGROUND TASK ANTI-BENTROK SESI
+        // ==========================================
+        (async () => {
+            const datePrefix = new Date().toISOString().replace(/T/, '_').replace(/\..+/, '').replace(/:/g, '-');
+            const driveFolderName = `${datePrefix}_${lockedSessionId}`;
+            let pathGif = null;
+            const namaGif = `live_${lockedSessionId}.gif`;
+
+            // ---> TUGAS A: GOOGLE DRIVE (Mendapatkan Link Folder Spesifik)
+            const driveTask = (async () => {
+                if (isOnlineMode && typeof uploadToDrive === 'function') {
+                    try {
+                        const folderLink = await uploadToDrive(outputPath, driveFolderName, parentFolderId);
+                        const finalLink = folderLink || `https://drive.google.com/drive/folders/${parentFolderId}`;
+                        io.emit('qr-ready', { sessionId: lockedSessionId, url: finalLink });
+                    } catch(err) {
+                        io.emit('qr-ready', { sessionId: lockedSessionId, url: `https://drive.google.com/drive/folders/${parentFolderId}` });
+                    }
+                } else {
+                    const ipLokal = getLocalIP();
+                    io.emit('qr-ready', { sessionId: lockedSessionId, url: `http://${ipLokal}:3000/uploads/${lockedSessionId}/${outputName}` });
+                }
+            })();
+
+            // ---> TUGAS B: FFMPEG (Merakit GIF Tanpa Membekukan CPU & Anti Bentrok)
+            const gifTask = (async () => {
+                if (isLivePhotoOn && req.body.selectedPhotos && req.body.selectedPhotos.length > 0) {
+                    pathGif = path.join(sessionDir, namaGif);
+                    const wAsli = frameMeta.width || 1200;
+                    const hAsli = frameMeta.height || 1800;
+                    const sf = 600 / wAsli; 
+                    const canvasW = 600;
+                    const canvasH = Math.round(hAsli * sf);
+
+                    let ffmpegInputs = `-i "${path.join(frameDir, `${req.body.templateId}.png`).replace(/\\/g, '/')}" `;
+                    let filterComplex = `color=c=white:s=${canvasW}x${canvasH}:d=2.5[bg0];`; 
+                    let overlayChain = ``;
+                    let foldersToClean = [];
+
+                    const fsPromises = require('fs').promises; 
+
+                    for (let i = 0; i < req.body.selectedPhotos.length; i++) {
+                        const fotoName = req.body.selectedPhotos[i];
+                        const slotDir = path.join(tempDir, `frames_${lockedSessionId}_slot_${i}`);
+                        if (!fs.existsSync(slotDir)) fs.mkdirSync(slotDir, { recursive: true });
+                        foldersToClean.push(slotDir);
+
+                        let frameData = savedLiveFrames[fotoName];
+                        let framesBuffer = frameData ? frameData.buffer : null;
+                        let isMirrored = frameData ? frameData.isMirrored : false;
+                        let isFallback = false;
+                        
+                        if (!framesBuffer || framesBuffer.length === 0) {
+                            const fallbackImg = fs.readFileSync(path.join(sessionDir, fotoName));
+                            framesBuffer = Array(50).fill(fallbackImg);
+                            isFallback = true; 
+                        }
+
+                        // Penulisan ratusan file secara Asynchronous (Tidak nge-freeze mesin)
+                        const writePromises = framesBuffer.map((buf, idx) => {
+                            return fsPromises.writeFile(path.join(slotDir, `frame_${String(idx).padStart(3, '0')}.jpg`), buf);
+                        });
+                        await Promise.all(writePromises);
+
+                        ffmpegInputs += `-framerate 20 -i "${path.join(slotDir, 'frame_%03d.jpg').replace(/\\/g, '/')}" `;
+
+                        const coord = templateData.layout.coords[i];
+                        const sw = Math.round((coord.width || templateData.layout.width) * sf);
+                        const sh = Math.round((coord.height || templateData.layout.height) * sf);
+                        const sx = Math.round(coord.x * sf);
+                        const sy = Math.round(coord.y * sf);
+
+                        const mirrorFilter = (isMirrored && !isFallback) ? 'hflip,' : '';
+                        const rotFilter = statusRotasiFoto[i] ? 'transpose=1,' : '';
+
+                        let offX = 50, offY = 50;
+                        if (req.body.customOffsets && req.body.customOffsets[i]) {
+                            offX = parseFloat(req.body.customOffsets[i].x);
+                            offY = parseFloat(req.body.customOffsets[i].y);
+                            if (isNaN(offX)) offX = 50;
+                            if (isNaN(offY)) offY = 50;
+                        }
+
+                        offX = Math.max(0, Math.min(100, offX));
+                        offY = Math.max(0, Math.min(100, offY));
+
+                        const cx = `(in_w-${sw})*(${offX}/100)`;
+                        const cy = `(in_h-${sh})*(${offY}/100)`;
+
+                        filterComplex += `[${i+1}:v]${mirrorFilter}${rotFilter}scale=${sw}:${sh}:force_original_aspect_ratio=increase,crop=${sw}:${sh}:${cx}:${cy}[v${i+1}];`;
+                        overlayChain += `[bg${i}][v${i+1}]overlay=x=${sx}:y=${sy}[bg${i+1}];`;
+                    } 
+
+                    filterComplex += `[0:v]scale=${canvasW}:${canvasH}[frame];`;
+                    filterComplex += overlayChain;
+                    const jumlahSlot = req.body.selectedPhotos.length;
+                    filterComplex += `[bg${jumlahSlot}][frame]overlay=0:0,split[s0][s1];[s0]palettegen=stats_mode=diff[p];[s1][p]paletteuse=dither=bayer:bayer_scale=5`;
+                    
+                    const outputPattern = pathGif.replace(/\\/g, '/');
+                    const ffmpegPath = path.join(__dirname, 'ffmpeg.exe').replace('app.asar', 'app.asar.unpacked');
+                    const ffmpegCmd = `"${ffmpegPath}" -y ${ffmpegInputs} -filter_complex "${filterComplex}" -loop 0 "${outputPattern}"`;
+
+                    await new Promise((resolve) => {
+                        exec(ffmpegCmd, (error, stdout, stderr) => {
+                            if (!error) {
+                                io.emit('gif-ready', { sessionId: lockedSessionId, url: `/uploads/${lockedSessionId}/${namaGif}` });
+                            } else {
+                                io.emit('gif-failed', { sessionId: lockedSessionId });
+                            }
+                            foldersToClean.forEach(folder => {
+                                try { fs.rmSync(folder, { recursive: true, force: true }); } catch(e){}
+                            });
+                            resolve();
+                        });
+                    });
+                }
+            })();
+
+            // ---> TUGAS C: UPLOAD SISA FILE KE DRIVE SETELAH GIF / JPG SELESAI
+            await Promise.all([driveTask, gifTask]);
+            
+            if (isOnlineMode && typeof uploadToDrive === 'function') {
+                if (isLivePhotoOn && fs.existsSync(pathGif)) {
+                    try { await uploadToDrive(pathGif, driveFolderName, parentFolderId); } catch(err) {}
+                }
+                const allRawFiles = fs.readdirSync(sessionDir).filter(f => f.endsWith('_mentah.jpg'));
+                for (let fotoName of allRawFiles) {
+                    const rawPath = path.join(sessionDir, fotoName);
+                    if (fs.existsSync(rawPath)) {
+                        try { await uploadToDrive(rawPath, driveFolderName, parentFolderId); } catch(err) {}
+                    }
+                }
+            }
+        })(); 
         
     } catch (error) { 
-        console.error("Gagal Generate:", error);
         res.status(500).json({ success: false, message: error.message }); 
     }
 });
@@ -2329,12 +2325,15 @@ expressApp.get('/api/settings/qris', (req, res) => {
 });
 
 expressApp.post('/api/settings/qris', express.json(), (req, res) => {
-    // Tangkap format kunci baru
-    const { type, gateway, dynamicPrice, key1, key2, key3, cloudflareToken } = req.body;
+   // 1. [PERBAIKAN] Tambahkan 'dynamicExtraPrice' ke dalam daftar tangkapan data
+    const { type, gateway, dynamicPrice, dynamicExtraPrice, key1, key2, key3, cloudflareToken } = req.body;
     
     if (type) qrisSettings.type = type;
     if (gateway) qrisSettings.gateway = gateway; 
     if (dynamicPrice) qrisSettings.dynamicPrice = dynamicPrice;
+    
+    // 2. [BARU] Simpan Harga Extra Dinamis ke memori server
+    if (dynamicExtraPrice !== undefined) qrisSettings.dynamicExtraPrice = dynamicExtraPrice; 
     
     // Simpan ke variabel global backend
     qrisSettings.key1 = key1 || "";
@@ -2343,7 +2342,6 @@ expressApp.post('/api/settings/qris', express.json(), (req, res) => {
     
     // Tulis pengaturan QRIS ke file permanen qris_data.json
     fs.writeFileSync(qrisDataPath, JSON.stringify(qrisSettings, null, 2));
-
     // ... (sisa kode Cloudflare biarkan seperti semula)
     // Masukkan Cloudflare Token ke settings.json agar dibaca oleh fungsi startCloudflareTunnel
     if (cloudflareToken !== undefined) {
@@ -2392,12 +2390,16 @@ expressApp.all('/api/payment/qris-dynamic', async (req, res) => {
         // 🧠 1. OTAK MIDTRANS & GOBIZ
         if (gateway === 'midtrans' || gateway === 'gobiz') {
             if (!key1) throw new Error("Server Key Midtrans belum diisi!");
-            const coreApi = new midtransClient.CoreApi({ isProduction: true, serverKey: key1, clientKey: key2 });
+            
+            // Deteksi otomatis: Jika ada awalan SB-, berarti mode Sandbox (isProduction = false)
+            const isProd = !key1.includes('SB-'); 
+            
+            const coreApi = new midtransClient.CoreApi({ isProduction: isProd, serverKey: key1, clientKey: key2 });
             const chargeRes = await coreApi.charge({ payment_type: "gopay", transaction_details: { gross_amount: amount, order_id: orderId } });
             if (chargeRes.status_code !== '201') throw new Error(`Midtrans: ${chargeRes.status_message}`);
             const actionData = chargeRes.actions.find(a => a.name === 'generate-qr-code');
             qrString = actionData.url; 
-        } 
+        }
         
         // 🧠 2. OTAK XENDIT
         else if (gateway === 'xendit') {
@@ -2476,11 +2478,33 @@ expressApp.all('/api/payment/qris-dynamic', async (req, res) => {
             if (!dokuRes.ok) throw new Error(`DOKU: ${dokuData.error ? dokuData.error.message : 'Unknown Error'}`);
             qrString = dokuData.generate_qr_code;
         }
+        // 🧠 6. OTAK NEETPAY (Non-Custodial)
+        else if (gateway === 'neetpay') {
+            if (!key1) throw new Error("X-API-KEY NeetPay belum diisi!");
+            const npRes = await fetch('https://api.neetpay.web.id/v1/transactions', {
+                method: 'POST',
+                headers: { 
+                    'X-API-KEY': key1, 
+                    'Content-Type': 'application/json' 
+                },
+                body: JSON.stringify({ 
+                    order_id: orderId, 
+                    amount: amount 
+                })
+            });
+            const npData = await npRes.json();
+            if (!npRes.ok) throw new Error(`NeetPay: ${npData.message || 'Gagal generate QRIS'}`);
+            
+            // Mengambil teks QR (QR String) dari balasan server Neetpay
+            qrString = npData.data ? npData.data.qr_string : npData.qr_string;
+        }
 
-        // --- KONVERSI DATA QR KE GAMBAR GAMBAR BISA DILIHAT KLIEN ---
+        // --- KONVERSI DATA QR KE GAMBAR YANG BISA DILIHAT KLIEN ---
         if (!qrString) throw new Error("Gagal mengekstrak QR String dari penyedia.");
         
-        const qrImageBase64 = await qrcodeImg.toDataURL(qrString, {
+        // Panggil langsung library 'qrcode' bawaan sistem untuk menghindari variabel tidak dikenali
+        const qrcode = require('qrcode');
+        const qrImageBase64 = await qrcode.toDataURL(qrString, {
             errorCorrectionLevel: 'H', type: 'image/png', margin: 2, width: 400
         });
 
@@ -2526,6 +2550,12 @@ expressApp.post('/api/payment/universal-webhook', async (req, res) => {
             invoiceId = notif.order ? notif.order.invoice_number : "";
             nominal = notif.order ? notif.order.amount : 0;
         }
+        // 🚀 TAMBAHKAN LOGIKA NEETPAY DI SINI:
+        else if (gateway === 'neetpay') {
+            isLunas = (notif.status === 'PAID' || notif.status === 'SUCCESS');
+            invoiceId = notif.order_id || notif.reference;
+            nominal = notif.amount;
+        }
 
         // Tembak Sinyal UI Klien agar lanjut foto
         if (isLunas && invoiceId) {
@@ -2551,7 +2581,11 @@ expressApp.get('/api/payment/check-status/:orderId', async (req, res) => {
         // 1. Cek Manual via Midtrans / Gobiz
         if (gateway === 'midtrans' || gateway === 'gobiz') {
             if (!key1) return res.json({ success: false, status: 'not_found' });
-            const coreApi = new midtransClient.CoreApi({ isProduction: true, serverKey: key1, clientKey: key2 });
+            
+            // Deteksi otomatis: Jika ada awalan SB-, berarti mode Sandbox
+            const isProd = !key1.includes('SB-'); 
+            
+            const coreApi = new midtransClient.CoreApi({ isProduction: isProd, serverKey: key1, clientKey: key2 });
             const statusResponse = await coreApi.transaction.status(orderId);
             return res.json({ success: true, status: statusResponse.transaction_status });
         }
@@ -2581,9 +2615,25 @@ expressApp.get('/api/payment/check-status/:orderId', async (req, res) => {
             // 00 adalah kode sukses Duitku
             return res.json({ success: true, status: dkData.statusCode === '00' ? 'settlement' : 'pending' });
         }
+        // 5. Cek Manual via NeetPay
+        else if (gateway === 'neetpay') {
+            if (!key1) return res.json({ success: false, status: 'not_found' });
+            const npRes = await fetch(`https://api.neetpay.web.id/v1/transactions/${orderId}`, {
+                method: 'GET', 
+                headers: { 'X-API-KEY': key1 }
+            });
+            const npData = await npRes.json();
+            if (npRes.ok) {
+                // Terjemahkan status PAID milik Neetpay menjadi bahasa sistem (settlement)
+                const isPaid = (npData.data && (npData.data.status === 'PAID' || npData.data.status === 'SUCCESS'));
+                return res.json({ success: true, status: isPaid ? 'settlement' : 'pending' });
+            }
+        }
 
         // 4. Untuk Xendit & DOKU, kita kembalikan pending (sepenuhnya mengandalkan jalur Webhook yang sudah kita buat sebelumnya karena butuh parameter ID eksternal yang kompleks)
         return res.json({ success: true, status: 'pending' });
+        
+        
         
     } catch (error) {
         console.error("Gagal cek status manual:", error.message);
