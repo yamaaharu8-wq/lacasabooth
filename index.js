@@ -2454,37 +2454,56 @@ expressApp.all('/api/payment/qris-dynamic', async (req, res) => {
             qrString = dkData.qrString; 
         } 
         
-        // 🧠 5. OTAK DOKU
+       // 🧠 5. OTAK DOKU
         else if (gateway === 'doku') {
             if (!key1 || !key2) throw new Error("Secret Key dan Client ID DOKU belum diisi!");
+            
+            const isProd = !key2.startsWith('SB-'); 
+            const cleanClientId = key2.replace('SB-', ''); 
+            const dokuBaseUrl = isProd ? 'https://api.doku.com' : 'https://api-sandbox.doku.com';
+
             const timestamp = new Date().toISOString().slice(0, 19) + 'Z';
             const requestId = crypto.randomUUID ? crypto.randomUUID() : 'req-' + Date.now();
-            const targetPath = '/qris/v2/order';
-            const bodyPayload = { order: { invoice_number: orderId, amount: amount }, payment: { payment_due_date: 60 } };
+            
+            // [PERBAIKAN 1] Path API yang benar untuk DOKU QRIS
+            const targetPath = '/doku-qris/v2/order'; 
+            
+            const bodyPayload = { order: { invoice_number: orderId, amount: amount } };
             
             const digest = crypto.createHash('sha256').update(JSON.stringify(bodyPayload)).digest('base64');
-            const sigComponent = `Client-Id:${key2}\nRequest-Id:${requestId}\nRequest-Timestamp:${timestamp}\nRequest-Target:${targetPath}\nDigest:${digest}`;
+            const sigComponent = `Client-Id:${cleanClientId}\nRequest-Id:${requestId}\nRequest-Timestamp:${timestamp}\nRequest-Target:${targetPath}\nDigest:${digest}`;
             const signatureDoku = 'HMACSHA256=' + crypto.createHmac('sha256', key1).update(sigComponent).digest('base64');
 
-            const dokuRes = await fetch('https://api.doku.com' + targetPath, {
+            const dokuRes = await fetch(dokuBaseUrl + targetPath, {
                 method: 'POST',
                 headers: {
-                    'Client-Id': key2, 'Request-Id': requestId, 'Request-Timestamp': timestamp,
+                    'Client-Id': cleanClientId, 'Request-Id': requestId, 'Request-Timestamp': timestamp,
                     'Signature': signatureDoku, 'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(bodyPayload)
             });
+            
             const dokuData = await dokuRes.json();
-            if (!dokuRes.ok) throw new Error(`DOKU: ${dokuData.error ? dokuData.error.message : 'Unknown Error'}`);
-            qrString = dokuData.generate_qr_code;
+            
+            if (!dokuRes.ok) {
+                // Menangkap pesan error spesifik dari DOKU jika terjadi penolakan
+                const errorMsg = dokuData.error ? dokuData.error.message : 'Pastikan Layanan QRIS sudah Aktif di DOKU Anda.';
+                throw new Error(`DOKU: ${errorMsg}`);
+            }
+            
+            // [PERBAIKAN 2] Ambil Mentahan String QR, bukan URL Gambar!
+            qrString = dokuData.qr_code;
+            
+            if (!qrString) throw new Error("DOKU tidak mengembalikan data String QRIS yang valid.");
         }
         // 🧠 6. OTAK NEETPAY (Non-Custodial)
         else if (gateway === 'neetpay') {
-            if (!key1) throw new Error("X-API-KEY NeetPay belum diisi!");
+            if (!key1) throw new Error("API Key NeetPay belum diisi!");
             const npRes = await fetch('https://api.neetpay.web.id/v1/transactions', {
                 method: 'POST',
                 headers: { 
-                    'X-API-KEY': key1, 
+                    // [PERBAIKAN] Gunakan format Authorization Bearer sesuai permintaan server NeetPay
+                    'Authorization': 'Bearer ' + key1, 
                     'Content-Type': 'application/json' 
                 },
                 body: JSON.stringify({ 
@@ -2620,20 +2639,69 @@ expressApp.get('/api/payment/check-status/:orderId', async (req, res) => {
             if (!key1) return res.json({ success: false, status: 'not_found' });
             const npRes = await fetch(`https://api.neetpay.web.id/v1/transactions/${orderId}`, {
                 method: 'GET', 
-                headers: { 'X-API-KEY': key1 }
+                headers: { 
+                    // [PERBAIKAN CELAH] Samakan format "Bearer" seperti saat membuat QRIS
+                    'Authorization': 'Bearer ' + key1 
+                }
             });
             const npData = await npRes.json();
             if (npRes.ok) {
-                // Terjemahkan status PAID milik Neetpay menjadi bahasa sistem (settlement)
                 const isPaid = (npData.data && (npData.data.status === 'PAID' || npData.data.status === 'SUCCESS'));
                 return res.json({ success: true, status: isPaid ? 'settlement' : 'pending' });
             }
         }
 
-        // 4. Untuk Xendit & DOKU, kita kembalikan pending (sepenuhnya mengandalkan jalur Webhook yang sudah kita buat sebelumnya karena butuh parameter ID eksternal yang kompleks)
+        // 4. Cek Manual via DOKU
+        else if (gateway === 'doku') {
+            if (!key1 || !key2) return res.json({ success: false, status: 'not_found' });
+            
+            const isProd = !key2.startsWith('SB-'); 
+            const cleanClientId = key2.replace('SB-', '');
+            const dokuBaseUrl = isProd ? 'https://api.doku.com' : 'https://api-sandbox.doku.com';
+
+            const timestamp = new Date().toISOString().slice(0, 19) + 'Z';
+            const requestId = 'req-chk-' + Date.now();
+            const targetPath = `/orders/v1/status/${orderId}`;
+
+            // Untuk method GET di DOKU, Digest tidak perlu dimasukkan ke dalam komponen tanda tangan
+            const sigComponent = `Client-Id:${cleanClientId}\nRequest-Id:${requestId}\nRequest-Timestamp:${timestamp}\nRequest-Target:${targetPath}`;
+            const signatureDoku = 'HMACSHA256=' + crypto.createHmac('sha256', key1).update(sigComponent).digest('base64');
+
+            const dokuRes = await fetch(dokuBaseUrl + targetPath, {
+                method: 'GET',
+                headers: {
+                    'Client-Id': cleanClientId, 'Request-Id': requestId, 'Request-Timestamp': timestamp, 'Signature': signatureDoku
+                }
+            });
+            
+            const dokuData = await dokuRes.json();
+            if (dokuRes.ok && dokuData.transaction && dokuData.transaction.status === 'SUCCESS') {
+                return res.json({ success: true, status: 'settlement' });
+            }
+            return res.json({ success: true, status: 'pending' });
+        }
+        
+        
+   // 6. Cek Manual via Xendit (Rencana Cadangan)
+        else if (gateway === 'xendit') {
+            if (!key1) return res.json({ success: false, status: 'not_found' });
+            const authHeader = 'Basic ' + Buffer.from(key1 + ':').toString('base64');
+            // Mencari transaksi berdasarkan ID Eksternal / Order ID
+            const xenRes = await fetch(`https://api.xendit.co/qr_codes?external_id=${orderId}`, {
+                method: 'GET',
+                headers: { 'Authorization': authHeader }
+            });
+            const xenData = await xenRes.json();
+            if (xenRes.ok && xenData.data && xenData.data.length > 0) {
+                // Xendit mengembalikan array, kita cek status elemen pertamanya
+                const isPaid = (xenData.data[0].status === 'COMPLETED' || xenData.data[0].status === 'PAID');
+                return res.json({ success: true, status: isPaid ? 'settlement' : 'pending' });
+            }
+            return res.json({ success: true, status: 'pending' });
+        }
+
+        // Jika Gateway tidak dikenali, kembalikan pending
         return res.json({ success: true, status: 'pending' });
-        
-        
         
     } catch (error) {
         console.error("Gagal cek status manual:", error.message);

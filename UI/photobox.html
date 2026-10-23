@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lacasaphoto - Self Studio</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/assets/theme.css">
     <style>
@@ -97,6 +98,21 @@
         
         .teks-petunjuk-jepret { font-family: 'Caveat', cursive; font-size: 1.8rem; font-weight: 700; color: var(--ink); background: var(--paper-white); padding: 5px 25px; border: 3px solid var(--ink); border-radius: 50px; box-shadow: 4px 4px 0px var(--ink); pointer-events: none; animation: pulsePetunjuk 2s infinite ease-in-out; }
         @keyframes pulsePetunjuk { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        /* --- [BARU] ANIMASI MEMANTUL (BOUNCE) & KOTAK LOADING GIF --- */
+        @keyframes bounceInDoodle {
+            0% { transform: scale(0.1); opacity: 0; }
+            60% { transform: scale(1.05); opacity: 1; }
+            80% { transform: scale(0.95); }
+            100% { transform: scale(1); }
+        }
+        .anim-bounce { animation: bounceInDoodle 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+
+        .gif-placeholder {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: var(--paper-white); border: 4px dashed var(--ink); border-radius: 20px;
+            width: 100%; height: 100%; min-width: 150px; min-height: 250px; flex-shrink: 1;
+        }
+        .gif-placeholder span { font-size: 2.5rem; animation: pulsePetunjuk 1.5s infinite; }
 
         /* --- UI COUNTDOWN & LOADING --- */
         #jepretCountdown { display: none; flex-direction: column; align-items: center; justify-content: center; position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); color: white; font-weight: 700; z-index: 20; text-shadow: 3px 3px 0px var(--ink), -2px -2px 0px var(--ink); }
@@ -380,11 +396,16 @@
         
         <div style="display: flex; gap: 30px; align-items: center; justify-content: center; flex-wrap: wrap; width: 100%; padding: 0 10px; box-sizing: border-box; max-height: 85vh;">
             
-            <div class="image-showcase" style="display: flex; gap: 20px; align-items: center; justify-content: center; min-width: 0; flex-shrink: 1; height: 100%;">
+           <div class="image-showcase" style="display: flex; gap: 20px; align-items: center; justify-content: center; min-width: 0; flex-shrink: 1; height: 100%;">
                 <img id="hasilAkhir" src="" style="max-height: 65vh; max-width: 100%; object-fit: contain; border-radius: 20px; border: 4px solid var(--ink); box-shadow: 10px 10px 0px var(--ink); background: white; flex-shrink: 1; min-width: 0;">
                 <img id="img-hasil-gif" src="" style="display: none; max-height: 65vh; max-width: 100%; object-fit: contain; border-radius: 20px; border: 4px solid var(--ink); box-shadow: 10px 10px 0px var(--ink); background: white; flex-shrink: 1; min-width: 0;">
+                
+                <!-- [BARU] Kotak Placeholder yang muncul saat GIF sedang diproses di background -->
+                <div id="gif-loading-box" class="gif-placeholder" style="display: none;">
+                    <span>🎬</span>
+                    <p style="font-weight: 700; color: var(--ink); margin-top: 10px; font-size: 0.9rem; text-align: center; font-family: 'Fredoka', sans-serif;">Memproses<br>Animasi...</p>
+                </div>
             </div>
-            
             <div class="card-hasil" style="flex-shrink: 0;">
                 <div class="jumlah-kontrol">
                     <button class="btn-jumlah" onclick="ubahJumlahCetak(-1)">-</button>
@@ -489,7 +510,38 @@
         let isAutoRendering = false;
         let databaseTemplate = {};
         let currentCustomOffsets = {}; 
+        // --- [BARU] PENANGKAP SINYAL DARI BACKGROUND NODE.JS ---
+        const socket = io();
+        
+        socket.on('gif-ready', (data) => {
+            if (data.sessionId === currentSessionId && data.url) {
+                const elemenGif = document.getElementById('img-hasil-gif');
+                const loadingBox = document.getElementById('gif-loading-box');
+                
+                loadingBox.style.display = 'none';
+                elemenGif.src = data.url + "?t=" + Date.now();
+                elemenGif.style.display = 'block';
+                elemenGif.classList.add('anim-bounce');
+            }
+        });
+        
+        socket.on('gif-failed', (data) => {
+            if (data.sessionId === currentSessionId) {
+                const loadingBox = document.getElementById('gif-loading-box');
+                if(loadingBox) loadingBox.style.display = 'none';
+            }
+        });
 
+        socket.on('qr-ready', (data) => {
+            if (data.sessionId === currentSessionId && data.url) {
+                linkGoogleDriveUnik = data.url;
+                const qrContainer = document.getElementById('qrCodeContainer');
+                if (qrContainer) {
+                    qrContainer.innerHTML = '';
+                    new QRCode(qrContainer, { text: data.url, width: 130, height: 130, colorDark: "#292524", colorLight: "#ffffff" });
+                }
+            }
+        });
         // FUNGSI CUSTOM WAKTU
         let nilaiCustomWaktu = "";
         function bukaModalCustomWaktu() {
@@ -1093,16 +1145,36 @@
                     namaFileCetak = data.file;
 
                     const elemenGif = document.getElementById('img-hasil-gif');
-                    if (data.livePhoto) {
+                    const loadingBox = document.getElementById('gif-loading-box');
+                    
+                    // Reset animasi sebelumnya (jika ada)
+                    elemenGif.classList.remove('anim-bounce');
+                    
+                    // Logika tampilan GIF vs Kotak Loading
+                    if (data.livePhoto === 'processing') {
+                        elemenGif.style.display = 'none';
+                        loadingBox.style.display = 'flex';
+                    } else if (data.livePhoto) {
+                        loadingBox.style.display = 'none';
                         elemenGif.src = data.livePhoto + "?t=" + Date.now();
                         elemenGif.style.display = 'block';
                     } else {
-                        elemenGif.style.display = 'none'; elemenGif.src = '';
+                        loadingBox.style.display = 'none';
+                        elemenGif.style.display = 'none';
+                        elemenGif.src = '';
                     }
 
                     if (data.driveLink) linkGoogleDriveUnik = data.driveLink;
-                    document.getElementById('qrCodeContainer').innerHTML = ""; 
-                    new QRCode(document.getElementById("qrCodeContainer"), { text: linkGoogleDriveUnik, width: 130, height: 130, colorDark: "#292524", colorLight: "#ffffff" });
+                    
+                    const qrContainer = document.getElementById('qrCodeContainer');
+                    qrContainer.innerHTML = ""; 
+                    
+                    // Logika tampilan QR Code vs Animasi Jam Pasir
+                    if (linkGoogleDriveUnik === "processing") {
+                        qrContainer.innerHTML = '<div style="display:flex; justify-content:center; align-items:center; width:130px; height:130px; font-size:3rem; animation: pulsePetunjuk 1s infinite;">⏳</div>';
+                    } else {
+                        new QRCode(qrContainer, { text: linkGoogleDriveUnik, width: 130, height: 130, colorDark: "#292524", colorLight: "#ffffff" });
+                    }
                     
                     jumlahCetakDipilih = 1; updateUIJumlahCetak(); resetIdleHalamanHasil();
                 } else {
