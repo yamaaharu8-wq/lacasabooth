@@ -7,6 +7,7 @@ const https = require('https');
 const http = require('http');
 const { Server } = require('socket.io');
 const fs = require('fs');
+const crypto = require('crypto');
 const { google } = require('googleapis');
 const { autoUpdater } = require('electron-updater');
 
@@ -518,8 +519,16 @@ autoUpdater.autoInstallOnAppQuit = true;
 
 electronApp.whenReady().then(() => {
     
-    // ✨ [BARU] Trik Anti-Blokir Google: Menyamar sebagai Chrome Asli versi 120
-    electronApp.userAgentFallback = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+    // ✨ [PERBAIKAN] Trik Anti-Blokir Google Dinamis
+    // Ambil User-Agent bawaan asli dari sistem PC Client
+    let originalUserAgent = session.defaultSession.getUserAgent();
+    
+    // Hapus jejak kata "Electron" dan nama aplikasi agar 100% tersamar sebagai Chrome biasa
+    let safeUserAgent = originalUserAgent.replace(/Electron\/[\d.]+\s/g, '').replace(/lacasabooth\/[\d.]+\s/gi, '');
+    
+    // Terapkan ke seluruh aplikasi dan sesi pop-up
+    electronApp.userAgentFallback = safeUserAgent;
+    session.defaultSession.setUserAgent(safeUserAgent);
 
     // --- BYPASS IZIN WEBCAM ELECTRON (TETAP DIPERTAHANKAN) ---
     session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
@@ -545,7 +554,6 @@ electronApp.whenReady().then(() => {
         }, 5000); 
     }
 });
-
 // =======================================================
 // EVENT LISTENER AUTO-UPDATER & SINGLE INSTANCE LOCK
 // =======================================================
@@ -2289,11 +2297,12 @@ const qrisDataPath = path.join(userDataPath, 'qris_data.json'); // Membuat file 
 
 let qrisSettings = {
     type: 'static', 
+    gateway: 'midtrans', // <-- [BARU] Menyimpan nama penyedia payment gateway
     staticImageUrl: '/assets/qris_static.png',
     dynamicPrice: 35000,
     midtransServerKey: '', 
     midtransClientKey: '',
-    cloudflareToken: '' // <-- Menyatukan token ke database terpisah ini
+    cloudflareToken: '' 
 };
 
 // Mencegah data hilang saat restart dengan membaca file permanen
@@ -2320,17 +2329,22 @@ expressApp.get('/api/settings/qris', (req, res) => {
 });
 
 expressApp.post('/api/settings/qris', express.json(), (req, res) => {
-    // Menangkap token cloudflare dari kiriman frontend
-    const { type, dynamicPrice, midtransServerKey, midtransClientKey, cloudflareToken } = req.body;
+    // Tangkap format kunci baru
+    const { type, gateway, dynamicPrice, key1, key2, key3, cloudflareToken } = req.body;
     
     if (type) qrisSettings.type = type;
+    if (gateway) qrisSettings.gateway = gateway; 
     if (dynamicPrice) qrisSettings.dynamicPrice = dynamicPrice;
-    if (midtransServerKey !== undefined) qrisSettings.midtransServerKey = midtransServerKey;
-    if (midtransClientKey !== undefined) qrisSettings.midtransClientKey = midtransClientKey;
     
-    // Tulis pengaturan QRIS ke file permanen
+    // Simpan ke variabel global backend
+    qrisSettings.key1 = key1 || "";
+    qrisSettings.key2 = key2 || "";
+    qrisSettings.key3 = key3 || "";
+    
+    // Tulis pengaturan QRIS ke file permanen qris_data.json
     fs.writeFileSync(qrisDataPath, JSON.stringify(qrisSettings, null, 2));
 
+    // ... (sisa kode Cloudflare biarkan seperti semula)
     // Masukkan Cloudflare Token ke settings.json agar dibaca oleh fungsi startCloudflareTunnel
     if (cloudflareToken !== undefined) {
         try {
@@ -2344,7 +2358,7 @@ expressApp.post('/api/settings/qris', express.json(), (req, res) => {
                 dbSet.global.cloudflareToken = cloudflareToken;
                 fs.writeFileSync(settingsPath, JSON.stringify(dbSet, null, 2));
                 
-                // [TWEAK BARU] Langsung sambungkan ke Cloudflare tanpa perlu restart aplikasi
+                // Langsung sambungkan ke Cloudflare tanpa perlu restart aplikasi
                 if (isTokenChanged && cloudflareToken.trim() !== "") {
                     console.log("🔄 Token baru terdeteksi! Menyambungkan ulang Cloudflare Tunnel...");
                     startCloudflareTunnel();
@@ -2357,107 +2371,222 @@ expressApp.post('/api/settings/qris', express.json(), (req, res) => {
     
     res.json({ success: true, message: 'Pengaturan QRIS disimpan & Tunnel aktif!', data: qrisSettings });
 });
-// --- 3. API Generate QRIS Midtrans (Bisa untuk Sesi Utama & Cetak Extra) ---
-// Menggunakan expressApp.all agar bisa menerima metode GET maupun POST
+// --- 3. API Generate QRIS Multi-Gateway (Mesin Otak Super) ---
 expressApp.all('/api/payment/qris-dynamic', async (req, res) => {
     try {
-        // CEK APAKAH INI BAYAR EXTRA PRINT ATAU SESI UTAMA
-        let reqAmount = null;
+        let reqAmount = (req.method === 'POST' && req.body && req.body.amount) ? parseInt(req.body.amount) :
+                        (req.query && req.query.amount) ? parseInt(req.query.amount) : null;
         
-        // Jika dari Extra Cetak (POST), ambil harga dari body
-        if (req.method === 'POST' && req.body && req.body.amount) {
-            reqAmount = parseInt(req.body.amount);
-        } 
-        // Jika dari parameter URL (GET)
-        else if (req.query && req.query.amount) {
-            reqAmount = parseInt(req.query.amount);
-        }
-        
-        // Jika tidak ada request khusus, gunakan harga default photobooth
-        const amount = reqAmount ? reqAmount : qrisSettings.dynamicPrice; 
-        
-        const serverKey = qrisSettings.midtransServerKey ? qrisSettings.midtransServerKey.trim() : "";
-        const clientKey = qrisSettings.midtransClientKey ? qrisSettings.midtransClientKey.trim() : "";
-        
-        if (!serverKey) throw new Error("Server Key Midtrans belum diisi di Dashboard.");
+        const amount = reqAmount ? reqAmount : qrisSettings.dynamicPrice;
         if (!amount || amount <= 0) throw new Error("Harga belum diatur di Dashboard.");
 
-        const coreApi = new midtransClient.CoreApi({
-            // Otomatis deteksi mode Sandbox/Production dari awalan kunci 'SB-'
-            isProduction: true,
-            serverKey: serverKey,
-            clientKey: clientKey
-        });
+        const gateway = qrisSettings.gateway || 'midtrans';
+        const key1 = qrisSettings.key1 ? qrisSettings.key1.trim() : "";
+        const key2 = qrisSettings.key2 ? qrisSettings.key2.trim() : "";
+        const key3 = qrisSettings.key3 ? qrisSettings.key3.trim() : "";
 
-        // Bedakan ID Order agar rapi di laporan Dashboard Midtrans
         const orderPrefix = reqAmount ? 'EXTRAPRINT-' : 'PHOTOBOOTH-';
         const orderId = orderPrefix + Date.now();
+        let qrString = ""; // Variabel penampung data QR dari semua penyedia
+
+        // 🧠 1. OTAK MIDTRANS & GOBIZ
+        if (gateway === 'midtrans' || gateway === 'gobiz') {
+            if (!key1) throw new Error("Server Key Midtrans belum diisi!");
+            const coreApi = new midtransClient.CoreApi({ isProduction: true, serverKey: key1, clientKey: key2 });
+            const chargeRes = await coreApi.charge({ payment_type: "gopay", transaction_details: { gross_amount: amount, order_id: orderId } });
+            if (chargeRes.status_code !== '201') throw new Error(`Midtrans: ${chargeRes.status_message}`);
+            const actionData = chargeRes.actions.find(a => a.name === 'generate-qr-code');
+            qrString = actionData.url; 
+        } 
         
-        let parameter = {
-            "payment_type": "gopay",
-            "transaction_details": {
-                "gross_amount": amount,
-                "order_id": orderId,
-            }
-        };
+        // 🧠 2. OTAK XENDIT
+        else if (gateway === 'xendit') {
+            if (!key1) throw new Error("Secret API Key Xendit belum diisi!");
+            const authHeader = 'Basic ' + Buffer.from(key1 + ':').toString('base64');
+            const xenRes = await fetch('https://api.xendit.co/qr_codes', {
+                method: 'POST',
+                headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reference_id: orderId, type: 'DYNAMIC', currency: 'IDR', amount: amount })
+            });
+            const xenData = await xenRes.json();
+            if (!xenRes.ok) throw new Error(`Xendit: ${xenData.message}`);
+            qrString = xenData.qr_string;
+        } 
+        
+        // 🧠 3. OTAK TRIPAY
+        else if (gateway === 'tripay') {
+            if (!key1 || !key2 || !key3) throw new Error("API Key, Merchant Code, dan Private Key Tripay wajib diisi lengkap!");
+            const signature = crypto.createHmac('sha256', key3).update(key2 + orderId + amount).digest('hex');
+            const tpRes = await fetch('https://tripay.co.id/api/transaction/create', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + key1, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    method: 'QRIS', merchant_ref: orderId, amount: amount, 
+                    customer_name: 'Guest Photobooth', customer_email: 'guest@lacasabooth.id', customer_phone: '081234567890',
+                    order_items: [{ sku: 'PB', name: 'Photobooth Session', price: amount, quantity: 1 }],
+                    signature: signature
+                })
+            });
+            const tpData = await tpRes.json();
+            if (!tpData.success) throw new Error(`Tripay: ${tpData.message}`);
+            qrString = tpData.data.qr_string;
+        } 
+        
+        // 🧠 4. OTAK DUITKU
+        else if (gateway === 'duitku') {
+            if (!key1 || !key2) throw new Error("API Key dan Merchant Code Duitku belum diisi!");
+            // Rumus MD5 Duitku = merchantCode + orderId + amount + apiKey
+            const signatureDuitku = crypto.createHash('md5').update(key2 + orderId + amount + key1).digest('hex');
+            const dkRes = await fetch('https://api-prod.duitku.com/api/merchant/v2/inquiry', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    merchantCode: key2, paymentAmount: amount, merchantOrderId: orderId,
+                    productDetails: 'Photobooth', email: 'guest@lacasabooth.id',
+                    paymentMethod: 'Q1', // Kode Q1 adalah QRIS di Duitku
+                    signature: signatureDuitku
+                })
+            });
+            const dkData = await dkRes.json();
+            if (dkData.statusCode !== '00') throw new Error(`Duitku: ${dkData.statusMessage}`);
+            qrString = dkData.qrString; 
+        } 
+        
+        // 🧠 5. OTAK DOKU
+        else if (gateway === 'doku') {
+            if (!key1 || !key2) throw new Error("Secret Key dan Client ID DOKU belum diisi!");
+            const timestamp = new Date().toISOString().slice(0, 19) + 'Z';
+            const requestId = crypto.randomUUID ? crypto.randomUUID() : 'req-' + Date.now();
+            const targetPath = '/qris/v2/order';
+            const bodyPayload = { order: { invoice_number: orderId, amount: amount }, payment: { payment_due_date: 60 } };
+            
+            const digest = crypto.createHash('sha256').update(JSON.stringify(bodyPayload)).digest('base64');
+            const sigComponent = `Client-Id:${key2}\nRequest-Id:${requestId}\nRequest-Timestamp:${timestamp}\nRequest-Target:${targetPath}\nDigest:${digest}`;
+            const signatureDoku = 'HMACSHA256=' + crypto.createHmac('sha256', key1).update(sigComponent).digest('base64');
 
-        const chargeResponse = await coreApi.charge(parameter);
-        if (chargeResponse.status_code !== '201') throw new Error(`Ditolak Midtrans: ${chargeResponse.status_message}`);
+            const dokuRes = await fetch('https://api.doku.com' + targetPath, {
+                method: 'POST',
+                headers: {
+                    'Client-Id': key2, 'Request-Id': requestId, 'Request-Timestamp': timestamp,
+                    'Signature': signatureDoku, 'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(bodyPayload)
+            });
+            const dokuData = await dokuRes.json();
+            if (!dokuRes.ok) throw new Error(`DOKU: ${dokuData.error ? dokuData.error.message : 'Unknown Error'}`);
+            qrString = dokuData.generate_qr_code;
+        }
 
-        const actionString = chargeResponse.actions && chargeResponse.actions.find(a => a.name === 'generate-qr-code');
-        if (!actionString) throw new Error("Midtrans tidak mengembalikan QR Code");
-
-        const qrImageBase64 = await qrcodeImg.toDataURL(actionString.url, {
+        // --- KONVERSI DATA QR KE GAMBAR GAMBAR BISA DILIHAT KLIEN ---
+        if (!qrString) throw new Error("Gagal mengekstrak QR String dari penyedia.");
+        
+        const qrImageBase64 = await qrcodeImg.toDataURL(qrString, {
             errorCorrectionLevel: 'H', type: 'image/png', margin: 2, width: 400
         });
 
         res.json({ success: true, qrImage: qrImageBase64, amount: amount, orderId: orderId });
     } catch (error) {
-        console.error('Midtrans Error:', error.message);
+        console.error('Payment Gateway Error:', error.message);
         res.status(500).json({ success: false, message: error.message });
     }
 });
 
-// --- [BARU] API WEBHOOK MIDTRANS ---
-expressApp.post('/api/payment/midtrans-webhook', async (req, res) => {
+// --- 4. UNIVERSAL WEBHOOK (Menerima sinyal bayar lunas dari semua Gateway) ---
+expressApp.post('/api/payment/universal-webhook', async (req, res) => {
     try {
         const notif = req.body;
-        console.log(`[MIDTRANS] Menerima webhook untuk Order ID: ${notif.order_id} | Status: ${notif.transaction_status}`);
-        
-        // --- TAMBAHAN LOGIKA REAL-TIME ---
-        // Jika pelanggan berhasil membayar (settlement) atau ter-capture
-        if (notif.transaction_status === 'capture' || notif.transaction_status === 'settlement') {
-            console.log(`[MIDTRANS] ✅ Uang Rp${notif.gross_amount} masuk! Order ID: ${notif.order_id}`);
-            
-            // Tembakkan sinyal ke UI Klien (Layar depan) agar langsung lanjut foto
-            io.emit('payment-success', { 
-                orderId: notif.order_id, 
-                amount: notif.gross_amount 
-            });
-        }
-        // ----------------------------------
+        const gateway = qrisSettings.gateway || 'midtrans';
+        let isLunas = false;
+        let invoiceId = "";
+        let nominal = 0;
 
-        res.status(200).send('OK'); 
+        // Mesin Pendeteksi Webhook
+        if (gateway === 'midtrans' || gateway === 'gobiz') {
+            isLunas = (notif.transaction_status === 'capture' || notif.transaction_status === 'settlement');
+            invoiceId = notif.order_id;
+            nominal = notif.gross_amount;
+        } 
+        else if (gateway === 'xendit') {
+            isLunas = (notif.status === 'COMPLETED' || notif.status === 'PAID');
+            invoiceId = notif.external_id || notif.reference_id;
+            nominal = notif.amount;
+        } 
+        else if (gateway === 'tripay') {
+            isLunas = (notif.status === 'PAID');
+            invoiceId = notif.merchant_ref;
+            nominal = notif.total_amount;
+        }
+        else if (gateway === 'duitku') {
+            isLunas = (notif.resultCode === '00');
+            invoiceId = notif.merchantOrderId;
+            nominal = notif.amount;
+        }
+        else if (gateway === 'doku') {
+            isLunas = (notif.transaction && notif.transaction.status === 'SUCCESS');
+            invoiceId = notif.order ? notif.order.invoice_number : "";
+            nominal = notif.order ? notif.order.amount : 0;
+        }
+
+        // Tembak Sinyal UI Klien agar lanjut foto
+        if (isLunas && invoiceId) {
+            console.log(`[WEBHOOK] ✅ Uang Rp${nominal} masuk dari ${gateway.toUpperCase()}! Order ID: ${invoiceId}`);
+            io.emit('payment-success', { orderId: invoiceId, amount: nominal });
+        }
+
+        // Balas 200 OK agar server gateway berhenti mengirim spam ping
+        res.status(200).send({ success: true, message: 'Webhook Received' }); 
     } catch (error) {
         console.error("Error webhook:", error);
         res.status(500).send('Internal Server Error');
     }
 });
-// --- 4. API Cek Status Pembayaran (Dinamis per Klien) ---
+// --- 4. API Cek Status Pembayaran Universal (Dinamis per Klien) ---
 expressApp.get('/api/payment/check-status/:orderId', async (req, res) => {
     try {
-        const serverKey = qrisSettings.midtransServerKey;
-        if (!serverKey) return res.json({ success: false, status: 'not_found' });
+        const gateway = qrisSettings.gateway || 'midtrans';
+        const orderId = req.params.orderId;
+        const key1 = qrisSettings.key1 ? qrisSettings.key1.trim() : "";
+        const key2 = qrisSettings.key2 ? qrisSettings.key2.trim() : "";
 
-        const coreApi = new midtransClient.CoreApi({
-            isProduction: true,
-            serverKey: serverKey,
-            clientKey: qrisSettings.midtransClientKey
-        });
+        // 1. Cek Manual via Midtrans / Gobiz
+        if (gateway === 'midtrans' || gateway === 'gobiz') {
+            if (!key1) return res.json({ success: false, status: 'not_found' });
+            const coreApi = new midtransClient.CoreApi({ isProduction: true, serverKey: key1, clientKey: key2 });
+            const statusResponse = await coreApi.transaction.status(orderId);
+            return res.json({ success: true, status: statusResponse.transaction_status });
+        }
+        
+        // 2. Cek Manual via Tripay
+        else if (gateway === 'tripay') {
+            if (!key1) return res.json({ success: false, status: 'not_found' });
+            const tpRes = await fetch(`https://tripay.co.id/api/transaction/detail?reference=${orderId}`, {
+                method: 'GET', headers: { 'Authorization': 'Bearer ' + key1 }
+            });
+            const tpData = await tpRes.json();
+            if (tpData.success) {
+                // Konversi status Tripay (PAID) menjadi bahasa yang dipahami sistem depan (settlement)
+                return res.json({ success: true, status: tpData.data.status === 'PAID' ? 'settlement' : 'pending' });
+            }
+        }
+        
+        // 3. Cek Manual via Duitku
+        else if (gateway === 'duitku') {
+            if (!key1 || !key2) return res.json({ success: false, status: 'not_found' });
+            const signature = crypto.createHash('md5').update(key2 + orderId + key1).digest('hex');
+            const dkRes = await fetch('https://api-prod.duitku.com/api/merchant/v2/transactionStatus', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ merchantCode: key2, merchantOrderId: orderId, signature: signature })
+            });
+            const dkData = await dkRes.json();
+            // 00 adalah kode sukses Duitku
+            return res.json({ success: true, status: dkData.statusCode === '00' ? 'settlement' : 'pending' });
+        }
 
-        const statusResponse = await coreApi.transaction.status(req.params.orderId);
-        res.json({ success: true, status: statusResponse.transaction_status });
+        // 4. Untuk Xendit & DOKU, kita kembalikan pending (sepenuhnya mengandalkan jalur Webhook yang sudah kita buat sebelumnya karena butuh parameter ID eksternal yang kompleks)
+        return res.json({ success: true, status: 'pending' });
+        
     } catch (error) {
+        console.error("Gagal cek status manual:", error.message);
         res.json({ success: false, status: 'not_found' });
     }
 });

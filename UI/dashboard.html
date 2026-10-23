@@ -894,86 +894,116 @@
                 </div>
             </div>
         </div>
-
-        <!-- TAB QRIS BARU -->
+<!-- TAB QRIS BARU (DESAIN DIPERBAIKI) -->
         <div id="tab-qris" class="tab-panel">
             <div class="top-bar">
                 <h2>QRIS & Pembayaran 💳</h2>
-                <p class="tab-desc">Atur metode pembayaran QRIS (Statis/Dinamis) dan harga cetak tambahan untuk photobooth berbayar.</p>
+                <p class="tab-desc">Atur metode pembayaran QRIS dan konfigurasi Payment Gateway toko Anda.</p>
             </div>
-            <div class="grid-2">
-                <!-- KARTU 1: PENGATURAN QRIS DINAMIS -->
-                <div class="card" style="background: var(--blue);">
-                    <div class="card-header" style="border-bottom-color: var(--ink);">💳 Pengaturan QRIS</div>
-                    
-                    <div class="form-group" style="background: rgba(255,255,255,0.5); padding: 15px; border-radius: 10px; border: 2px dashed var(--ink);">
-                        <label>Tipe Pembayaran QRIS:</label>
-                        <!-- TAMBAHKAN ONCHANGE DI SINI -->
-                        <!-- Tambahkan saveQrisSettings(true) pada onchange agar otomatis tersimpan saat diklik -->
-<select id="qrisType" style="font-weight: bold;" onchange="toggleDynamicFields(this.value); saveQrisSettings(true);">
-                            <option value="static">QRIS Statis (Gambar Manual)</option>
-                            <option value="dynamic">QRIS Dinamis (Generate per Transaksi)</option>
-                        </select>
-                    </div>
+            
+            <!-- MASTER SELECTOR -->
+            <div class="card" style="margin-bottom: 25px; border: 3px solid var(--ink); background: var(--paper-white); padding: 15px 25px;">
+                <label style="font-size: 1.1rem; color: var(--ink); font-weight: bold; margin-bottom: 10px; display: block;">💳 Pilih Tipe Pembayaran QRIS Utama:</label>
+                <select id="qrisType" style="font-weight: bold; font-size: 1.1rem; padding: 12px; border: 2px solid var(--ink); border-radius: 10px; background: var(--bg-color); width: 100%; cursor: pointer;" onchange="toggleDynamicFields(this.value); saveQrisSettings(true);">
+                    <option value="static">QRIS Statis (Scan Gambar Tetap)</option>
+                    <option value="dynamic">QRIS Dinamis (Generate Otomatis via Payment Gateway)</option>
+                </select>
+            </div>
 
-                    <div id="dynamicSettings" class="form-group" style="display: none; background: rgba(255,255,255,0.5); padding: 15px; border-radius: 10px; border: 2px dashed var(--ink);">
-                        <label>Harga Sesi Photobooth (Rp):</label>
-                        <input type="number" id="qrisPrice" placeholder="Contoh: 35000" style="font-weight: bold; font-size: 1.1rem; margin-bottom: 15px;">
-                        
-                        <label>Harga Cetak Extra Dinamis (Rp):</label>
-                        <input type="number" id="sys-extraPrintPriceDynamic" placeholder="Misal: 15000" style="font-weight: bold; font-size: 1.1rem; margin-bottom: 15px;">
-                        
-                        <label>Midtrans Server Key:</label>
-                        <input type="text" id="midtransServerKey" placeholder="Mulai dengan SB-Mid-server-..." style="font-weight: bold; font-size: 0.9rem; margin-bottom: 10px;">
-                        
-                        <label style="font-weight: 600; font-size: 0.9rem; color: var(--ink); margin-top: 15px; display: block;">Midtrans Client Key:</label>
-                        <input type="text" id="midtransClientKey" placeholder="Contoh: Mid-client-XXXXX..." style="width: 100%; padding: 12px; border: 2px solid var(--ink); border-radius: 10px; font-weight: bold;">
-                        
-                        <!-- KODE BARU CLOUDFLARE -->
-                        <hr style="border: 1px dashed var(--ink); margin: 20px 0;">
-                        <label style="color: #3b82f6; display: flex; align-items: center; gap: 5px;">🌐 Token Cloudflare Tunnel:</label>
-                        <input type="text" id="input-cf-token" placeholder="eyJh... (Paste token panjang di sini)" style="font-weight: bold; font-size: 0.9rem; font-family: monospace; border: 2px solid #3b82f6;">
-                        <p style="font-size: 0.8rem; color: #444; margin-top: 8px;">*Wajib diisi agar Midtrans bisa berkomunikasi dengan Mini PC Photobooth ini secara online.</p>
-                        <!-- AKHIR KODE BARU CLOUDFLARE -->
-                    </div>
-                    
-                    <button type="button" class="btn-primary" style="background: var(--ink); color: white; width: 100%;" onclick="saveQrisSettings()">💾 Simpan Setelan Tipe & QRIS</button>
-                </div>
+            <!-- SETTINGS DINAMIS -->
+            <div id="dynamicSettings" style="display: none;">
+                <div class="grid-2">
+                    <!-- Kolom Kiri Dinamis -->
+                    <div class="card" style="background: var(--blue);">
+                        <div class="card-header" style="border-bottom-color: var(--ink);">🌐 Payment Gateway</div>
+                        <div class="form-group" style="background: rgba(255,255,255,0.5); padding: 15px; border-radius: 10px; border: 2px dashed var(--ink);">
+                            <label>Penyedia Layanan:</label>
+                            <select id="sys-paymentGateway" style="font-weight: bold; margin-bottom: 15px; font-size: 1rem; width: 100%; padding: 10px; border: 2px solid var(--ink); border-radius: 10px;" onchange="updateLabelGateway(); saveQrisSettings(true);">
+                                <option value="midtrans">Midtrans (Default)</option>
+                                <option value="xendit">Xendit</option>
+                                <option value="tripay">Tripay</option>
+                                <option value="duitku">Duitku</option>
+                                <option value="doku">DOKU</option>
+                                <option value="gobiz">GoBiz</option>
+                            </select>
+                            
+                            <!-- Kolom Kunci 1 -->
+                            <label id="label-key-1" style="font-weight: 600; font-size: 0.9rem; color: var(--ink); margin-top: 15px; display: block;">Server Key:</label>
+                            <input type="text" id="gatewayKey1" placeholder="Masukkan kunci utama" style="font-weight: bold; font-size: 0.95rem; border-radius: 10px; padding: 10px; border: 2px solid var(--ink); width: 100%;">
+                            
+                            <!-- Kolom Kunci 2 -->
+                            <label id="label-key-2" style="font-weight: 600; font-size: 0.9rem; color: var(--ink); margin-top: 15px; display: block;">Client Key:</label>
+                            <input type="text" id="gatewayKey2" placeholder="Masukkan kunci kedua (opsional)" style="font-weight: bold; font-size: 0.95rem; border-radius: 10px; padding: 10px; border: 2px solid var(--ink); width: 100%;">
 
-                <!-- KARTU 2: UPLOAD QRIS STATIS & HARGA EXTRA STATIS -->
-                <div class="card">
-                    <div class="card-header">📲 Setup QRIS (Statis)</div>
-                    <p style="font-size: 0.85rem; color: #666; margin-bottom: 15px;">(Hanya digunakan jika Anda memilih Tipe QRIS Statis di samping kiri).</p>
-                    
-                    <div class="form-group" style="background: rgba(255,255,255,0.5); padding: 15px; border-radius: 10px; border: 2px dashed var(--ink); margin-bottom: 15px;">
-                        <label>Harga Sesi Utama Statis (Rp):</label>
-                        <input type="number" id="sys-qrisPriceStatic" placeholder="Misal: 35000" style="font-weight: bold; font-size: 1.1rem; width: 100%; padding: 10px; margin-bottom: 15px; border: 2px solid var(--ink); border-radius: 10px;">
-                        
-                        <label>Harga Cetak Extra Statis (Rp):</label>
-                        <input type="number" id="sys-extraPrintPriceStatic" placeholder="Misal: 15000" style="font-weight: bold; font-size: 1.1rem; width: 100%; padding: 10px; margin-bottom: 10px; border: 2px solid var(--ink); border-radius: 10px;">
-                        
-                        <button type="button" class="btn-primary" style="background:var(--pink); color:var(--ink); width: 100%;" onclick="simpanPengaturan()">💾 Simpan Harga Statis</button>
-                    </div>
-                    <!-- KOTAK PREVIEW QRIS STATIS (BARU) -->
-<div style="margin-bottom: 15px; text-align: center;">
-    <p style="font-size: 0.85rem; font-weight: 600; color: var(--ink); margin-bottom: 8px;">QRIS Statis Saat Ini:</p>
-    <div style="background: #fff; padding: 10px; border-radius: 10px; border: 2px dashed #cbd5e1; display: inline-block;">
-        <img id="qris-preview-img" src="/assets/qris_static.png" alt="Belum ada QRIS" style="max-width: 150px; max-height: 150px; border-radius: 8px; object-fit: contain;">
-    </div>
-</div>
-
-                    <form id="formQrisUpload">
-                        <div class="form-group">
-                            <label>Gambar QRIS (PNG/JPG)</label>
-                            <input type="file" id="fileQris" accept="image/png, image/jpeg, image/jpg" required>
+                            <!-- Kolom Kunci 3 (Disembunyikan secara default, hanya muncul untuk Tripay) -->
+                            <div id="wrapper-key-3" style="display: none;">
+                                <label id="label-key-3" style="font-weight: 600; font-size: 0.9rem; color: var(--ink); margin-top: 15px; display: block;">Private Key:</label>
+                                <input type="text" id="gatewayKey3" placeholder="Masukkan Private Key" style="font-weight: bold; font-size: 0.95rem; border-radius: 10px; padding: 10px; border: 2px solid var(--ink); width: 100%;">
+                            </div>
                         </div>
-                        <button type="submit" class="btn-primary" style="background:var(--yellow); color:var(--ink);">📤 Simpan Gambar QRIS</button>
-                    </form>
+                    </div>
+
+                    <!-- Kolom Kanan Dinamis -->
+                    <div class="card" style="background: var(--paper-white);">
+                        <div class="card-header" style="border-bottom-color: var(--ink);">💰 Pengaturan Harga Dinamis</div>
+                        <div class="form-group" style="background: rgba(255,255,255,0.5); padding: 15px; border-radius: 10px; border: 2px dashed var(--ink);">
+                            <label>Harga Sesi Photobooth (Rp):</label>
+                            <input type="number" id="qrisPrice" placeholder="Contoh: 35000" style="font-weight: bold; font-size: 1.1rem; margin-bottom: 15px;">
+                            
+                            <label>Harga Cetak Extra (Rp):</label>
+                            <input type="number" id="sys-extraPrintPriceDynamic" placeholder="Misal: 15000" style="font-weight: bold; font-size: 1.1rem; margin-bottom: 10px;">
+                        </div>
+                        
+                        <div class="form-group" style="background: rgba(59, 130, 246, 0.1); padding: 15px; border-radius: 10px; border: 2px dashed #3b82f6;">
+                            <label style="color: #3b82f6; display: flex; align-items: center; gap: 5px;">🌐 Token Cloudflare Tunnel:</label>
+                            <input type="text" id="input-cf-token" placeholder="eyJh..." style="font-weight: bold; font-size: 0.85rem; font-family: monospace; border: 2px solid #3b82f6;">
+                            <p style="font-size: 0.8rem; color: #444; margin-top: 8px; line-height: 1.3;">*Wajib diisi agar Payment Gateway bisa berkomunikasi dengan PC ini.</p>
+                        </div>
+                        <button type="button" class="btn-primary" style="background: var(--ink); color: white; width: 100%;" onclick="saveQrisSettings()">💾 Simpan Setelan Dinamis</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SETTINGS STATIS -->
+            <div id="staticSettings" style="display: block;">
+                <div class="grid-2">
+                    <!-- Kolom Kiri Statis -->
+                    <div class="card">
+                        <div class="card-header">📲 Gambar QRIS Statis</div>
+                        <div style="margin-bottom: 15px; text-align: center;">
+                            <div style="background: var(--bg-color); padding: 10px; border-radius: 10px; border: 2px dashed var(--ink); display: inline-block;">
+                                <img id="qris-preview-img" src="/assets/qris_static.png" alt="Belum ada QRIS" style="max-width: 150px; max-height: 150px; border-radius: 8px; object-fit: contain;">
+                            </div>
+                        </div>
+                        <form id="formQrisUpload">
+                            <div class="form-group">
+                                <label>Upload/Ganti Gambar QRIS (PNG/JPG)</label>
+                                <input type="file" id="fileQris" accept="image/png, image/jpeg, image/jpg" required>
+                            </div>
+                            <button type="submit" class="btn-primary" style="background:var(--yellow); color:var(--ink);">📤 Simpan Gambar QRIS</button>
+                        </form>
+                    </div>
+
+                    <!-- Kolom Kanan Statis -->
+                    <div class="card">
+                        <div class="card-header">💰 Harga (Hanya Tampilan)</div>
+                        <p style="font-size: 0.85rem; color: #666; margin-bottom: 15px; line-height: 1.4;">Harga ini tidak memengaruhi pembayaran karena tamu akan melakukan scan manual, hanya digunakan untuk keperluan Laporan Analitik.</p>
+                        <div class="form-group" style="background: rgba(255,255,255,0.5); padding: 15px; border-radius: 10px; border: 2px dashed var(--ink); margin-bottom: 15px;">
+                            <label>Harga Sesi Utama Statis (Rp):</label>
+                            <input type="number" id="sys-qrisPriceStatic" placeholder="Misal: 35000" style="font-weight: bold; font-size: 1.1rem; width: 100%; margin-bottom: 15px;">
+                            
+                            <label>Harga Cetak Extra Statis (Rp):</label>
+                            <input type="number" id="sys-extraPrintPriceStatic" placeholder="Misal: 15000" style="font-weight: bold; font-size: 1.1rem; width: 100%; margin-bottom: 15px;">
+                            
+                            <button type="button" class="btn-primary" style="background:var(--pink); color:var(--ink); width: 100%;" onclick="simpanPengaturan()">💾 Simpan Harga Statis</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
         <!-- END TAB QRIS BARU -->
 
+        <!-- TAB ANALITIK -->
         <div id="tab-analytic" class="tab-panel">
             <div class="top-bar">
                 <h2>Laporan Analitik 📊</h2>
@@ -987,6 +1017,8 @@
                 </table>
             </div>
         </div>
+        
+        <!-- TAB CREDIT -->
         <div id="tab-credit" class="tab-panel">
             <div class="top-bar">
                 <h2>Developer & Bantuan 📞</h2>
@@ -1009,113 +1041,63 @@
                     <a href="https://wa.me/628131080710" target="_blank" class="btn-primary" style="width: auto; background: #25d366; border-color: #128c7e; color: white;">💬 WA: 0813-1080-710</a>
                 </div>
             </div>
-<div class="card" style="background: var(--pink);">
+            
+            <div class="card" style="background: var(--pink); margin-bottom: 25px;">
                 <div class="card-header" style="border-bottom-color: var(--ink);">🐞 Laporkan Masalah (Bug Report)</div>
                 <p style="font-size: 0.9rem; margin-bottom: 15px;">Menemukan error pada sistem? Sertakan foto/screenshot layar kendala dan kirim ke WhatsApp kami.</p>
                 <a href="https://wa.me/628131080710?text=Halo%20Lacasaphoto,%20saya%20ingin%20melaporkan%20kendala%20pada%20sistem%20Lacasabooth..." target="_blank" class="btn-primary" style="background: var(--ink); color: white;">Laporkan via WhatsApp</a>
             </div>
             
-            <!-- MULAI: KOTAK CEK PEMBARUAN SISTEM -->
-            <div class="card" style="background: var(--yellow); margin-top: 25px;">
+            <div class="card" style="background: var(--yellow);">
                 <div class="card-header" style="border-bottom-color: var(--ink);">🔄 Pembaruan Sistem (OTA Update)</div>
                 <p style="font-size: 0.9rem; margin-bottom: 15px;">Cek apakah ada sinkronisasi template terbaru atau perbaikan sistem dari server cloud.</p>
-                
                 <button id="btn-cek-update" onclick="cekPembaruanSistem()" class="btn-primary" style="background: var(--ink); color: white;">
                     🔄 Cek Pembaruan Software
-                    <!-- Badge di dalam tombol -->
                     <span class="badge-notif" id="badge-btn-update">1</span>
                 </button>
             </div>
-            <!-- AKHIR: KOTAK CEK PEMBARUAN SISTEM -->
-
-        </div> <!-- Penutup tab-credit -->
-
+        </div>
     </main>
-
-    <div class="modal-overlay" id="editTemplateModal">
-        <div class="modal-content" style="max-width: 900px; width: 95%;"> <!-- Diperlebar agar muat 2 kolom -->
-            <button class="btn-close-modal" onclick="tutupEditModal()">✕</button>
-            <h2 style="font-family: 'Caveat', cursive; font-size: 2.5rem; font-weight: 700; margin: 0 0 15px 0; text-align: center;">Edit Template ✏️</h2>
-            
-            <input type="hidden" id="edit-format"><input type="hidden" id="edit-id">
-            <div class="form-group"><label>Nama Tema</label><input type="text" id="edit-nama" required></div>
-            
-            <div class="editor-row">
-                <div style="background: #f8fafc; padding: 15px; border-radius: 15px; border: 2px dashed #cbd5e1;">
-                    <div id="ve-container-edit" class="ve-container-wrapper" style="display:block; margin: 0; max-width: 100%;">
-                        <img id="ve-image-edit" class="ve-image-target" src="" alt="Template">
-                        <div id="ve-slots-edit"></div>
-                    </div>
-                </div>
-
-                <div class="layout-box" style="margin-bottom: 0; height: 100%;">
-                    <label style="color:var(--ink); font-weight:700; display:block; margin-bottom:15px;">📐 Koordinat Posisi Foto</label>
-                    <div id="coordContainer-edit"></div>
-                </div>
-            </div>
-            
-            <button class="btn-primary" style="background:var(--yellow); color:var(--ink);" onclick="simpanEditTemplate()">💾 Simpan Perubahan</button>
-        </div>
-    </div>
-  <div class="modal-overlay" id="paymentModal">
-    <div class="modal-content" style="max-width: 450px; text-align: center;">
-        <button class="btn-close-modal" onclick="document.getElementById('paymentModal').style.display='none'">✕</button>
-        <h2 style="font-family: 'Caveat', cursive; font-size: 2.5rem; margin-bottom: 5px;">Selesaikan Pembayaran 💳</h2>
-        <p id="payment-desc" style="margin-bottom: 15px; font-weight: 600; color: #444; font-size: 1.1rem;"></p>
-        
-        <div style="background: #f8fafc; border: 2px dashed #cbd5e1; padding: 20px; border-radius: 15px; margin-bottom: 10px;">
-            <p style="font-size: 0.9rem; margin-bottom: 10px; color: var(--ink);"><b>Opsi 1:</b> Scan QR ini menggunakan Google Lens atau Whatsapp Hp Anda (ini bukan QRIS Pembayaran) </p>
-            
-            <!-- Tempat QR Code Muncul -->
-            <div id="wa-qrcode" style="display: flex; justify-content: center; margin-bottom: 15px; background: white; padding: 10px; border-radius: 10px; width: fit-content; margin-left: auto; margin-right: auto; border: 2px solid var(--ink);"></div>
-            
-            <hr style="border: 1px dashed #cbd5e1; margin: 15px 0;">
-            
-            <p style="font-size: 0.9rem; margin-bottom: 10px; color: var(--ink);"><b>Opsi 2:</b> Lanjutkan di Perangkat Ini</p>
-            <button id="btn-lanjut-wa" class="btn-primary" style="background: #25d366; color: white; border-color: #128c7e;">💬 Buka WhatsApp Web / App</button>
-        </div>
-    </div>
-</div>
     
 
     <script>
-        // === FUNGSI KONFIRMASI CUSTOM (Bebas Bug Focus Input Teks) ===
+      // === FUNGSI KONFIRMASI CUSTOM (Bebas Bug ID Mismatch) ===
     function customConfirm(pesan, judul = "Konfirmasi Aksi", ikon = "⚠️") {
         return new Promise((resolve) => {
             const modal = document.getElementById('customConfirmModal');
-            const titleEl = document.getElementById('confirmModalTitle');
-            const msgEl = document.getElementById('confirmModalMessage');
-            const iconEl = document.getElementById('confirmModalIcon');
-            const btnOk = document.getElementById('confirmModalBtnOk');
-            const btnCancel = document.getElementById('confirmModalBtnCancel');
+            
+            // Perbaikan ID yang menyesuaikan dengan kerangka HTML Anda
+            const titleEl = document.getElementById('confirm-title');
+            const msgEl = document.getElementById('confirm-message');
+            const iconEl = document.getElementById('confirm-icon');
+            
+            // Kloning tombol "Ya" agar event klik lama terhapus (mencegah klik ganda)
+            const oldBtnOk = document.getElementById('confirm-yes-btn');
+            const btnOk = oldBtnOk.cloneNode(true);
+            oldBtnOk.parentNode.replaceChild(btnOk, oldBtnOk);
+
+            // Ambil tombol "Batal"
+            const btnCancel = modal.querySelector('button[onclick*="none"]');
 
             titleEl.innerText = judul;
             msgEl.innerHTML = pesan.replace(/\n/g, '<br>');
             iconEl.innerText = ikon;
+            
             modal.style.display = 'flex';
-
-            // Kembalikan fokus ke window
-            window.focus();
+            window.focus(); // Kembalikan fokus ke window
 
             const handleOk = () => {
                 modal.style.display = 'none';
-                cleanup();
-                resolve(true);
+                resolve(true); // Kirim sinyal SETUJU
             };
 
             const handleCancel = () => {
                 modal.style.display = 'none';
-                cleanup();
-                resolve(false);
+                resolve(false); // Kirim sinyal BATAL
             };
 
-            const cleanup = () => {
-                btnOk.removeEventListener('click', handleOk);
-                btnCancel.removeEventListener('click', handleCancel);
-            };
-
-            btnOk.onclick = handleOk;
-            btnCancel.onclick = handleCancel;
+            btnOk.addEventListener('click', handleOk);
+            btnCancel.addEventListener('click', handleCancel);
         });
     }
         
@@ -1308,6 +1290,36 @@
                 body: JSON.stringify({ iso, tv, av })
             }).catch(e => console.error(e));
         }
+        // --- FUNGSI MENGUBAH LABEL PAYMENT GATEWAY SECARA DINAMIS ---
+function updateLabelGateway() {
+    const gateway = document.getElementById('sys-paymentGateway').value;
+    const label1 = document.getElementById('label-key-1');
+    const label2 = document.getElementById('label-key-2');
+    const wrap3 = document.getElementById('wrapper-key-3');
+    const label3 = document.getElementById('label-key-3');
+
+    // Reset kolom ketiga agar tersembunyi
+    wrap3.style.display = 'none';
+
+    if (gateway === 'midtrans' || gateway === 'gobiz') {
+        label1.innerText = 'Server Key:';
+        label2.innerText = 'Client Key:';
+    } else if (gateway === 'xendit') {
+        label1.innerText = 'Secret API Key:';
+        label2.innerText = 'Public API Key:';
+    } else if (gateway === 'tripay') {
+        label1.innerText = 'API Key:';
+        label2.innerText = 'Merchant Code:';
+        wrap3.style.display = 'block'; // Tampilkan kolom ketiga khusus Tripay
+        label3.innerText = 'Private Key:';
+    } else if (gateway === 'duitku') {
+        label1.innerText = 'API Key:';
+        label2.innerText = 'Merchant Code:';
+    } else if (gateway === 'doku') {
+        label1.innerText = 'Secret Key:';
+        label2.innerText = 'Client ID:';
+    }
+}
 
         async function simpanDanTerapkanExposure() {
             tembakKameraSilent();
@@ -2251,54 +2263,105 @@ canonAv: getVal('sys-canonAv', currentData.global?.canonAv || 'auto'),
         }
     }
         // Fetch pengaturan saat halaman dimuat
-// --- FUNGSI MENGATUR TAMPILAN KOTAK MIDTRANS ---
+// --- FUNGSI MENGATUR TAMPILAN KOTAK PAYMENT GATEWAY ---
 function toggleDynamicFields(type) {
     const dynBox = document.getElementById('dynamicSettings');
+    const statBox = document.getElementById('staticSettings');
+    
     if (type === 'dynamic') {
-        dynBox.style.display = 'block'; // Tampilkan jika Dinamis
+        if (dynBox) dynBox.style.display = 'block'; 
+        if (statBox) statBox.style.display = 'none';  
     } else {
-        dynBox.style.display = 'none';  // Sembunyikan jika Statis
+        if (dynBox) dynBox.style.display = 'none';  
+        if (statBox) statBox.style.display = 'block';
     }
 }
-        async function loadQrisSettings() {
-    const res = await fetch('/api/settings/qris');
-    const data = await res.json();
+
+// --- FUNGSI MENGUBAH LABEL PAYMENT GATEWAY SECARA DINAMIS ---
+window.updateLabelGateway = function() {
+    const gatewayEl = document.getElementById('sys-paymentGateway');
+    if (!gatewayEl) return;
     
-    document.getElementById('qrisType').value = data.type;
-    document.getElementById('qrisPrice').value = data.dynamicPrice || 35000;
-    
-    // Tarik kunci yang tersimpan
-    if (document.getElementById('sys-extraPrintPriceDynamic')) document.getElementById('sys-extraPrintPriceDynamic').value = data.dynamicExtraPrice || 15000;
-    if (document.getElementById('midtransServerKey')) document.getElementById('midtransServerKey').value = data.midtransServerKey || "";
-    if (document.getElementById('midtransClientKey')) document.getElementById('midtransClientKey').value = data.midtransClientKey || "";
-    
-    // Tarik Token Cloudflare yang tersimpan
-    if (document.getElementById('input-cf-token')) {
-        document.getElementById('input-cf-token').value = data.cloudflareToken || "";
+    const gateway = gatewayEl.value;
+    const label1 = document.getElementById('label-key-1');
+    const label2 = document.getElementById('label-key-2');
+    const wrap3 = document.getElementById('wrapper-key-3');
+    const label3 = document.getElementById('label-key-3');
+
+    // Reset kolom ketiga agar tersembunyi
+    if(wrap3) wrap3.style.display = 'none';
+
+    if (gateway === 'midtrans' || gateway === 'gobiz') {
+        if(label1) label1.innerText = 'Server Key:';
+        if(label2) label2.innerText = 'Client Key:';
+    } else if (gateway === 'xendit') {
+        if(label1) label1.innerText = 'Secret API Key:';
+        if(label2) label2.innerText = 'Public API Key:';
+    } else if (gateway === 'tripay') {
+        if(label1) label1.innerText = 'API Key:';
+        if(label2) label2.innerText = 'Merchant Code:';
+        if(wrap3) wrap3.style.display = 'block'; // Tampilkan kolom ketiga khusus Tripay
+        if(label3) label3.innerText = 'Private Key:';
+    } else if (gateway === 'duitku') {
+        if(label1) label1.innerText = 'API Key:';
+        if(label2) label2.innerText = 'Merchant Code:';
+    } else if (gateway === 'doku') {
+        if(label1) label1.innerText = 'Secret Key:';
+        if(label2) label2.innerText = 'Client ID:';
     }
-    
-    toggleDynamicFields(data.type);
-    
-    // [PERBAIKAN] Tarik URL QRIS asli dari backend agar preview otomatis muncul saat halaman dibuka
+};
+
+async function loadQrisSettings() {
     try {
-        const resQris = await fetch('/api/get-qris');
-        const dataQris = await resQris.json();
-        if (dataQris.success) {
-            const qrisImg = document.getElementById('qris-preview-img');
-            if (qrisImg) qrisImg.src = dataQris.url;
+        const res = await fetch('/api/settings/qris');
+        const data = await res.json();
+        
+        if (document.getElementById('qrisType')) document.getElementById('qrisType').value = data.type || 'static';
+        if (document.getElementById('qrisPrice')) document.getElementById('qrisPrice').value = data.dynamicPrice || 35000;
+        
+        if (document.getElementById('sys-paymentGateway')) {
+            document.getElementById('sys-paymentGateway').value = data.gateway || 'midtrans';
         }
-    } catch (e) {}
+        
+        if (document.getElementById('sys-extraPrintPriceDynamic')) document.getElementById('sys-extraPrintPriceDynamic').value = data.dynamicExtraPrice || 15000;
+        
+        // Tarik nilai kunci menggunakan format baru
+        if (document.getElementById('gatewayKey1')) document.getElementById('gatewayKey1').value = data.key1 || "";
+        if (document.getElementById('gatewayKey2')) document.getElementById('gatewayKey2').value = data.key2 || "";
+        if (document.getElementById('gatewayKey3')) document.getElementById('gatewayKey3').value = data.key3 || "";
+        
+        if (document.getElementById('input-cf-token')) {
+            document.getElementById('input-cf-token').value = data.cloudflareToken || "";
+        }
+        
+        toggleDynamicFields(data.type || 'static');
+        window.updateLabelGateway(); // Panggil fungsi pelabelan agar namanya menyesuaikan gateway tersimpan
+        
+        try {
+            const resQris = await fetch('/api/get-qris');
+            const dataQris = await resQris.json();
+            if (dataQris.success) {
+                const qrisImg = document.getElementById('qris-preview-img');
+                if (qrisImg) qrisImg.src = dataQris.url;
+            }
+        } catch (e) {}
+    } catch (e) {
+        console.error("Gagal memuat pengaturan QRIS", e);
+    }
 }
 
 async function saveQrisSettings(silent = false) {
     try {
-        const type = document.getElementById('qrisType').value;
-        const price = document.getElementById('qrisPrice').value || 35000;
-        const extraDynamicPrice = document.getElementById('sys-extraPrintPriceDynamic').value || 15000;
-        const serverKey = document.getElementById('midtransServerKey').value || "";
-        const clientKey = document.getElementById('midtransClientKey').value || "";
+        const type = document.getElementById('qrisType') ? document.getElementById('qrisType').value : 'static';
+        const gateway = document.getElementById('sys-paymentGateway') ? document.getElementById('sys-paymentGateway').value : 'midtrans';
+        const price = document.getElementById('qrisPrice') ? document.getElementById('qrisPrice').value : 35000;
+        const extraDynamicPrice = document.getElementById('sys-extraPrintPriceDynamic') ? document.getElementById('sys-extraPrintPriceDynamic').value : 15000;
         
-        // 1. Tangkap isi kotak Token Cloudflare
+        // Simpan kunci menggunakan format baru
+        const key1 = document.getElementById('gatewayKey1') ? document.getElementById('gatewayKey1').value : "";
+        const key2 = document.getElementById('gatewayKey2') ? document.getElementById('gatewayKey2').value : "";
+        const key3 = document.getElementById('gatewayKey3') ? document.getElementById('gatewayKey3').value : "";
+        
         const cfToken = document.getElementById('input-cf-token') ? document.getElementById('input-cf-token').value : ''; 
 
         const res = await fetch('/api/settings/qris', {
@@ -2306,11 +2369,13 @@ async function saveQrisSettings(silent = false) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 type: type, 
+                gateway: gateway,
                 dynamicPrice: parseInt(price),
                 dynamicExtraPrice: parseInt(extraDynamicPrice),
-                midtransServerKey: serverKey,
-                midtransClientKey: clientKey,
-                cloudflareToken: cfToken // 2. Kirim token ke Backend (main.js)
+                key1: key1,
+                key2: key2,
+                key3: key3,
+                cloudflareToken: cfToken
             })
         });
         
@@ -2318,7 +2383,7 @@ async function saveQrisSettings(silent = false) {
 
         const result = await res.json();
         if (result.success && !silent) {
-            alert('✅ Pengaturan QRIS, Midtrans & Cloudflare berhasil disimpan!');
+            alert('✅ Pengaturan QRIS & Payment Gateway berhasil disimpan!');
         }
     } catch (e) {
         if (!silent) alert('❌ GAGAL: ' + e.message);
