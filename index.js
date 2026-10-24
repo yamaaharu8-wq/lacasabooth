@@ -2193,18 +2193,24 @@ expressApp.post('/api/send-wa', async (req, res) => {
     let { nomorWa, linkFoto } = req.body;
     if (!nomorWa || !linkFoto) return res.status(400).json({ success: false, message: 'Nomor WA atau link kosong!' });
 
+    // 1. Pembersihan Nomor (Logika Anda sudah bagus, ditambah pengaman +62)
     let nomorFormat = nomorWa.trim().replace(/\D/g, ''); 
     if (nomorFormat.startsWith('0')) nomorFormat = '62' + nomorFormat.slice(1);
+    if (nomorFormat.startsWith('+62')) nomorFormat = '62' + nomorFormat.slice(3);
 
     try {
+        // 2. [VAKSIN] Cek apakah sesi WA mesin benar-benar hidup (menghindari error nyangkut)
+        if (!waClient || !waClient.info) {
+            return res.status(500).json({ success: false, message: 'Sesi WA terputus. Silakan Reset Bot WA di Dashboard.' });
+        }
+
         const isRegistered = await waClient.isRegisteredUser(`${nomorFormat}@c.us`);
         if (!isRegistered) return res.status(400).json({ success: false, message: 'Nomor tidak terdaftar di WhatsApp!' });
         
         const contactId = await waClient.getNumberId(nomorFormat);
         const chatId = contactId._serialized; 
         
-        // --- LOGIKA BARU: BACA PESAN DARI SETTINGS.JSON ---
-        let customPesan = "Halo dari Lacasaphoto! 📸\n\nTerima kasih sudah berfoto ria bersama kami. Berikut link foto kamu:\n\n🔗 {link}"; // Pesan cadangan
+        let customPesan = "Halo dari Lacasaphoto! 📸\n\nTerima kasih sudah berfoto ria bersama kami. Berikut link foto kamu:\n\n🔗 {link}"; 
         
         try {
             if (fs.existsSync(settingsPath)) {
@@ -2217,16 +2223,16 @@ expressApp.post('/api/send-wa', async (req, res) => {
             console.error("Gagal membaca pesan WA dari pengaturan:", e);
         }
 
-        // Ganti teks {link} dengan URL asli dari parameter
         const pesanAkhir = customPesan.replace('{link}', linkFoto);
         
         await waClient.sendMessage(chatId, pesanAkhir);
         return res.json({ success: true, message: 'Pesan WhatsApp berhasil dikirim!' });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Gagal mengirim pesan WhatsApp.' });
+        console.error("Error Kirim WA:", error);
+        // 3. [VAKSIN] Tampilkan pesan error asli dari mesin ke layar Toast UI
+        res.status(500).json({ success: false, message: `Sistem WA: ${error.message}` });
     }
 });
-
 // =======================================================
 // 11.5 📊 API STATUS DASHBOARD & ANALITIK
 // =======================================================
@@ -2285,6 +2291,126 @@ expressApp.get('/api/rescan-camera', (req, res) => {
         res.status(500).json({ success: false, message: "Kesalahan sistem saat merestart EDSDK." });
     }
 });
+// =========================================================================
+// 🌟 SISTEM PEMBAYARAN LANGGANAN SAAS OTOMATIS (DOKU MERCHANT DEVELOPER)
+// =========================================================================
+// Masukkan Kredensial DOKU milik ANDA (Developer) di sini agar uang langganan
+// masuk ke rekening DOKU Anda, bukan ke Payment Gateway milik toko klien.
+const SAAS_DOKU_CLIENT_ID = "BRN-0277-1792792800723"; // Client ID DOKU Anda
+const SAAS_DOKU_SECRET_KEY = "SK-c7aYURwtIn7AgUzenftw"; // Secret Key DOKU Anda
+const SAAS_DOKU_IS_PROD = true; // Ubah ke false jika ingin tes pakai Sandbox DOKU
+
+expressApp.post('/api/saas/create-invoice', async (req, res) => {
+    try {
+        const { email, tier, duration, amount } = req.body;
+        if (!email || !tier || !amount) {
+            return res.status(400).json({ success: false, message: "Data transaksi tidak lengkap." });
+        }
+
+        const orderId = `SUBS-${tier.toUpperCase()}-${duration.toUpperCase()}-${Date.now()}`;
+        const dokuBaseUrl = SAAS_DOKU_IS_PROD ? 'https://api.doku.com' : 'https://api-sandbox.doku.com';
+        const cleanClientId = SAAS_DOKU_CLIENT_ID.replace('SB-', '');
+
+        // Menggunakan DOKU Checkout V1 agar mendukung SEMUA metode pembayaran di akun DOKU Anda
+        const targetPath = '/checkout/v1/payment';
+        const timestamp = new Date().toISOString().slice(0, 19) + 'Z';
+        const requestId = crypto.randomUUID ? crypto.randomUUID() : 'req-saas-' + Date.now();
+
+        const bodyPayload = {
+            order: {
+                amount: parseInt(amount),
+                invoice_number: orderId,
+                currency: "IDR",
+                callback_url: "https://lacasaphoto.id",
+                line_items: [
+                    {
+                        name: `Langganan Lacasabooth ${tier.toUpperCase()} (${duration})`,
+                        price: parseInt(amount),
+                        quantity: 1
+                    }
+                ]
+            },
+            payment: {
+                payment_due_date: 60
+            },
+            customer: {
+                id: email,
+                name: email.split('@')[0],
+                email: email
+            }
+        };
+
+        const digest = crypto.createHash('sha256').update(JSON.stringify(bodyPayload)).digest('base64');
+        const sigComponent = `Client-Id:${cleanClientId}\nRequest-Id:${requestId}\nRequest-Timestamp:${timestamp}\nRequest-Target:${targetPath}\nDigest:${digest}`;
+        const signatureDoku = 'HMACSHA256=' + crypto.createHmac('sha256', SAAS_DOKU_SECRET_KEY).update(sigComponent).digest('base64');
+
+        const dokuRes = await fetch(dokuBaseUrl + targetPath, {
+            method: 'POST',
+            headers: {
+                'Client-Id': cleanClientId,
+                'Request-Id': requestId,
+                'Request-Timestamp': timestamp,
+                'Signature': signatureDoku,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(bodyPayload)
+        });
+
+        const dokuData = await dokuRes.json();
+
+        // Jika Jokul Checkout berhasil dibuat
+        if (dokuRes.ok && dokuData.response && dokuData.response.payment && dokuData.response.payment.url) {
+            return res.json({
+                success: true,
+                orderId: orderId,
+                paymentUrl: dokuData.response.payment.url
+            });
+        }
+
+        // Fallback: Jika akun DOKU hanya mengaktifkan Direct QRIS
+        let errMsg = dokuData.error?.message || dokuData.message || JSON.stringify(dokuData);
+        return res.status(400).json({ success: false, message: `DOKU: ${errMsg}` });
+
+    } catch (error) {
+        console.error("Error Create SaaS DOKU:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Endpoint Cek Status Pembayaran Langganan SaaS secara Otomatis
+expressApp.get('/api/saas/check-status/:orderId', async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const dokuBaseUrl = SAAS_DOKU_IS_PROD ? 'https://api.doku.com' : 'https://api-sandbox.doku.com';
+        const cleanClientId = SAAS_DOKU_CLIENT_ID.replace('SB-', '');
+
+        const timestamp = new Date().toISOString().slice(0, 19) + 'Z';
+        const requestId = 'chk-saas-' + Date.now();
+        const targetPath = `/orders/v1/status/${orderId}`;
+
+        const sigComponent = `Client-Id:${cleanClientId}\nRequest-Id:${requestId}\nRequest-Timestamp:${timestamp}\nRequest-Target:${targetPath}`;
+        const signatureDoku = 'HMACSHA256=' + crypto.createHmac('sha256', SAAS_DOKU_SECRET_KEY).update(sigComponent).digest('base64');
+
+        const dokuRes = await fetch(dokuBaseUrl + targetPath, {
+            method: 'GET',
+            headers: {
+                'Client-Id': cleanClientId,
+                'Request-Id': requestId,
+                'Request-Timestamp': timestamp,
+                'Signature': signatureDoku
+            }
+        });
+
+        const dokuData = await dokuRes.json();
+        if (dokuRes.ok && dokuData.transaction && dokuData.transaction.status === 'SUCCESS') {
+            return res.json({ success: true, status: 'PAID' });
+        }
+        return res.json({ success: true, status: 'PENDING' });
+    } catch (error) {
+        return res.json({ success: false, status: 'PENDING' });
+    }
+});
+
 const qrcodeImg = require('qrcode'); 
 const midtransClient = require('midtrans-client');
 
@@ -2454,7 +2580,7 @@ expressApp.all('/api/payment/qris-dynamic', async (req, res) => {
             qrString = dkData.qrString; 
         } 
         
-       // 🧠 5. OTAK DOKU
+      // 🧠 5. OTAK DOKU (AUTO-ROUTING)
         else if (gateway === 'doku') {
             if (!key1 || !key2) throw new Error("Secret Key dan Client ID DOKU belum diisi!");
             
@@ -2462,39 +2588,58 @@ expressApp.all('/api/payment/qris-dynamic', async (req, res) => {
             const cleanClientId = key2.replace('SB-', ''); 
             const dokuBaseUrl = isProd ? 'https://api.doku.com' : 'https://api-sandbox.doku.com';
 
-            const timestamp = new Date().toISOString().slice(0, 19) + 'Z';
-            const requestId = crypto.randomUUID ? crypto.randomUUID() : 'req-' + Date.now();
-            
-            // [PERBAIKAN 1] Path API yang benar untuk DOKU QRIS
-            const targetPath = '/doku-qris/v2/order'; 
-            
             const bodyPayload = { order: { invoice_number: orderId, amount: amount } };
-            
             const digest = crypto.createHash('sha256').update(JSON.stringify(bodyPayload)).digest('base64');
-            const sigComponent = `Client-Id:${cleanClientId}\nRequest-Id:${requestId}\nRequest-Timestamp:${timestamp}\nRequest-Target:${targetPath}\nDigest:${digest}`;
-            const signatureDoku = 'HMACSHA256=' + crypto.createHmac('sha256', key1).update(sigComponent).digest('base64');
+            
+            // Daftar 3 pintu Acquirer QRIS DOKU
+            const qrisPaths = [
+                '/doku-qris/v2/order',     // Pintu 1: DOKU Utama
+                '/nobu-qris/v2/order',     // Pintu 2: Nobu Bank
+                '/shopeepay-qris/v2/order' // Pintu 3: ShopeePay
+            ];
+            
+            let lastError = "Layanan QRIS belum aktif di akun DOKU Anda.";
 
-            const dokuRes = await fetch(dokuBaseUrl + targetPath, {
-                method: 'POST',
-                headers: {
-                    'Client-Id': cleanClientId, 'Request-Id': requestId, 'Request-Timestamp': timestamp,
-                    'Signature': signatureDoku, 'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(bodyPayload)
-            });
-            
-            const dokuData = await dokuRes.json();
-            
-            if (!dokuRes.ok) {
-                // Menangkap pesan error spesifik dari DOKU jika terjadi penolakan
-                const errorMsg = dokuData.error ? dokuData.error.message : 'Pastikan Layanan QRIS sudah Aktif di DOKU Anda.';
-                throw new Error(`DOKU: ${errorMsg}`);
+            // Mesin mencoba mengetuk pintu satu per satu secara otomatis
+            for (let targetPath of qrisPaths) {
+                const timestamp = new Date().toISOString().slice(0, 19) + 'Z';
+                const requestId = crypto.randomUUID ? crypto.randomUUID() : 'req-' + Date.now() + Math.floor(Math.random() * 1000);
+                
+                const sigComponent = `Client-Id:${cleanClientId}\nRequest-Id:${requestId}\nRequest-Timestamp:${timestamp}\nRequest-Target:${targetPath}\nDigest:${digest}`;
+                const signatureDoku = 'HMACSHA256=' + crypto.createHmac('sha256', key1).update(sigComponent).digest('base64');
+
+                try {
+                    const dokuRes = await fetch(dokuBaseUrl + targetPath, {
+                        method: 'POST',
+                        headers: {
+                            'Client-Id': cleanClientId, 'Request-Id': requestId, 'Request-Timestamp': timestamp,
+                            'Signature': signatureDoku, 'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(bodyPayload)
+                    });
+                    
+                    const dokuData = await dokuRes.json();
+                    
+                    if (dokuRes.ok && dokuData.qr_code) {
+                        qrString = dokuData.qr_code;
+                        break; // Pintu ditemukan! Langsung keluar dari loop
+                    } else if (dokuRes.ok && dokuData.generate_qr_code) {
+                        qrString = dokuData.generate_qr_code;
+                        break;
+                    } else {
+                        // Tangkap error jika pintu ini tertutup (404 / 401)
+                        if (dokuData.error && dokuData.error.message) lastError = dokuData.error.message;
+                        else if (dokuData.message) lastError = dokuData.message;
+                        else lastError = JSON.stringify(dokuData);
+                    }
+                } catch (err) {
+                    lastError = err.message;
+                }
             }
             
-            // [PERBAIKAN 2] Ambil Mentahan String QR, bukan URL Gambar!
-            qrString = dokuData.qr_code;
-            
-            if (!qrString) throw new Error("DOKU tidak mengembalikan data String QRIS yang valid.");
+            if (!qrString) {
+                throw new Error(`DOKU: ${lastError} (Semua jalur ditolak)`);
+            }
         }
         // 🧠 6. OTAK NEETPAY (Non-Custodial)
         else if (gateway === 'neetpay') {

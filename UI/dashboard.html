@@ -413,7 +413,7 @@
                     <div class="card-header" style="border-bottom-color: var(--ink);">🖨️ Pengaturan Printer</div>
                     <div class="form-group" style="background: rgba(255,255,255,0.5); padding: 10px; border-radius: 10px; border: 2px dashed var(--ink);">
                         <label>Printer (Collage & Self Studio)</label>
-                        <select id="sys-printer4R" style="font-weight: bold; margin-bottom: 10px;"></select>
+                        <select id="sys-printer4R" style="font-weight: bold; margin-bottom: 10px;" onchange="simpanPengaturan()"></select>
                         <div style="display: flex; gap: 5px;">
                             <button type="button" onclick="bukaSetupPrinter('4R')" style="flex: 1; padding: 8px; border-radius: 8px; background: #fff; border: 2px solid var(--ink); font-weight: bold; cursor: pointer; font-size: 0.85rem; box-shadow: 2px 2px 0px var(--ink);">⚙️ Setup</button>
                            <button type="button" onclick="buatProfilPrinterBaru('sys-printer4R', this)" style="flex: 1; padding: 8px; border-radius: 8px; background: var(--yellow); color: var(--ink); border: 2px solid var(--ink); font-weight: bold; cursor: pointer; font-size: 0.85rem; box-shadow: 2px 2px 0px var(--ink);">➕ Gandakan</button>
@@ -421,7 +421,7 @@
                     </div>
                     <div class="form-group" style="background: rgba(255,255,255,0.5); padding: 10px; border-radius: 10px; border: 2px dashed var(--ink);">
                         <label>Printer (Mode Newspaper)</label>
-                        <select id="sys-printerA4" style="font-weight: bold; margin-bottom: 10px;"></select>
+                        <select id="sys-printerA4" style="font-weight: bold; margin-bottom: 10px;" onchange="simpanPengaturan()"></select>
                         <div style="display: flex; gap: 5px;">
                             <button type="button" onclick="bukaSetupPrinter('A4')" style="flex: 1; padding: 8px; border-radius: 8px; background: #fff; border: 2px solid var(--ink); font-weight: bold; cursor: pointer; font-size: 0.85rem; box-shadow: 2px 2px 0px var(--ink);">⚙️ Setup</button>
                             <button type="button" onclick="buatProfilPrinterBaru('sys-printerA4', this)" style="flex: 1; padding: 8px; border-radius: 8px; background: var(--pink); color: var(--ink); border: 2px solid var(--ink); font-weight: bold; cursor: pointer; font-size: 0.85rem; box-shadow: 2px 2px 0px var(--ink);">➕ Gandakan</button>
@@ -1066,39 +1066,29 @@
     function customConfirm(pesan, judul = "Konfirmasi Aksi", ikon = "⚠️") {
         return new Promise((resolve) => {
             const modal = document.getElementById('customConfirmModal');
-            
-            // Perbaikan ID yang menyesuaikan dengan kerangka HTML Anda
-            const titleEl = document.getElementById('confirm-title');
-            const msgEl = document.getElementById('confirm-message');
-            const iconEl = document.getElementById('confirm-icon');
-            
-            // Kloning tombol "Ya" agar event klik lama terhapus (mencegah klik ganda)
+            if (!modal) return resolve(window.confirm(pesan));
+
+            document.getElementById('confirm-title').innerText = judul;
+            document.getElementById('confirm-message').innerHTML = pesan.replace(/\n/g, '<br>');
+            document.getElementById('confirm-icon').innerText = ikon;
+
+            // Bersihkan event klik lama pada tombol Ya
             const oldBtnOk = document.getElementById('confirm-yes-btn');
             const btnOk = oldBtnOk.cloneNode(true);
             oldBtnOk.parentNode.replaceChild(btnOk, oldBtnOk);
 
-            // Ambil tombol "Batal"
-            const btnCancel = modal.querySelector('button[onclick*="none"]');
+            // Bersihkan event klik lama & konflik onclick pada tombol Batal
+            const oldBtnCancel = document.getElementById('confirm-cancel-btn') || modal.querySelector('button');
+            const btnCancel = oldBtnCancel.cloneNode(true);
+            btnCancel.id = 'confirm-cancel-btn';
+            btnCancel.removeAttribute('onclick');
+            oldBtnCancel.parentNode.replaceChild(btnCancel, oldBtnCancel);
 
-            titleEl.innerText = judul;
-            msgEl.innerHTML = pesan.replace(/\n/g, '<br>');
-            iconEl.innerText = ikon;
-            
             modal.style.display = 'flex';
-            window.focus(); // Kembalikan fokus ke window
+            window.focus();
 
-            const handleOk = () => {
-                modal.style.display = 'none';
-                resolve(true); // Kirim sinyal SETUJU
-            };
-
-            const handleCancel = () => {
-                modal.style.display = 'none';
-                resolve(false); // Kirim sinyal BATAL
-            };
-
-            btnOk.addEventListener('click', handleOk);
-            btnCancel.addEventListener('click', handleCancel);
+            btnOk.onclick = () => { modal.style.display = 'none'; resolve(true); };
+            btnCancel.onclick = () => { modal.style.display = 'none'; resolve(false); };
         });
     }
         
@@ -1369,7 +1359,7 @@ function updateLabelGateway() {
         // --- SISTEM PENGATURAN API ---
         async function muatPengaturan() {
             try {
-                const resPrinter = await fetch('/api/get-printers');
+                const resPrinter = await fetch('/api/get-printers?t=' + Date.now());
                 const dataPrinter = await resPrinter.json();
                 const select4R = document.getElementById('sys-printer4R');
                 const selectA4 = document.getElementById('sys-printerA4');
@@ -1382,8 +1372,8 @@ function updateLabelGateway() {
                     });
                 }
 
-                const res = await fetch('/api/settings'); const data = await res.json();
-                
+                const res = await fetch('/api/settings?t=' + Date.now(), { cache: 'no-store' }); const data = await res.json();
+
                 document.getElementById('pb-sessionTimer').value = data.photobox?.sessionTimer || "300"; 
                 document.getElementById('clg-timer').value = data.collage?.timer || "5";
                 document.getElementById('clg-sessionTimer').value = data.collage?.sessionTimer || "300"; 
@@ -1429,9 +1419,21 @@ document.getElementById('sys-brightness').value = data.global?.liveViewBrightnes
 
                 document.getElementById('wa-message-text').value = data.waMessage || "Halo dari Lacasaphoto! 📸\n\nTerima kasih sudah berfoto ria bersama kami. Berikut link foto kamu:\n\n🔗 {link}";
 
-                if (data.global?.printer4R) select4R.value = data.global.printer4R;
-                if (data.global?.printerA4) selectA4.value = data.global.printerA4;
-                if (data.global?.customIdleScreen) {
+                const saved4R = data.global?.printer4R || localStorage.getItem('backup_printer4R') || "";
+const savedA4 = data.global?.printerA4 || localStorage.getItem('backup_printerA4') || "";
+
+const setPrinterSelect = (selEl, targetVal) => {
+    if (!targetVal) return;
+    // Jika nama printer tersimpan belum ada di list, paksa tambahkan opsinya agar tidak ke-reset
+    let found = Array.from(selEl.options).some(opt => opt.value.trim() === targetVal.trim());
+    if (!found) {
+        selEl.innerHTML += `<option value="${targetVal}">${targetVal}</option>`;
+    }
+    selEl.value = targetVal;
+};
+setPrinterSelect(select4R, saved4R);
+setPrinterSelect(selectA4, savedA4);
+if (data.global?.customIdleScreen) {
                     document.getElementById('status-idle-screen').innerHTML = `<b style="color: var(--blue);">Terdapat Custom Layar</b>`;
                 }
                 
@@ -1444,8 +1446,11 @@ document.getElementById('sys-brightness').value = data.global?.liveViewBrightnes
         async function simpanPengaturan() {
             try {
                 // 1. Ambil data asli dari server sebelum menimpa
-                const resSettings = await fetch('/api/settings');
-                const currentData = await resSettings.json().catch(() => ({})); 
+               const resSettings = await fetch('/api/settings?t=' + Date.now(), { cache: 'no-store' });
+// Simpan juga ke localStorage PC Client sebagai kunci cadangan anti-reset
+if (document.getElementById('sys-printer4R')) localStorage.setItem('backup_printer4R', document.getElementById('sys-printer4R').value);
+if (document.getElementById('sys-printerA4')) localStorage.setItem('backup_printerA4', document.getElementById('sys-printerA4').value);
+ const currentData = await resSettings.json().catch(() => ({})); 
 
                 // 2. Fungsi cerdas pengambil nilai dari HTML (AMAN):
                 const getVal = (id, fallback) => {
@@ -2230,19 +2235,25 @@ canonAv: getVal('sys-canonAv', currentData.global?.canonAv || 'auto'),
             btn.innerText = "📤 Unggah & Terapkan Layar"; btn.disabled = false;
         });
 
-        async function resetIdleScreen() {
-        if(!(await customConfirm('Yakin ingin menghapus custom idle screen dan kembali ke tema bawaan?', 'Reset Layar Utama', '🗑️'))) return;
-        try {
-            const resSettings = await fetch('/api/settings'); 
-            const dataSettings = await resSettings.json();
-            if (dataSettings.global) {
-                dataSettings.global.customIdleScreen = null; 
-                await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dataSettings) });
-                document.getElementById('status-idle-screen').innerHTML = "Bawaan Tema (Default)";
-                alert("✅ Layar utama dikembalikan ke tema bawaan.");
+       async function resetIdleScreen() {
+            // [PERBAIKAN] Pastikan customConfirm memiliki penamaan yang tepat
+            const setuju = await customConfirm('Yakin ingin menghapus layar utama custom dan kembali ke tema bawaan?', 'Reset Layar Utama', '🗑️');
+            if (!setuju) return;
+            
+            try {
+                const resSettings = await fetch('/api/settings'); 
+                const dataSettings = await resSettings.json();
+                
+                if (dataSettings.global) {
+                    dataSettings.global.customIdleScreen = null; 
+                    await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dataSettings) });
+                    document.getElementById('status-idle-screen').innerHTML = "Bawaan Tema (Default)";
+                    alert("✅ Layar utama dikembalikan ke tema bawaan.");
+                }
+            } catch (error) { 
+                alert("Gagal mereset pengaturan."); 
             }
-        } catch (error) { alert("Gagal mereset pengaturan."); }
-    }
+        }
         async function resetSistemTotal() {
         if (!(await customConfirm("⚠️ PERINGATAN KERAS: Semua setelan, koneksi bot, Drive, QRIS, dan analitik akan terhapus & direset!\n\nTemplate & Akun Lisensi Anda tetap aman. Lanjutkan?", "Reset Sistem Total", "🧨"))) return;
         
@@ -2427,68 +2438,91 @@ document.addEventListener('DOMContentLoaded', () => {
 let selectedTier = '';
 let selectedDuration = '';
 
-// --- LOGIKA PEMBAYARAN MVP (VIA WHATSAPP & QR) ---
-        const NOMOR_WA_ADMIN = "628131080710"; 
+// --- LOGIKA PEMBAYARAN LANGGANAN OTOMATIS VIA DOKU ---
+let saasPollingInterval = null;
 
-        window.bukaPayment = function(tier) {
-            const user = window.auth ? window.auth.currentUser : null;
-            if(!user) return alert("⚠️ Silakan login terlebih dahulu!");
+window.tutupModalPaymentSaas = function() {
+    if (saasPollingInterval) clearInterval(saasPollingInterval);
+    document.getElementById('paymentModal').style.display = 'none';
+};
 
-            let durasiTeks = "1 Bulan"; 
-            const selDur = document.getElementById(`sel-dur-${tier}`);
-            let priceText = "";
+window.bukaPayment = async function(tier) {
+    const user = window.auth ? window.auth.currentUser : null;
+    if (!user) return alert("⚠️ Silakan login menggunakan akun Google terlebih dahulu!");
 
-            if(selDur) {
-                const dur = selDur.value;
-                durasiTeks = (dur === '3d') ? '3 Hari' : (dur === '1w') ? '7 Hari' : (dur === '1m') ? '1 Bulan' : '1 Tahun';
-                priceText = pricing[tier][dur].price; 
-            }
-
-            const pesan = `Halo Admin Lacasabooth! 👋\n\nSaya ingin berlangganan/upgrade software dengan detail berikut:\n\n* Akun Email: ${user.email}\n* Paket: ${tier.toUpperCase()}\n* Durasi: ${durasiTeks}\n* Total Harga: ${priceText}\n\nMohon instruksi pembayarannya ya. Terima kasih!`;
-            
-            // Link WhatsApp yang sudah berisi format pesan
-            const waLink = `https://wa.me/${NOMOR_WA_ADMIN}?text=${encodeURIComponent(pesan)}`;
-
-            // 1. Tulis deskripsi paket di Modal
-            document.getElementById('payment-desc').innerHTML = `Anda memilih paket:<br><b style="color:var(--ink); font-size:1.3rem;">${tier.toUpperCase()} - ${durasiTeks}</b><br><span style="color:var(--blue); font-size:1.5rem;">${priceText}</span>`;
-
-            // 2. Generate QR Code ke dalam Modal
-            const qrContainer = document.getElementById('wa-qrcode');
-            qrContainer.innerHTML = ''; // Bersihkan QR lama jika ada
-            new QRCode(qrContainer, {
-                text: waLink,
-                width: 160,
-                height: 160,
-                colorDark : "#000000",
-                colorLight : "#ffffff",
-            });
-
-            // 3. Setel tombol "Buka WhatsApp" untuk opsi 2
-            document.getElementById('btn-lanjut-wa').onclick = function() {
-                window.open(waLink, '_blank');
-            };
-
-            // 4. Tampilkan Modal ke layar
-            document.getElementById('paymentModal').style.display = 'flex';
-        };
-function prosesSimulasiBayar() {
-    let daysToAdd = 0;
-    if(selectedDuration === '3d') daysToAdd = 3;
-    if(selectedDuration === '1w') daysToAdd = 7;
-    if(selectedDuration === '1m') daysToAdd = 30;
-    if(selectedDuration === '1y') daysToAdd = 365;
+    const selDur = document.getElementById(`sel-dur-${tier}`);
+    const dur = selDur ? selDur.value : '1m';
+    const durasiTeks = (dur === '3d') ? '3 Hari' : (dur === '1w') ? '7 Hari' : (dur === '1m') ? '1 Bulan' : '1 Tahun';
+    const daysToAdd = (dur === '3d') ? 3 : (dur === '1w') ? 7 : (dur === '1m') ? 30 : 365;
     
-    const expiredDate = new Date();
-    expiredDate.setDate(expiredDate.getDate() + daysToAdd);
-    
-    if(window.updateLicenseToFirebase) {
-        window.updateLicenseToFirebase(selectedTier, expiredDate);
-    } else {
-        alert("Kesalahan: Modul Firebase belum siap.");
+    const priceText = pricing[tier][dur].price;
+    const nominalAngka = parseInt(priceText.replace(/\D/g, ''));
+
+    selectedTier = tier;
+    selectedDuration = dur;
+
+    // Tampilkan Modal Loading
+    const modal = document.getElementById('paymentModal');
+    const descEl = document.getElementById('payment-desc');
+    const statusEl = document.getElementById('saas-payment-status');
+    const btnBayarDoku = document.getElementById('btn-lanjut-doku');
+
+    descEl.innerHTML = `Akun: <b>${user.email}</b><br>Paket: <b style="color:var(--ink); font-size:1.3rem;">${tier.toUpperCase()} (${durasiTeks})</b><br><span style="color:var(--blue); font-size:1.6rem; font-weight:bold;">${priceText}</span>`;
+    statusEl.innerHTML = "⏳ Menghubungkan ke DOKU Payment Gateway...";
+    btnBayarDoku.style.display = 'none';
+    modal.style.display = 'flex';
+
+    try {
+        const res = await fetch('/api/saas/create-invoice', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                email: user.email,
+                tier: tier,
+                duration: durasiTeks,
+                amount: nominalAngka
+            })
+        });
+        const data = await res.json();
+
+        if (!data.success) {
+            statusEl.innerHTML = `<span style="color:#ef4444;">❌ ${data.message}</span>`;
+            return;
+        }
+
+        // Buka halaman pembayaran DOKU (mendukung semua metode di akun DOKU Anda)
+        statusEl.innerHTML = `✅ Tagihan DOKU Siap!<br><span style="font-size:0.85rem; color:#555;">Silakan selesaikan pembayaran di jendela DOKU. Sistem akan mengaktifkan paket <b>${tier.toUpperCase()}</b> secara otomatis begitu lunas.</span>`;
+        btnBayarDoku.style.display = 'flex';
+        btnBayarDoku.onclick = () => window.open(data.paymentUrl, '_blank', 'width=500,height=750');
+        
+        // Buka otomatis popup DOKU
+        window.open(data.paymentUrl, '_blank', 'width=500,height=750');
+
+        // Mulai Polling Otomatis setiap 4 detik untuk cek lunas
+        if (saasPollingInterval) clearInterval(saasPollingInterval);
+        saasPollingInterval = setInterval(async () => {
+            try {
+                const chkRes = await fetch(`/api/saas/check-status/${data.orderId}?t=${Date.now()}`);
+                const chkData = await chkRes.json();
+
+                if (chkData.success && chkData.status === 'PAID') {
+                    clearInterval(saasPollingInterval);
+                    statusEl.innerHTML = `<span style="color:#10b981; font-size:1.2rem;">🎉 PEMBAYARAN BERHASIL! Mengaktifkan Lisensi...</span>`;
+                    
+                    const expiredDate = new Date();
+                    expiredDate.setDate(expiredDate.getDate() + daysToAdd);
+                    
+                    if (window.updateLicenseToFirebase) {
+                        await window.updateLicenseToFirebase(tier, expiredDate);
+                    }
+                }
+            } catch (err) {}
+        }, 4000);
+
+    } catch (e) {
+        statusEl.innerHTML = `<span style="color:#ef4444;">❌ Gagal menghubungi server pembayaran.</span>`;
     }
-}
-// === LOGIC PENGECEKAN PEMBARUAN KE GITHUB (VIA ELECTRON) ===
-
+};
 // === LOGIC PENGECEKAN PEMBARUAN KE GITHUB & IPC LISTENERS ===
 
 // Inisialisasi IPC Electron yang aman (Tidak crash jika dibuka di browser biasa)
@@ -3156,13 +3190,14 @@ document.addEventListener('DOMContentLoaded', loadQrisSettings);
         }
     </script>
     <div class="modal-overlay" id="customConfirmModal" style="z-index: 999999;">
-    <div class="modal-content" style="max-width: 420px; text-align: center; padding: 30px;">
-        <div id="confirmModalIcon" style="font-size: 3.5rem; margin-bottom: 10px;">⚠️</div>
-        <h3 id="confirmModalTitle" style="font-family: 'Fredoka', sans-serif; font-size: 1.4rem; margin-bottom: 10px; color: var(--ink);">Konfirmasi Aksi</h3>
-        <p id="confirmModalMessage" style="font-size: 0.95rem; color: #444; margin-bottom: 25px; font-weight: 500; line-height: 1.4;"></p>
-        <div style="display: flex; gap: 12px; justify-content: center;">
-            <button id="confirmModalBtnCancel" class="btn-primary" style="background: #e2e8f0; color: #334155; border-color: var(--ink); flex: 1;">Batal</button>
-            <button id="confirmModalBtnOk" class="btn-primary" style="background: #ef4444; color: white; border-color: #b91c1c; flex: 1;">Ya, Lanjutkan</button>
+        <div class="modal-content" style="max-width: 420px; text-align: center; padding: 30px;">
+            <div id="confirm-icon" style="font-size: 3.5rem; margin-bottom: 10px;">⚠️</div>
+            <h3 id="confirm-title" style="font-family: 'Fredoka', sans-serif; font-size: 1.4rem; margin-bottom: 10px; color: var(--ink);">Konfirmasi Aksi</h3>
+            <p id="confirm-message" style="font-size: 0.95rem; color: #444; margin-bottom: 25px; font-weight: 500; line-height: 1.4;"></p>
+            <div style="display: flex; gap: 12px; justify-content: center;">
+                <button onclick="this.closest('.modal-overlay').style.display='none'" class="btn-primary" style="background: #e2e8f0; color: #334155; border-color: var(--ink); flex: 1;">Batal</button>
+                <button id="confirm-yes-btn" class="btn-primary" style="background: #ef4444; color: white; border-color: #b91c1c; flex: 1;">Ya, Lanjutkan</button>
+            </div>
         </div>
     </div>
     <div class="modal-overlay" id="updateProgressModal" style="z-index: 999999;">
@@ -3184,6 +3219,51 @@ document.addEventListener('DOMContentLoaded', loadQrisSettings);
         </div>
     </div>
 </div>
+
+<!-- MODAL PEMBAYARAN LANGGANAN DOKU OTOMATIS -->
+<div class="modal-overlay" id="paymentModal" style="z-index: 999999;">
+    <div class="modal-content" style="max-width: 450px; text-align: center;">
+        <button class="btn-close-modal" onclick="window.tutupModalPaymentSaas()">✕</button>
+        <div style="font-size: 3.5rem; margin-bottom: 5px;">💳</div>
+        <h3 style="font-size: 1.6rem; margin-bottom: 10px;">Pembayaran Langganan</h3>
+        <p id="payment-desc" style="margin-bottom: 15px; line-height: 1.5;"></p>
+        
+        <div id="saas-payment-status" style="background: var(--bg-color); padding: 15px; border-radius: 15px; border: 2px dashed var(--ink); margin-bottom: 15px; font-weight: 600;">
+            ⏳ Mempersiapkan metode pembayaran...
+        </div>
+
+        <button id="btn-lanjut-doku" class="btn-primary" style="background: #ef4444; color: white; margin-bottom: 10px; display: none;">
+            🔗 Buka Halaman Pembayaran DOKU
+        </button>
+        <button onclick="window.tutupModalPaymentSaas()" class="btn-primary" style="background: #e2e8f0; color: var(--ink);">
+            Batal / Tutup
+        </button>
+    </div>
+</div>
+
+<!-- MODAL EDIT TEMPLATE YANG SEBELUMNYA HILANG -->
+<div class="modal-overlay" id="editTemplateModal" style="z-index: 999998;">
+    <div class="modal-content" style="max-width: 750px;">
+        <button class="btn-close-modal" onclick="tutupEditModal()">✕</button>
+        <h3 style="font-size: 1.5rem; margin-bottom: 15px;">✏️ Edit Template & Koordinat</h3>
+        <input type="hidden" id="edit-format">
+        <input type="hidden" id="edit-id">
+        <div class="form-group">
+            <label>Nama Template</label>
+            <input type="text" id="edit-nama">
+        </div>
+        <div class="editor-row">
+            <div id="ve-container-edit" class="ve-container-wrapper" style="display:block; max-width:100%;">
+                <img id="ve-image-edit" class="ve-image-target" src="">
+                <div id="ve-slots-edit"></div>
+            </div>
+            <div class="layout-box">
+                <label style="font-weight:bold; display:block; margin-bottom:10px;">📐 Koordinat (X, Y, W, H)</label>
+                <div id="coordContainer-edit"></div>
+            </div>
+        </div>
+        <button onclick="simpanEditTemplate()" class="btn-primary" style="background: var(--green); color: var(--ink); margin-top: 15px;">💾 Simpan Perubahan</button>
+    </div>
 </div>
 </body>
 </html>
