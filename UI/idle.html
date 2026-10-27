@@ -10,109 +10,149 @@
     <link rel="stylesheet" href="/assets/theme.css">
     
     <style>
+        /* ========================================================= */
+        /* 🎨 TEMA CLEAN AESTHETIC BRAND (PINK, TOSCA, LAVENDER)     */
+        /* ========================================================= */
+        :root {
+            --brand-pink: #f7a8b8;
+            --brand-pink-soft: #fdf2f4;
+            --brand-teal: #76cbc4;
+            --brand-teal-soft: #eefaf9;
+            --brand-purple: #b9a5e2;
+            --brand-purple-soft: #f5f2fc;
+            --brand-dark: #42464d;
+            --brand-muted: #64748b;
+        }
+
         html, body {
             margin: 0; padding: 0; width: 100vw; height: 100vh;
             overflow: hidden; 
-            background-color: var(--bg-color); 
-            color: var(--ink);
+            background-color: #fafbfc; 
+            color: var(--brand-dark);
             font-family: 'Fredoka', sans-serif; 
             user-select: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background-image: radial-gradient(var(--dot-color) 2px, transparent 2px);
-            background-size: 40px 40px;
+            display: flex; align-items: center; justify-content: center;
+            background-image: 
+                radial-gradient(circle at 12% 18%, rgba(247, 168, 184, 0.16) 0%, transparent 38%),
+                radial-gradient(circle at 88% 82%, rgba(118, 203, 196, 0.18) 0%, transparent 40%),
+                radial-gradient(circle at 82% 18%, rgba(185, 165, 226, 0.15) 0%, transparent 32%),
+                radial-gradient(#cbd5e1 1.5px, transparent 1.5px);
+            background-size: 100% 100%, 100% 100%, 100% 100%, 36px 36px;
         }
 
-        /* --- ORNAMEN DOODLE MENGAMBANG --- */
-        .doodle-asset { position: absolute; pointer-events: none; z-index: 1; }
-        .doodle-flags { top: 0; left: 0; width: 250px; }
-        .doodle-smile { top: 8%; right: 15%; width: 120px; animation: float 4s infinite ease-in-out; }
+        /* --- ORNAMEN PASTEL MENGAMBANG --- */
+        .doodle-asset { position: absolute; pointer-events: none; z-index: 1; filter: drop-shadow(0 10px 20px rgba(66, 70, 77, 0.06)); }
+        .doodle-flags { top: 0; left: 0; width: 240px; opacity: 0.9; }
+        .doodle-smile { top: 8%; right: 14%; width: 115px; animation: float 4.5s infinite ease-in-out; }
         .doodle-smile-text {
-            position: absolute; top: 12%; right: 17%;
-            font-family: 'Caveat', cursive; font-size: 2rem; color: var(--ink);
-            transform: rotate(5deg); pointer-events: none; animation: float 4s infinite ease-in-out;
+            position: absolute; top: 11.5%; right: 16.2%;
+            font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 1.35rem; color: var(--brand-dark);
+            transform: rotate(4deg); pointer-events: none; animation: float 4.5s infinite ease-in-out; z-index: 2;
         }
-        .doodle-cloud { top: 30%; right: 8%; width: 130px; animation: float 6s infinite ease-in-out 1s; }
-        .doodle-star { top: 50%; right: 25%; width: 30px; animation: pop 2s infinite alternate; }
-        .doodle-strip { bottom: 5%; left: 8%; width: 160px; transform: rotate(-10deg); animation: float 5s infinite ease-in-out reverse; }
-        .doodle-polaroid { bottom: 5%; right: 10%; width: 180px; transform: rotate(5deg); animation: float 5s infinite ease-in-out 0.5s; }
-        .doodle-heart-1 { top: 15%; left: 30%; width: 25px; }
-        .doodle-heart-2 { bottom: 35%; right: 35%; width: 20px; }
+        .doodle-cloud { top: 32%; right: 7%; width: 125px; animation: float 6s infinite ease-in-out 1s; opacity: 0.9; }
+        .doodle-star { top: 52%; right: 22%; width: 32px; animation: pop 2.2s infinite alternate; }
+        .doodle-strip { bottom: 6%; left: 7%; width: 145px; transform: rotate(-8deg); animation: float 5s infinite ease-in-out reverse; }
+        .doodle-polaroid { bottom: 6%; right: 8%; width: 165px; transform: rotate(5deg); animation: float 5s infinite ease-in-out 0.5s; }
+        .doodle-heart-1 { top: 16%; left: 26%; width: 28px; animation: pop 2.5s infinite alternate; }
         
         @keyframes float {
-            0% { transform: translateY(0px) rotate(0deg); }
-            50% { transform: translateY(-15px) rotate(3deg); }
-            100% { transform: translateY(0px) rotate(0deg); }
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-12px) rotate(2deg); }
         }
         @keyframes pop {
-            0% { transform: scale(0.9); opacity: 0.8; }
-            100% { transform: scale(1.1); opacity: 1; }
+            0% { transform: scale(0.92); opacity: 0.75; }
+            100% { transform: scale(1.08); opacity: 1; }
         }
 
-        /* --- KONTEN UTAMA (TENGAH) --- */
+        /* --- KONTEN UTAMA (TENGAH - CLEAN GLASS CARD) --- */
         .main-content {
             z-index: 10; display: flex; flex-direction: column;
-            align-items: center; text-align: center; gap: 10px;
+            align-items: center; text-align: center; gap: 12px;
             cursor: pointer; position: relative; width: 100%; height: 100vh;
-            justify-content: center;
-        }
-        .top-camera-icon { width: 90px; margin-bottom: -10px; }
-        .brand-wrapper { position: relative; display: inline-block; margin-bottom: 5px; }
-        .brand-blob {
-            position: absolute; top: 30%; left: 5%; width: 90%; height: 60%;
-            background: var(--paper-white); border-radius: 50px; z-index: -1; transform: rotate(-2deg);
-        }
-        .brand-title { font-size: 6.5rem; font-weight: 600; color: var(--ink); margin: 0; line-height: 1.1; letter-spacing: -1px; }
-        .brand-title span { font-size: 5rem; }
-        .subtitle { font-family: 'Caveat', cursive; font-size: 2.2rem; color: var(--ink); margin: 0 0 30px 0; line-height: 1.2; }
-        
-        /* --- TOMBOL TAP TO START --- */
-        .btn-start {
-            position: relative; 
-            background: transparent; /* Warna dikosongkan agar layer di bawahnya terlihat */
-            color: var(--ink);
-            border: 4px solid var(--ink); border-radius: 50px;
-            padding: 18px 60px; font-size: 2.5rem; font-family: 'Caveat', cursive; font-weight: 700;
-            display: flex; align-items: center; gap: 15px; cursor: pointer;
-            animation: pulseBtn 1.5s infinite alternate ease-in-out; 
-            pointer-events: none; /* Klik tembus ke .main-content */
-            z-index: 1; /* Memastikan tumpukan layer rapi */
+            justify-content: center; padding: 20px; box-sizing: border-box;
         }
 
-        /* Lapisan 1: Background Pink (Tepat di belakang teks & border) */
-        .btn-start::before {
-            content: ""; position: absolute; 
-            top: -4px; left: -4px; /* Ditarik mundur sedikit untuk menutupi ketebalan border */
-            width: calc(100% + 8px); height: calc(100% + 8px);
-            background: var(--pink);
-            border-radius: 50px;
-            z-index: -1;
+        .center-hero-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+            border: 2px solid #ffffff;
+            border-radius: 40px;
+            padding: 42px 60px;
+            box-shadow: 0 24px 60px rgba(66, 70, 77, 0.08), 0 0 0 2px rgba(247, 168, 184, 0.22);
+            display: flex; flex-direction: column; align-items: center;
+            max-width: 720px; width: 92%;
+            transition: transform 0.3s ease;
         }
-        
-        /* Lapisan 2: Efek garis bayangan arsir (Di posisi paling belakang) */
-        .btn-start::after {
-            content: ""; position: absolute; 
-            top: 10px; left: 10px; /* Jarak jatuhnya bayangan */
-            width: calc(100% + 8px); height: calc(100% + 8px); 
-            border: 4px solid var(--ink); border-radius: 50px;
-            background: repeating-linear-gradient(45deg, transparent, transparent 5px, var(--ink) 5px, var(--ink) 7px);
-            z-index: -2;
+        .center-hero-card:hover { transform: translateY(-4px); }
+
+        .brand-logo-icon {
+            width: 110px; height: 110px; margin-bottom: 8px;
+            background: #ffffff; border-radius: 28px; padding: 12px;
+            box-shadow: 0 12px 28px rgba(118, 203, 196, 0.22);
+            border: 2px solid #f1f5f9;
+        }
+
+        /* Judul Brand Persis Warna Logo lacasabooth.id */
+        .brand-title { 
+            font-size: 4.8rem; font-weight: 700; color: var(--brand-dark); 
+            margin: 0; line-height: 1.05; letter-spacing: -1px; 
+        }
+        .brand-title .c-teal { color: var(--brand-teal); }
+        .brand-title .c-purple { color: var(--brand-purple); }
+        .brand-title .c-pink { color: var(--brand-pink); }
+        .brand-title .c-dot { font-size: 3.8rem; color: var(--brand-dark); }
+
+        .subtitle { 
+            font-family: 'Fredoka', sans-serif; font-size: 1.25rem; color: var(--brand-muted); 
+            margin: 8px 0 18px 0; line-height: 1.4; font-weight: 500; max-width: 520px;
+        }
+
+        /* --- PILLS KETERANGAN FITUR PHOTOBOOTH --- */
+        .feature-pills {
+            display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+            margin-bottom: 28px;
+        }
+        .pill-item {
+            padding: 7px 16px; border-radius: 50px; font-size: 0.88rem; font-weight: 600;
+            display: inline-flex; align-items: center; gap: 6px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+        }
+        .pill-pink { background: var(--brand-pink-soft); color: #be185d; border: 1.5px solid #fbcfe8; }
+        .pill-teal { background: var(--brand-teal-soft); color: #0f766e; border: 1.5px solid #99f6e4; }
+        .pill-purple { background: var(--brand-purple-soft); color: #6d28d9; border: 1.5px solid #ddd6fe; }
+
+        /* --- TOMBOL TAP TO START (GRADASI BRAND) --- */
+        .btn-start {
+            position: relative;
+            background: linear-gradient(135deg, var(--brand-pink) 0%, var(--brand-purple) 50%, var(--brand-teal) 100%);
+            color: #ffffff;
+            border: 3px solid #ffffff; border-radius: 50px;
+            padding: 16px 52px; font-size: 1.65rem; font-family: 'Fredoka', sans-serif; font-weight: 700;
+            display: flex; align-items: center; gap: 14px; cursor: pointer;
+            box-shadow: 0 14px 30px rgba(185, 165, 226, 0.45);
+            animation: pulseBtn 1.6s infinite alternate ease-in-out; 
+            pointer-events: none; z-index: 1; letter-spacing: 0.3px;
+        }
+
+        .touch-hint {
+            margin-top: 14px; font-size: 0.85rem; color: #94a3b8; font-weight: 600;
+            letter-spacing: 0.5px; text-transform: uppercase;
         }
 
         @keyframes pulseBtn {
-            0% { transform: scale(1); }
-            100% { transform: scale(1.03); }
+            0% { transform: scale(1); box-shadow: 0 12px 25px rgba(185, 165, 226, 0.38); }
+            100% { transform: scale(1.04); box-shadow: 0 18px 36px rgba(118, 203, 196, 0.5); }
         }
         
-        /* Tombol Admin */
+        /* --- TOMBOL ADMIN (CLEAN PILL) --- */
         .btn-admin {
-            position: absolute; top: 20px; right: 20px; z-index: 50;
-            background: rgba(0,0,0,0.5); border: none; color: white;
-            padding: 8px 15px; border-radius: 15px; font-family: 'Fredoka', sans-serif;
-            font-size: 0.9rem; cursor: pointer; transition: 0.2s; backdrop-filter: blur(5px);
+            position: absolute; top: 22px; right: 25px; z-index: 50;
+            background: rgba(255, 255, 255, 0.85); border: 2px solid #e2e8f0; color: var(--brand-dark);
+            padding: 8px 18px; border-radius: 50px; font-family: 'Fredoka', sans-serif;
+            font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: 0.2s; 
+            backdrop-filter: blur(8px); box-shadow: 0 6px 15px rgba(0,0,0,0.05);
         }
-        .btn-admin:hover { background: var(--pink); color: var(--ink); }
+        .btn-admin:hover { background: var(--brand-pink-soft); border-color: var(--brand-pink); color: #be185d; transform: translateY(-2px); }
 
         /* Lapisan Layar Custom */
         #custom-ui-layer {
@@ -120,34 +160,35 @@
             z-index: 20; display: none; cursor: pointer;
         }
 
+        /* --- UI NUMPAD PIN (CLEAN PASTEL) --- */
+        .pin-dot { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid #cbd5e1; background: #f8fafc; transition: 0.2s; }
+        .pin-dot.filled { background: var(--brand-teal); border-color: var(--brand-teal); transform: scale(1.1); }
+        .pin-dot.error { border-color: #ef4444; background: #ef4444; animation: shakePin 0.3s; }
+        .btn-numpad { 
+            background: #ffffff; border: 1.5px solid #e2e8f0; font-size: 1.4rem; 
+            font-family: 'Fredoka', sans-serif; font-weight: 700; color: var(--brand-dark); 
+            border-radius: 16px; padding: 13px 0; cursor: pointer; transition: 0.15s; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.04); 
+        }
+        .btn-numpad:hover { background: var(--brand-teal-soft); border-color: var(--brand-teal); }
+        .btn-numpad:active { transform: translateY(2px); }
+        .btn-numpad.special { font-size: 0.95rem; background: #f1f5f9; color: #475569; }
+        @keyframes shakePin { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+
         /* ====================================================
-           RESPONSIVE MOBILE (ANDROID & IOS)
+           RESPONSIVE MOBILE & PORTRAIT
            ==================================================== */
-        @media (max-width: 768px) {
-            .brand-title { font-size: 4.5rem; }
-            .brand-title span { font-size: 3rem; }
-            .subtitle { font-size: 1.8rem; margin: 0 0 40px 0;}
-            
-            .btn-start { padding: 15px 40px; font-size: 2rem; }
-            
+        @media (max-width: 768px), (orientation: portrait) {
+            .center-hero-card { padding: 32px 24px; border-radius: 32px; }
+            .brand-title { font-size: 3.3rem; }
+            .brand-title .c-dot { font-size: 2.6rem; }
+            .subtitle { font-size: 1.05rem; margin: 6px 0 16px 0; }
+            .btn-start { padding: 14px 38px; font-size: 1.35rem; }
             .doodle-polaroid, .doodle-strip, .doodle-cloud { display: none; }
             .doodle-flags { width: 150px; }
-            .doodle-smile { width: 80px; top: 5%; right: 5%; }
-            .doodle-smile-text { font-size: 1.3rem; top: 8%; right: 7%; }
-            .doodle-star { right: 10%; width: 20px; }
-            .doodle-heart-1 { top: 10%; left: 15%; }
-            .doodle-heart-2 { bottom: 25%; right: 15%; }
-            
-            .btn-admin { top: 10px; right: 10px; padding: 6px 12px; font-size: 0.8rem; }
+            .doodle-smile { width: 85px; top: 5%; right: 5%; }
+            .doodle-smile-text { font-size: 1rem; top: 7.5%; right: 7%; }
         }
-        /* --- UI NUMPAD PIN --- */
-.pin-dot { width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--ink); background: transparent; transition: 0.2s; }
-.pin-dot.filled { background: var(--ink); }
-.pin-dot.error { border-color: #ef4444; background: #ef4444; animation: shakePin 0.3s; }
-.btn-numpad { background: var(--paper-white); border: 3px solid var(--ink); font-size: 1.8rem; font-family: 'Fredoka', sans-serif; font-weight: 700; color: var(--ink); border-radius: 15px; padding: 15px 0; cursor: pointer; transition: 0.1s; box-shadow: 3px 3px 0px var(--ink); }
-.btn-numpad:active { transform: translateY(3px); box-shadow: 0px 0px 0px var(--ink); background: var(--yellow); }
-.btn-numpad.special { font-size: 1rem; background: #e5e7eb; }
-@keyframes shakePin { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
     </style>
 </head>
 <body>
@@ -158,83 +199,105 @@
     <!-- LAPISAN 1: CUSTOM IDLE SCREEN (Muncul jika klien upload file) -->
     <div id="custom-ui-layer" onclick="mulaiSesi()"></div>
 
-    <!-- LAPISAN 2: TEMA BAWAAN (Muncul jika tidak ada file custom) -->
-   <div id="default-ui-layer" style="width: 100%; height: 100%; position: absolute; top: 0; left: 0; display: none;">  
-        <!-- ORNAMEN DOODLE KIRI ATAS (BENDERA) -->
+    <!-- LAPISAN 2: TEMA BAWAAN CLEAN AESTHETIC -->
+    <div id="default-ui-layer" style="width: 100%; height: 100%; position: absolute; top: 0; left: 0; display: none;">  
+        <!-- ORNAMEN KIRI ATAS (BENDERA PASTEL LOGO) -->
         <svg class="doodle-asset doodle-flags" viewBox="0 0 250 150">
-            <path d="M0 20 Q125 70 250 10" fill="none" stroke="var(--ink)" stroke-width="4"/>
-            <polygon points="20,25 45,75 70,30" fill="var(--green)" stroke="var(--ink)" stroke-width="4" stroke-linejoin="round"/>
-            <polygon points="90,37 115,85 140,38" fill="var(--pink)" stroke="var(--ink)" stroke-width="4" stroke-linejoin="round"/>
-            <polygon points="160,32 185,80 210,25" fill="var(--blue)" stroke="var(--ink)" stroke-width="4" stroke-linejoin="round"/>
+            <path d="M0 20 Q125 70 250 10" fill="none" stroke="#cbd5e1" stroke-width="3"/>
+            <polygon points="20,25 45,75 70,30" fill="#76cbc4" stroke="#ffffff" stroke-width="3" stroke-linejoin="round"/>
+            <polygon points="90,37 115,85 140,38" fill="#f7a8b8" stroke="#ffffff" stroke-width="3" stroke-linejoin="round"/>
+            <polygon points="160,32 185,80 210,25" fill="#b9a5e2" stroke="#ffffff" stroke-width="3" stroke-linejoin="round"/>
         </svg>
 
-        <!-- ORNAMEN DOODLE KANAN ATAS (SMILE) -->
+        <!-- ORNAMEN KANAN ATAS (SMILE BUBBLE) -->
         <svg class="doodle-asset doodle-smile" viewBox="0 0 150 100">
-            <path d="M10 50 Q10 10 75 10 Q140 10 140 50 Q140 90 75 90 Q40 90 20 110 L25 80 Q10 70 10 50 Z" fill="var(--paper-white)" stroke="var(--ink)" stroke-width="4" stroke-linejoin="round"/>
-            <path d="M80 75 C75 85 65 85 60 75 Z" fill="var(--pink)" stroke="var(--ink)" stroke-width="3"/>
+            <path d="M10 50 Q10 10 75 10 Q140 10 140 50 Q140 90 75 90 Q40 90 20 110 L25 80 Q10 70 10 50 Z" fill="#ffffff" stroke="#f7a8b8" stroke-width="3.5" stroke-linejoin="round"/>
         </svg>
-        <div class="doodle-smile-text">smile!</div>
+        <div class="doodle-smile-text">Say Cheese! ✨</div>
 
-        <!-- ORNAMEN KANAN TENGAH (AWAN) -->
+        <!-- ORNAMEN KANAN TENGAH (AWAN PASTEL) -->
         <svg class="doodle-asset doodle-cloud" viewBox="0 0 150 100">
-            <path d="M40 70 A25 25 0 0 1 40 20 A35 35 0 0 1 100 15 A30 30 0 0 1 120 70 Z" fill="var(--blue)" stroke="var(--ink)" stroke-width="4" stroke-linejoin="round"/>
+            <path d="M40 70 A25 25 0 0 1 40 20 A35 35 0 0 1 100 15 A30 30 0 0 1 120 70 Z" fill="#eefaf9" stroke="#76cbc4" stroke-width="3.5" stroke-linejoin="round"/>
         </svg>
 
         <!-- ORNAMEN BINTANG & HATI -->
         <svg class="doodle-asset doodle-star" viewBox="0 0 50 50">
-            <polygon points="25,5 31,18 45,20 35,30 38,45 25,37 12,45 15,30 5,20 19,18" fill="var(--yellow)" stroke="var(--ink)" stroke-width="3" stroke-linejoin="round"/>
+            <polygon points="25,5 31,18 45,20 35,30 38,45 25,37 12,45 15,30 5,20 19,18" fill="#fde68a" stroke="#f59e0b" stroke-width="2.5" stroke-linejoin="round"/>
         </svg>
         <svg class="doodle-asset doodle-heart-1" viewBox="0 0 50 50">
-            <path d="M25 45 C10 35 5 20 12 10 C18 2 25 10 25 10 C25 10 32 2 38 10 C45 20 40 35 25 45 Z" fill="none" stroke="var(--pink)" stroke-width="4"/>
+            <path d="M25 45 C10 35 5 20 12 10 C18 2 25 10 25 10 C25 10 32 2 38 10 C45 20 40 35 25 45 Z" fill="#fdf2f4" stroke="#f7a8b8" stroke-width="3.5"/>
         </svg>
 
-        <!-- ORNAMEN KIRI BAWAH (PHOTOSTRIP) -->
+        <!-- ORNAMEN KIRI BAWAH (PHOTOSTRIP PASTEL) -->
         <svg class="doodle-asset doodle-strip" viewBox="0 0 120 280">
-            <rect x="10" y="10" width="100" height="260" fill="var(--paper-white)" stroke="var(--ink)" stroke-width="4" rx="5"/>
-            <rect x="5" y="5" width="110" height="30" fill="var(--green)" stroke="var(--ink)" stroke-width="4" rx="2" transform="rotate(-5 60 20)"/>
-            <rect x="20" y="50" width="80" height="60" fill="var(--bg-color)" stroke="var(--ink)" stroke-width="3"/>
-            <circle cx="50" cy="75" r="8" fill="none" stroke="var(--ink)" stroke-width="2"/>
-            <circle cx="70" cy="75" r="8" fill="none" stroke="var(--ink)" stroke-width="2"/>
-            <path d="M50 90 Q60 100 70 90" fill="none" stroke="var(--ink)" stroke-width="2"/>
-            <rect x="20" y="120" width="80" height="60" fill="var(--pink)" stroke="var(--ink)" stroke-width="3"/>
-            <rect x="20" y="190" width="80" height="60" fill="var(--blue)" stroke="var(--ink)" stroke-width="3"/>
+            <rect x="10" y="10" width="100" height="260" fill="#ffffff" stroke="#e2e8f0" stroke-width="3.5" rx="12"/>
+            <rect x="20" y="30" width="80" height="65" fill="#fdf2f4" stroke="#f7a8b8" stroke-width="2" rx="6"/>
+            <rect x="20" y="108" width="80" height="65" fill="#eefaf9" stroke="#76cbc4" stroke-width="2" rx="6"/>
+            <rect x="20" y="186" width="80" height="65" fill="#f5f2fc" stroke="#b9a5e2" stroke-width="2" rx="6"/>
         </svg>
 
-        <!-- ORNAMEN KANAN BAWAH (POLAROID) -->
+        <!-- ORNAMEN KANAN BAWAH (INSTANT PRINTER CAMERA) -->
         <svg class="doodle-asset doodle-polaroid" viewBox="0 0 160 180">
-            <rect x="20" y="20" width="120" height="100" fill="var(--paper-white)" stroke="var(--ink)" stroke-width="4" rx="15"/>
-            <rect x="20" y="90" width="120" height="20" fill="var(--green)" stroke="var(--ink)" stroke-width="4"/>
-            <circle cx="80" cy="60" r="25" fill="var(--bg-color)" stroke="var(--ink)" stroke-width="4"/>
-            <circle cx="80" cy="60" r="10" fill="var(--ink)"/>
-            <rect x="30" y="30" width="15" height="15" fill="var(--pink)" stroke="var(--ink)" stroke-width="3" rx="3"/>
-            <path d="M35 110 L125 110 L140 170 L20 170 Z" fill="var(--paper-white)" stroke="var(--ink)" stroke-width="4" stroke-linejoin="round"/>
-            <path d="M45 120 L115 120 L125 160 L35 160 Z" fill="var(--pink)" stroke="var(--ink)" stroke-width="3" stroke-linejoin="round"/>
+            <rect x="20" y="20" width="120" height="100" fill="#ffffff" stroke="#76cbc4" stroke-width="3.5" rx="20"/>
+            <rect x="20" y="92" width="120" height="18" fill="#eefaf9"/>
+            <circle cx="80" cy="60" r="24" fill="#fafbfc" stroke="#42464d" stroke-width="3.5"/>
+            <circle cx="80" cy="60" r="10" fill="#42464d"/>
+            <circle cx="115" cy="40" r="6" fill="#f7a8b8"/>
+            <path d="M35 110 L125 110 L135 168 L25 168 Z" fill="#ffffff" stroke="#e2e8f0" stroke-width="3" stroke-linejoin="round"/>
+            <path d="M45 118 L115 118 L122 156 L38 156 Z" fill="#fdf2f4" stroke="#f7a8b8" stroke-width="2" stroke-linejoin="round"/>
         </svg>
 
-        <!-- KLIK AREA TEMA BAWAAN -->
+        <!-- AREA KLIK UTAMA -->
         <div class="main-content" onclick="mulaiSesi()">
-            <svg class="top-camera-icon" viewBox="0 0 100 80">
-                <rect x="10" y="20" width="80" height="55" fill="var(--paper-white)" stroke="var(--ink)" stroke-width="4" rx="10"/>
-                <rect x="35" y="5" width="30" height="15" fill="var(--paper-white)" stroke="var(--ink)" stroke-width="4" rx="5"/>
-                <circle cx="50" cy="47" r="18" fill="none" stroke="var(--ink)" stroke-width="4"/>
-                <circle cx="50" cy="47" r="8" fill="var(--ink)"/>
-                <circle cx="25" cy="35" r="4" fill="var(--pink)"/>
-            </svg>
-            <div class="brand-wrapper">
-                <div class="brand-blob"></div>
-                <h1 class="brand-title">Lacasabooth<span>.id</span></h1>
-            </div>
-            <p class="subtitle">
-                Capture the <span style="color: var(--pink); font-weight:bold;">moment</span>,<br>
-                create the <span style="color: var(--green); font-weight:bold;">memory</span>.
-            </p>
-            <div class="btn-start">
-                <svg width="35" height="35" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="8" width="18" height="12" rx="2" ry="2"></rect>
-                    <path d="M16 8v-2a2 2 0 0 0 -2-2h-4a2 2 0 0 0 -2 2v2"></path>
-                    <circle cx="12" cy="14" r="3"></circle>
+            <div class="center-hero-card">
+                
+                <!-- IKON LOGO RUMAH KAMERA LACASABOOTH.ID -->
+                <svg class="brand-logo-icon" viewBox="0 0 120 120">
+                    <!-- Atap Kiri Pink & Kanan Tosca + Cerobong Ungu -->
+                    <rect x="82" y="20" width="12" height="22" rx="3" fill="#b9a5e2"/>
+                    <path d="M16 48 L60 16" stroke="#f7a8b8" stroke-width="11" stroke-linecap="round"/>
+                    <path d="M60 16 L104 48" stroke="#76cbc4" stroke-width="11" stroke-linecap="round"/>
+                    <!-- Lampu Flash Atas -->
+                    <rect x="52" y="38" width="16" height="7" rx="3.5" fill="#42464d"/>
+                    <!-- Huruf L Pink -->
+                    <path d="M30 48 L30 92 Q30 102 40 102 L58 102" fill="none" stroke="#f7a8b8" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+                    <!-- Badan Kamera / Huruf B Tosca -->
+                    <rect x="52" y="50" width="42" height="52" rx="20" fill="#76cbc4"/>
+                    <!-- Lensa Kamera -->
+                    <circle cx="62" cy="76" r="19" fill="#ffffff"/>
+                    <circle cx="62" cy="76" r="11" fill="#42464d"/>
+                    <circle cx="65" cy="73" r="3" fill="#ffffff"/>
                 </svg>
-                Tap to Start
+
+                <!-- TULISAN BRAND SESUAI WARNA LOGO -->
+                <h1 class="brand-title">
+                    lacasa<span class="c-teal">boo</span><span class="c-purple">t</span><span class="c-pink">h</span><span class="c-dot">.id</span>
+                </h1>
+
+                <!-- TEKS KETERANGAN PHOTOBOOTH -->
+                <p class="subtitle">
+                    Interactive Self-Photo & Instant Photobooth Experience.<br>
+                    Bergaya bebas, pilih bingkai favoritmu, dan bawa pulang kenangannya!
+                </p>
+
+                <!-- BADGE FITUR PHOTOBOOTH -->
+                <div class="feature-pills">
+                    <div class="pill-item pill-pink">🖨️ Cetak Foto Instan</div>
+                    <div class="pill-item pill-teal">🎬 Live Photo & Animasi GIF</div>
+                    <div class="pill-item pill-purple">📲 Softcopy QR & WhatsApp</div>
+                </div>
+
+                <!-- TOMBOL MULAI -->
+                <div class="btn-start">
+                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="8" width="18" height="12" rx="3" ry="3"></rect>
+                        <path d="M16 8v-2a2 2 0 0 0 -2-2h-4a2 2 0 0 0 -2 2v2"></path>
+                        <circle cx="12" cy="14" r="3"></circle>
+                    </svg>
+                    Sentuh Layar untuk Mulai
+                </div>
+
+                <div class="touch-hint">✨ Tap Anywhere on Screen to Start Photobooth ✨</div>
             </div>
         </div>
     </div>
@@ -335,19 +398,18 @@ let inputPinBuffer = "";
     tampilkanPopupBiasa(e);
 }
 
-// Pisahkan popup lama menjadi fungsi sendiri
 function tampilkanPopupBiasa(e) {
     const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.6); z-index:999999; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(5px);';
+    overlay.style.cssText = 'position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(30, 41, 59, 0.65); z-index:999999; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(6px);';
     
     const box = document.createElement('div');
-    box.style.cssText = 'background:var(--paper-white); padding:30px 40px; border-radius:25px; border:4px solid var(--ink); box-shadow:8px 10px 0px var(--ink); text-align:center; animation: pop 0.3s ease; color: var(--ink);';
+    box.style.cssText = 'background:#ffffff; padding:32px 38px; border-radius:30px; border:2px solid #e2e8f0; box-shadow:0 20px 45px rgba(66, 70, 77, 0.18); text-align:center; animation: pop 0.25s ease; color: #42464d; max-width: 360px; width: 90%;';
     box.innerHTML = `
-        <h2 style="font-family:'Caveat', cursive; font-size:2.8rem; margin:0 0 5px 0; font-weight: 700;">Admin Panel ⚙️</h2>
-        <p style="margin-bottom: 25px; font-weight: 500; opacity: 0.8;">Tinggalkan layar ini dan kembali ke pengaturan?</p>
-        <div style="display:flex; gap:15px; justify-content:center;">
-            <button id="btn-batal" style="background:var(--bg-color); border:2px solid var(--ink); padding:10px 25px; border-radius:15px; font-weight:600; cursor:pointer; font-family:'Fredoka', sans-serif; font-size: 1rem; transition: 0.2s;">Batal</button>
-            <button id="btn-yakin" style="background:var(--pink); border:2px solid var(--ink); padding:10px 25px; border-radius:15px; font-weight:600; cursor:pointer; font-family:'Fredoka', sans-serif; font-size: 1rem; transition: 0.2s; box-shadow: 3px 3px 0px var(--ink);">Yakin</button>
+        <h2 style="font-family:'Fredoka', sans-serif; font-size:1.8rem; margin:0 0 8px 0; font-weight: 700; color:#42464d;">Admin Panel ⚙️</h2>
+        <p style="margin-bottom: 24px; font-weight: 500; color: #64748b; font-size: 0.95rem;">Tinggalkan layar utama dan buka pengaturan Event Manager?</p>
+        <div style="display:flex; gap:12px; justify-content:center;">
+            <button id="btn-batal" style="flex:1; background:#f1f5f9; color:#475569; border:none; padding:12px 20px; border-radius:50px; font-weight:600; cursor:pointer; font-family:'Fredoka', sans-serif; font-size: 0.95rem;">Batal</button>
+            <button id="btn-yakin" style="flex:1; background:linear-gradient(135deg, #f7a8b8, #76cbc4); color:#ffffff; border:none; padding:12px 20px; border-radius:50px; font-weight:600; cursor:pointer; font-family:'Fredoka', sans-serif; font-size: 0.95rem; box-shadow: 0 6px 15px rgba(118, 203, 196, 0.35);">Masuk ›</button>
         </div>
     `;
     
@@ -409,14 +471,15 @@ function updatePinDots() {
     });
 }
     </script>
-    <!-- MODAL PIN NUMPAD -->
-<div id="pin-modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 999999; justify-content: center; align-items: center; backdrop-filter: blur(5px);">
-    <div style="background: var(--bg-color); padding: 30px; border-radius: 30px; border: 4px solid var(--ink); box-shadow: 10px 12px 0px var(--ink); text-align: center; width: 340px; background-image: radial-gradient(var(--dot-color) 2px, transparent 2px); background-size: 40px 40px;">
-        <h2 style="font-family: 'Caveat', cursive; font-size: 3rem; margin: 0 0 10px 0; line-height: 1;">PIN Admin 🔒</h2>
-        <div id="pin-dots" style="display: flex; justify-content: center; gap: 15px; margin-bottom: 25px;">
+    <!-- MODAL PIN NUMPAD (CLEAN PASTEL) -->
+<div id="pin-modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(30, 41, 59, 0.65); z-index: 999999; justify-content: center; align-items: center; backdrop-filter: blur(6px);">
+    <div style="background: rgba(255, 255, 255, 0.96); padding: 30px; border-radius: 32px; border: 2px solid #e2e8f0; box-shadow: 0 24px 50px rgba(66, 70, 77, 0.22); text-align: center; width: 320px;">
+        <h2 style="font-family: 'Fredoka', sans-serif; font-size: 1.7rem; color: #42464d; margin: 0 0 6px 0;">PIN Admin 🔒</h2>
+        <p style="margin: 0 0 18px 0; font-size: 0.85rem; color: #64748b; font-weight: 500;">Masukkan 4 digit kode keamanan</p>
+        <div id="pin-dots" style="display: flex; justify-content: center; gap: 14px; margin-bottom: 22px;">
             <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
         </div>
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 15px;">
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px;">
             <button class="btn-numpad" onclick="tekanNumpad('1', event)">1</button>
             <button class="btn-numpad" onclick="tekanNumpad('2', event)">2</button>
             <button class="btn-numpad" onclick="tekanNumpad('3', event)">3</button>
@@ -428,9 +491,9 @@ function updatePinDots() {
             <button class="btn-numpad" onclick="tekanNumpad('9', event)">9</button>
             <button class="btn-numpad special" onclick="tutupPinModal(event)">Batal</button>
             <button class="btn-numpad" onclick="tekanNumpad('0', event)">0</button>
-            <button class="btn-numpad special" style="background: var(--pink);" onclick="tekanNumpad('del', event)">⌫</button>
+            <button class="btn-numpad special" style="background: #fee2e2; color: #ef4444; border-color: #fecaca;" onclick="tekanNumpad('del', event)">⌫</button>
         </div>
-        <p id="pin-error-text" style="color: #ef4444; font-weight: bold; font-size: 1.1rem; height: 20px; margin: 0; visibility: hidden; background: #fee2e2; border-radius: 10px; border: 2px solid #ef4444;">PIN Salah!</p>
+        <p id="pin-error-text" style="color: #ef4444; font-weight: 600; font-size: 0.9rem; padding: 4px 10px; margin: 0; visibility: hidden; background: #fee2e2; border-radius: 50px;">PIN Salah, coba lagi!</p>
     </div>
 </div>
 </body>

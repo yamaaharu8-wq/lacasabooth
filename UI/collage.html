@@ -6,257 +6,314 @@
     <title>Lacasaphoto - Mode Collage</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/assets/theme.css">
     
-    <style>
-        html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; position: fixed; touch-action: none; user-select: none; font-family: 'Poppins', sans-serif; background-color: var(--bg-color); background-image: radial-gradient(var(--dot-color) 2px, transparent 2px); background-size: 40px 40px; color: var(--ink); text-align: center; }
+   <style>
+        /* ========================================================= */
+        /* 🌸 TEMA CLEAN DUSTY PINK / BLUSH PASTEL (SOFT & BLEND)    */
+        /* ========================================================= */
+        html, body { 
+            margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; position: fixed; 
+            touch-action: none; user-select: none; font-family: 'Fredoka', 'Poppins', sans-serif; 
+            background-color: #fdf8f9; background-image: radial-gradient(#f2dce2 1.5px, transparent 1.5px); 
+            background-size: 35px 35px; color: #1e293b; text-align: center; 
+        }
         .secret-back-btn { position: fixed; top: 0; left: 0; width: 90px; height: 90px; z-index: 9999999; cursor: pointer; background: transparent; }
+
+        /* --- TIMER SESI (SOFT BLUSH PINK) --- */
         #sessionTimerDisplay { 
-            position: fixed; 
-            top: 25px; 
-            right: 30px; /* Posisi default di pojok kanan atas */
-            left: auto;
-            transform: none; 
-            background: rgba(253, 251, 247, 0.7); /* Transparan estetik */
-            backdrop-filter: blur(10px); /* Efek kaca (Glassmorphism) */
-            -webkit-backdrop-filter: blur(10px);
-            color: var(--ink); 
-            padding: 8px 20px; 
-            border-radius: 50px; 
-            font-size: 1.1rem; 
-            font-weight: 700; 
-            z-index: 99999999; 
-            border: 2px solid rgba(0,0,0,0.05); 
-            box-shadow: 0 8px 20px rgba(0,0,0,0.08); 
-            transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); 
-            display: flex; align-items: center; gap: 8px; 
+            position: fixed; top: 25px; right: 30px; left: auto; transform: none; 
+            background: #ffffff; color: #1e293b; padding: 8px 24px; border-radius: 50px; 
+            font-size: 1.1rem; font-weight: 700; z-index: 99999999; 
+            border: 2px solid #f5d0dc; box-shadow: 0 8px 20px rgba(219, 112, 147, 0.12); 
+            transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); display: flex; align-items: center; gap: 8px; 
         }
-        
-        /* Class ini akan dipanggil JS saat masuk ke mode Kamera */
         #sessionTimerDisplay.center-mode {
-            right: auto;
-            left: 50%;
-            top: 30px;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.5); /* Gelap transparan agar kontras dengan kamera */
-            color: #ffffff;
-            border: 1px solid rgba(255,255,255,0.2);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            right: auto; left: 50%; top: 30px; transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(8px);
+            color: #1e293b; border: 2px solid #f5d0dc; box-shadow: 0 4px 15px rgba(219, 112, 147, 0.18);
         }
-        
-        /* Mengurangi padding atas karena timer sudah pindah ke kanan */
-        .panel { display: none; flex-direction: column; align-items: center; justify-content: flex-start; width: 100%; height: 100%; overflow-y: hidden; overflow-x: hidden; padding: 40px 20px 20px 20px; box-sizing: border-box; position: relative; z-index: 10; }
+
+        /* --- PANEL UTAMA & PILIH FRAME --- */
+        .panel { display: none; flex-direction: column; align-items: center; justify-content: flex-start; width: 100%; height: 100%; overflow: hidden; padding: 40px 20px 20px 20px; box-sizing: border-box; position: relative; z-index: 10; }
         .active-panel { display: flex !important; animation: popIn 0.4s ease forwards; }
         @keyframes popIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
 
-        .judul-interaktif { font-size: 3rem; color: var(--ink); margin-bottom: 5px; font-weight: 700; line-height: 1.2; position: relative; z-index: 10; }
-        .sub-judul { font-size: 1.1rem; color: var(--ink); opacity: 0.8; margin-bottom: 40px; font-weight: 500; position: relative; z-index: 10;}
-        .nav-bar { position: fixed; top: 30px; left: 40px; right: 40px; display: flex; justify-content: space-between; z-index: 1000; pointer-events: none; align-items: center; }
-        .nav-bar button { pointer-events: auto; background: var(--paper-white); color: var(--ink); border: 3px solid var(--ink); padding: 10px 25px; font-size: 1rem; cursor: pointer; border-radius: 15px; font-weight: 700; transition: 0.2s; box-shadow: 4px 4px 0px var(--ink); display: flex; align-items: center; gap: 8px; font-family: 'Poppins', sans-serif; }
-        .nav-bar button:active { transform: translate(4px, 4px); box-shadow: 0px 0px 0px var(--ink); }
+        .judul-interaktif { font-size: 2.8rem; color: #1e293b; margin-bottom: 5px; font-weight: 700; line-height: 1.2; position: relative; z-index: 10; }
+        .sub-judul { font-size: 1.05rem; color: #64748b; margin-bottom: 30px; font-weight: 500; position: relative; z-index: 10; }
 
-        .grid-format { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin-top: 20px; z-index: 10;}
-        .btn-format { background: var(--paper-white); border: 3px solid var(--ink); color: var(--ink); padding: 30px 20px; border-radius: 20px; cursor: pointer; font-size: 1.4rem; transition: all 0.2s ease; width: 200px; box-shadow: 6px 6px 0px var(--ink); font-weight: 700; display: flex; flex-direction: column; align-items: center; gap: 15px; font-family: 'Poppins', sans-serif; font-size: 1.5rem; }
-        .btn-format span { font-size: 2rem; background: var(--pink); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid var(--ink); transition: 0.3s; }
-        .btn-format:hover { background: var(--yellow); transform: translate(-3px, -3px); box-shadow: 9px 9px 0px var(--ink); }
-        
-       /* === TAMPILAN TAB KIRI KANAN (MINIMALIST & AESTHETIC) === */
-        .template-layout { display: flex; width: 100%; max-width: 1400px; gap: 40px; margin: 0 auto; height: calc(100vh - 160px); text-align: left; z-index: 10; position: relative;}
-        
-        .format-sidebar { display: flex; flex-direction: column; gap: 10px; width: 240px; flex-shrink: 0; overflow-y: auto; padding-right: 10px; }
-        
-        .format-tab { background: transparent; border: 2px solid transparent; color: var(--ink); padding: 12px 15px; border-radius: 16px; font-weight: 600; font-size: 1.1rem; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 15px; text-align: left; font-family: 'Poppins', sans-serif; opacity: 0.6;}
-        .format-tab span { font-size: 1.4rem; background: var(--paper-white); width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05); transition: 0.3s ease; }
-        
-        /* Efek Tab Saat Aktif */
-        .format-tab.active { background: var(--paper-white); border: 2px solid rgba(0,0,0,0.1); opacity: 1; box-shadow: 0 8px 25px rgba(0,0,0,0.05); transform: translateX(10px); }
-        .format-tab.active span { background: var(--yellow); }
-        .format-tab:hover:not(.active) { background: rgba(255,255,255,0.4); opacity: 1; transform: translateX(5px); }
-        
-        .template-content { flex: 1; overflow-y: auto; background: transparent; border: none; padding: 10px 10px 50px 10px; display: flex; flex-wrap: wrap; gap: 25px; align-content: flex-start; justify-content: flex-start;}
-        
-        .card { background: var(--paper-white); border-radius: 16px; cursor: pointer; border: 2px solid rgba(0,0,0,0.05); text-align: center; transition: 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); padding: 15px; width: 220px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); display: flex; flex-direction: column; }
-        .card:hover { transform: translateY(-8px); box-shadow: 0 15px 35px rgba(0,0,0,0.15); border-color: var(--ink); }
-        .card img { width: 100%; height: auto; border-radius: 10px; background: #f8fafc; object-fit: contain; aspect-ratio: 2/3; }
-        .card h3 { margin: 15px 0 5px 0; font-size: 1.1rem; color: var(--ink); font-weight: 700; line-height: 1.2;}
-
-        @media (max-width: 850px), (orientation: portrait) {
-            .template-layout { flex-direction: column; height: 75vh; }
-            .format-sidebar { flex-direction: row; width: 100%; overflow-x: auto; padding-bottom: 10px; }
-            .format-tab { flex: 0 0 auto; padding: 10px 15px; font-size: 1.1rem; }
-            .format-tab span { width: 35px; height: 35px; font-size: 1.3rem; }
-            .card { width: 160px; padding: 10px; }
+        /* --- NAV BAR & TOMBOL ATAS KAMERA (SOFT PINK) --- */
+        .nav-bar { position: fixed; top: 30px; left: 40px; right: 40px; display: flex; justify-content: space-between; z-index: 999999 !important; pointer-events: none; align-items: center; }
+        .nav-bar button { 
+            pointer-events: auto !important; background: #ffffff !important; color: #1e293b !important; 
+            border: 2px solid #f5d0dc !important; padding: 10px 24px !important; font-size: 1rem !important; 
+            cursor: pointer !important; border-radius: 50px !important; font-weight: 700 !important; 
+            font-family: 'Fredoka', sans-serif !important; transition: 0.2s !important; 
+            box-shadow: 0 6px 15px rgba(219, 112, 147, 0.14) !important; display: flex !important; align-items: center !important; gap: 8px !important; 
         }
-        #kamera-container { padding: 0; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg-color); overflow: hidden; z-index: 50; display: none; flex-direction: column; align-items: center; justify-content: center; }
-       #liveView { object-fit: cover; position: absolute; top: 50%; left: 50%; z-index: 1; transition: filter 0.3s; }
-#previewImage { display: none; object-fit: cover; position: absolute; top: 50%; left: 50%; z-index: 2; }
-.mirrored { transform: scaleX(-1) !important; }
-        
-        .pose-card-container { position: absolute; top: 50%; left: 20px; transform: translateY(-50%); display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 20; background: var(--paper-white); padding: 10px; width: 130px; border-radius: 15px; border: 3px solid var(--ink); box-shadow: 5px 5px 0px var(--ink); }
-        .pose-card-container h3 { font-size: 0.95rem; margin: 0 0 5px 0; color: var(--ink); font-weight: 700; text-align: center; line-height: 1.2;}
-        .pose-video { width: 100%; border-radius: 8px; border: 2px solid var(--ink); background: #000; }
+        .nav-bar button:hover { background: #fceef2 !important; border-color: #eeb4c7 !important; color: #9e4261 !important; transform: translateY(-3px) !important; box-shadow: 0 8px 20px rgba(219, 112, 147, 0.2) !important; }
+        .nav-bar button:active { transform: translateY(1px) !important; }
+        .btn-mirror { background: #fceef2 !important; border-color: #eeb4c7 !important; color: #9e4261 !important; }
 
-        .mini-gallery-container { position: absolute; top: 50%; right: 40px; left: auto; transform: translateY(-50%); display: flex; flex-direction: column; gap: 12px; z-index: 20; background: var(--paper-white); padding: 15px; border-radius: 15px; border: 3px solid var(--ink); box-shadow: 5px 5px 0px var(--ink); }
-        .mini-slot { width: 70px; height: 50px; background: var(--bg-color); border: 2px solid var(--ink); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--ink); font-size: 1.2rem; font-weight: 700; overflow: hidden; position: relative; transition: 0.3s; cursor: pointer; }
-        .mini-slot.active { background: var(--yellow); transform: scale(1.1); box-shadow: 4px 4px 0px var(--ink); border-color: var(--ink); }
+        /* --- LAYOUT PILIH TEMPLATE --- */
+        .template-layout { display: flex; width: 100%; max-width: 1400px; gap: 40px; margin: 0 auto; height: calc(100vh - 160px); text-align: left; z-index: 10; position: relative; }
+        .format-sidebar { display: flex; flex-direction: column; gap: 10px; width: 240px; flex-shrink: 0; overflow-y: auto; padding-right: 10px; }
+        .format-tab { background: rgba(255,255,255,0.65); border: 2px solid transparent; color: #475569; padding: 12px 15px; border-radius: 18px; font-weight: 600; font-size: 1.1rem; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 15px; text-align: left; font-family: 'Fredoka', sans-serif; }
+        .format-tab span { font-size: 1.4rem; background: #ffffff; width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.04); transition: 0.3s ease; }
+        .format-tab.active { background: #ffffff; border: 2px solid #f5d0dc; color: #9e4261; box-shadow: 0 8px 25px rgba(219, 112, 147, 0.14); transform: translateX(10px); }
+        .format-tab.active span { background: #fceef2; }
+        .format-tab:hover:not(.active) { background: #ffffff; transform: translateX(5px); }
+
+        .template-content { flex: 1; overflow-y: auto; padding: 10px 10px 50px 10px; display: flex; flex-wrap: wrap; gap: 25px; align-content: flex-start; justify-content: flex-start; }
+        .card { background: #ffffff; border-radius: 20px; cursor: pointer; border: 2px solid #f8edf0; text-align: center; transition: 0.3s ease; padding: 15px; width: 220px; box-shadow: 0 10px 30px rgba(219, 112, 147, 0.08); display: flex; flex-direction: column; }
+        .card:hover { transform: translateY(-8px); box-shadow: 0 15px 35px rgba(219, 112, 147, 0.18); border-color: #eeb4c7; }
+        .card img { width: 100%; height: auto; border-radius: 12px; background: #f8fafc; object-fit: contain; aspect-ratio: 2/3; }
+        .card h3 { margin: 15px 0 5px 0; font-size: 1.15rem; color: #1e293b; font-weight: 700; line-height: 1.2; }
+
+        /* ========================================================= */
+        /* 📸 LIVE VIEW & UI KAMERA PASTEL (SOFT DUSTY PINK)         */
+        /* ========================================================= */
+        #kamera-container { padding: 0; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #fdf8f9; overflow: hidden; z-index: 50; display: none; flex-direction: column; align-items: center; justify-content: center; }
+        #liveView { object-fit: cover; position: absolute; top: 50%; left: 50%; z-index: 1; transition: filter 0.3s; }
+        #previewImage { display: none; object-fit: cover; position: absolute; top: 50%; left: 50%; z-index: 2; }
+        .mirrored { transform: scaleX(-1) !important; }
+
+        .pose-card-container { 
+            position: absolute; bottom: 35px; left: 35px; top: auto; transform: none;
+            display: flex; flex-direction: column; align-items: center; gap: 6px; z-index: 25; 
+            background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(8px); padding: 10px; width: 145px; 
+            border-radius: 22px; border: 2px solid #f5d0dc; box-shadow: 0 12px 30px rgba(219, 112, 147, 0.18); 
+            pointer-events: none;
+        }
+        .pose-card-container h3 { font-size: 0.9rem; margin: 2px 0; color: #9e4261; font-weight: 700; text-align: center; }
+        .pose-video { width: 100%; border-radius: 14px; border: 1px solid #f5d0dc; background: #000; }
+
+        .mini-gallery-container { 
+            position: absolute; top: 50%; right: 30px; left: auto; transform: translateY(-50%); 
+            display: flex; flex-direction: column; gap: 10px; z-index: 25; 
+            background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(10px); padding: 12px; 
+            border-radius: 22px; border: 2px solid #f5d0dc; box-shadow: 0 12px 30px rgba(219, 112, 147, 0.16); 
+        }
+        .mini-slot { 
+            width: 70px; height: 50px; background: #fdf8f9; border: 2px solid #e2e8f0; border-radius: 12px; 
+            display: flex; align-items: center; justify-content: center; color: #64748b; font-size: 1.1rem; 
+            font-weight: 700; overflow: hidden; position: relative; transition: 0.3s; cursor: pointer; 
+        }
+        .mini-slot.active { background: #fceef2; border-color: #db7093; color: #9e4261; transform: scale(1.12); box-shadow: 0 4px 12px rgba(219, 112, 147, 0.25); z-index: 5; }
         .mini-slot:hover { transform: scale(1.05); }
         .mini-slot img { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; }
-        .mini-slot .overlay-review { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); color: white; display: none; align-items: center; justify-content: center; font-size: 0.8rem; }
+        .mini-slot .overlay-review { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(194, 89, 124, 0.72); color: white; display: none; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 600; text-align: center; }
         .mini-slot:hover .overlay-review { display: flex; }
 
-        .kamera-ui-bottom { position: absolute; bottom: 35px; left: 0; width: 100vw; z-index: 10; display: flex; align-items: center; justify-content: center; gap: 15px; }
-        .btn-diafragma { background: var(--pink); color: var(--ink); border: 4px solid var(--ink); border-radius: 50%; width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 5px 5px 0px var(--ink); transition: 0.2s; pointer-events: auto; }
-        .btn-diafragma:hover { transform: scale(1.05); background: var(--blue); }
-        .btn-diafragma:active { transform: scale(0.95); box-shadow: 0px 0px 0px var(--ink); }
-        
-        .teks-petunjuk-jepret { font-size: 1.2rem; font-weight: 700; color: var(--ink); background: var(--paper-white); padding: 10px 20px; border-radius: 12px; box-shadow: 4px 4px 0px var(--ink); pointer-events: none; border: 3px solid var(--ink); }
+        .kamera-ui-bottom { position: absolute; bottom: 30px; left: 0; width: 100vw; z-index: 100; display: flex; align-items: center; justify-content: center; gap: 18px; pointer-events: none; }
+        .btn-diafragma { 
+            background: #ffffff; color: #c2597c; border: 3px solid #f5d0dc; border-radius: 50%; width: 82px; height: 82px; 
+            display: flex; align-items: center; justify-content: center; cursor: pointer; 
+            box-shadow: 0 10px 25px rgba(219, 112, 147, 0.28); transition: 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: auto; 
+        }
+        .btn-diafragma:hover:not(:disabled) { transform: scale(1.1); background: #fceef2; border-color: #db7093; }
+        .btn-diafragma:active { transform: scale(0.95); }
 
-        .retake-floating-panel { display: none; background: var(--paper-white); padding: 15px 30px; border-radius: 20px; box-shadow: 6px 6px 0px var(--ink); align-items: center; gap: 20px; border: 3px solid var(--ink); pointer-events: auto; animation: popIn 0.3s ease-out; }
-        .retake-floating-panel h3 { margin: 0; color: var(--ink); font-size: 1.4rem; font-weight: 700; margin-right: 10px; }
-        .btn-aksi { background: var(--ink); color: var(--paper-white); padding: 12px 25px; font-size: 1.1rem; border: 3px solid var(--ink); border-radius: 12px; cursor: pointer; font-weight: 700; transition: 0.2s; box-shadow: 4px 4px 0px rgba(0,0,0,0.5); font-family: 'Poppins', sans-serif; }
-        .btn-aksi:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0px rgba(0,0,0,0.5); background: var(--ink);}
-        .btn-aksi:active { transform: translate(2px, 2px); box-shadow: 0px 0px 0px rgba(0,0,0,0.5); }
-        .btn-aksi:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
+        .teks-petunjuk-jepret { 
+            font-size: 1.1rem; font-weight: 700; color: #1e293b; background: #ffffff; padding: 10px 24px; 
+            border-radius: 50px; box-shadow: 0 8px 25px rgba(219, 112, 147, 0.2); pointer-events: auto; 
+            border: 2px solid #f5d0dc; font-family: 'Fredoka', sans-serif; 
+        }
 
-        #jepretCountdown { display: none; flex-direction: column; align-items: center; justify-content: center; position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); color: #fff; font-weight: 700; z-index: 20; -webkit-text-stroke: 1px var(--ink); text-shadow: 3px 3px 0px var(--ink); }
-        .ikon-atas { font-size: 3rem; margin-bottom: 5px; color: var(--yellow);}
-        .teks-kamera { font-size: 2rem; margin-bottom: -15px; z-index: 21;}
-        .angka-kamera { font-size: 12rem; line-height: 1;}
-        
-        #loadingTeks { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--paper-white); padding: 25px 40px; border-radius: 15px; font-size: 1.5rem; font-weight: 700; color: var(--ink); z-index: 999999; box-shadow: 8px 8px 0px var(--ink); border: 4px solid var(--ink); }
+        .retake-floating-panel { 
+            display: none; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); 
+            padding: 12px 24px; border-radius: 50px; box-shadow: 0 12px 30px rgba(219, 112, 147, 0.22); 
+            align-items: center; gap: 14px; border: 2px solid #f5d0dc; pointer-events: auto; animation: popIn 0.3s ease-out; 
+        }
+        .retake-floating-panel h3 { margin: 0; color: #1e293b; font-size: 1.1rem; font-weight: 700; font-family: 'Fredoka', sans-serif; }
 
-        #effectOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); z-index: 99999; flex-direction: column; justify-content: center; align-items: center; padding: 40px; box-sizing: border-box; overflow-y: auto;}
-        .effect-container { display: flex; gap: 40px; align-items: center; background: var(--paper-white); padding: 40px; border-radius: 20px; box-shadow: 8px 8px 0px var(--ink); border: 4px solid var(--ink); max-width: 1000px; width: 100%; }
-        .effect-preview-box { flex: 1; display: flex; flex-direction: column; align-items: center; width: 100%; }
+        #btn-retake-action { background: #fee2e2 !important; color: #ef4444 !important; border: 2px solid #fecaca !important; width: auto !important; padding: 10px 22px !important; }
+        #btn-retake-action:hover { background: #fecaca !important; }
+        .btn-aksi-lanjut { background: #dcfce7 !important; color: #16a34a !important; border: 2px solid #bbf7d0 !important; width: auto !important; padding: 10px 22px !important; }
+        .btn-aksi-lanjut:hover { background: #bbf7d0 !important; }
+
+        #jepretCountdown { display: none; flex-direction: column; align-items: center; justify-content: center; position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); color: #fff; font-weight: 700; z-index: 200; text-shadow: 0 4px 15px rgba(0,0,0,0.45); font-family: 'Fredoka', sans-serif; }
+        .ikon-atas { font-size: 2.5rem; margin-bottom: 5px; color: #fceef2; font-family: 'Fredoka', sans-serif; }
+        .teks-kamera { font-size: 1.5rem; margin-bottom: -10px; z-index: 21; font-family: 'Fredoka', sans-serif; }
+        .angka-kamera { font-size: 11rem; line-height: 1; font-family: 'Fredoka', sans-serif; }
+
+        #loadingTeks { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #ffffff; padding: 18px 36px; border-radius: 50px; font-size: 1.3rem; font-weight: 700; color: #1e293b; z-index: 999999; box-shadow: 0 15px 35px rgba(219, 112, 147, 0.25); border: 2px solid #f5d0dc; font-family: 'Fredoka', sans-serif; }
+
+        /* ========================================================= */
+        /* 🎨 PANEL EFEK (SOFT DUSTY PINK)                           */
+        /* ========================================================= */
+        #effectOverlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #fdf8f9; z-index: 99999; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; overflow: hidden; }
+        .effect-container { display: flex; gap: 35px; align-items: center; justify-content: center; background: #ffffff; padding: 25px 35px; border-radius: 32px; box-shadow: 0 20px 40px rgba(219, 112, 147, 0.14); border: 2px solid #f5d0dc; max-width: 980px; width: 100%; max-height: 85vh; margin: 0 auto; box-sizing: border-box; }
         #effectPreviewContainer { width: 100%; display: flex; justify-content: center; align-items: center; }
-        /* Hapus pemaksaan auto agar tidak jadi 0 piksel */
-        #effectPreviewContainer > div { max-width: 100% !important; flex-shrink: 1; }
-        
-        .effect-options-box { width: 350px; display: flex; flex-direction: column; gap: 12px; }
-        .effect-btn { background: var(--paper-white); border: 3px solid var(--ink); padding: 14px 20px; border-radius: 12px; font-size: 1.1rem; font-weight: 700; color: var(--ink); cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 15px; text-align: left; font-family: 'Poppins', sans-serif; box-shadow: 4px 4px 0px var(--ink); }
-        .effect-btn:hover { background: var(--yellow); transform: translate(-2px, -2px); box-shadow: 6px 6px 0px var(--ink); }
-        .effect-btn.active { background: var(--green); color: var(--ink); box-shadow: 6px 6px 0px var(--ink); transform: translate(-2px, -2px); }
-        .color-circle { width: 25px; height: 25px; border-radius: 50%; border: 3px solid var(--ink); }
+        #effectPreviewContainer > div { max-height: 55vh !important; max-width: 100% !important; flex-shrink: 1; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border: 2px solid #f5d0dc; }
 
-        /* HASIL AKHIR */
-        #finalPreviewOverlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg-color); z-index: 999999; flex-direction: row; justify-content: center; align-items: center; padding: 30px; box-sizing: border-box; overflow: hidden; }
-        
-        .final-wrapper { display: flex; flex-direction: row; gap: 40px; align-items: center; justify-content: center; max-width: 100%; width: 100%; height: 100%; max-height: 85vh; }
-        
-        /* Hilangkan flex:1 agar kotak foto hanya mengambil ruang selebar isi fotonya */
-        .image-showcase { display: flex; gap: 25px; align-items: center; justify-content: center; height: 100%; min-width: 0; flex-shrink: 1; }
-        
-        /* Tambahkan flex-shrink dan min-width:0 agar bisa mengecil saat ada 2 gambar (Foto + GIF) */
-        .image-showcase img { max-height: 100%; max-width: 100%; width: auto; object-fit: contain; border-radius: 12px; border: 4px solid var(--ink); box-shadow: 8px 8px 0px var(--ink); background: var(--paper-white); transition: all 0.3s ease; flex-shrink: 1; min-width: 0; }
-        
-        /* Pastikan card-hasil (Menu) tidak ikut mengecil (flex-shrink: 0) */
-        .card-hasil { background: var(--paper-white); padding: 25px 30px; border-radius: 20px; box-shadow: 8px 8px 0px var(--ink); width: 360px; flex-shrink: 0; border: 4px solid var(--ink); text-align: center; max-height: 100%; overflow-y: auto; display: flex; flex-direction: column; }
-        .card-hasil h2 { color: var(--ink); margin-top: 0; font-size: 1.8rem; font-weight: 700; margin-bottom: 15px;}
-        
-        .jumlah-kontrol { display: flex; align-items: center; background: var(--paper-white); border: 3px solid var(--ink); border-radius: 12px; overflow: hidden; box-shadow: 3px 3px 0px var(--ink); margin-bottom: 15px; }
-        .btn-jumlah { background: var(--bg-color); border: none; font-size: 1.5rem; font-weight: bold; width: 50px; cursor: pointer; color: var(--ink); transition: 0.2s; }
-        .btn-jumlah:hover { background: var(--yellow); }
-        .jumlah-kontrol span { flex: 1; font-weight: 700; font-size: 1.1rem; }
+        .effect-options-box { width: 340px; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
+        .effect-btn { background: #f8fafc; border: 2px solid #e2e8f0; padding: 11px 18px; border-radius: 16px; font-size: 1rem; font-weight: 600; color: #475569; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 12px; text-align: left; box-shadow: 0 4px 6px rgba(0,0,0,0.02); font-family: 'Fredoka', sans-serif; }
+        .effect-btn:hover { background: #ffffff; transform: translateX(5px); box-shadow: 0 8px 15px rgba(219, 112, 147, 0.12); }
+        .effect-btn.active { background: #fceef2; color: #9e4261; border-color: #eeb4c7; transform: translateX(8px); box-shadow: 0 8px 15px rgba(219, 112, 147, 0.16); }
+        .color-circle { width: 22px; height: 22px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.1); flex-shrink: 0; }
 
-        .qr-box { background: var(--bg-color); padding: 15px; border-radius: 15px; margin-top: 15px; border: 3px dashed var(--ink); display: flex; flex-direction: column; align-items: center; flex: 1; }
-        .qr-box p { margin: 5px 0; font-size: 1rem; color: var(--ink); font-weight: 700;}
-        .qr-box hr { width: 100%; border: 0; border-top: 2px dashed var(--ink); margin: 10px 0; }
-         /* VIRTUAL NUMPAD */
-        #virtual-numpad { position: fixed; background: var(--paper-white); padding: 20px; border-radius: 15px; box-shadow: 8px 8px 0px var(--ink); z-index: 9999999; border: 4px solid var(--ink); width: 280px; top: 50%; left: 50%; transform: translate(-50%, -50%); }
-        .numpad-header { color: var(--ink); text-align: center; font-size: 1.2rem; font-weight: bold; margin-bottom: 15px; cursor: grab; background: var(--yellow); padding: 8px; border-radius: 8px; border: 2px solid var(--ink); }
-        .numpad-header:active { cursor: grabbing; }
-        .numpad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        .numpad-grid button { width: 100%; height: 55px; font-size: 1.5rem; font-weight: bold; border: 3px solid var(--ink); border-radius: 10px; background: var(--bg-color); color: var(--ink); cursor: pointer; transition: 0.1s; box-shadow: 3px 3px 0px var(--ink); font-family: 'Poppins', sans-serif; }
-        .numpad-grid button:active { background: var(--yellow); transform: translate(3px, 3px); box-shadow: 0px 0px 0px var(--ink); }
-        .numpad-grid .btn-del { background: #ef4444; color: var(--paper-white); font-size: 1.2rem; }
-        .numpad-grid .btn-close { background: var(--green); font-size: 1.2rem; }
-
-        /* MODAL PEMBAYARAN EXTRA */
-        #paymentModalOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 99999999; justify-content: center; align-items: center; }
-        .payment-modal { background: var(--paper-white); padding: 30px; border-radius: 20px; border: 4px solid var(--ink); box-shadow: 10px 10px 0px var(--ink); width: 340px; text-align: center; max-height: 90vh; overflow-y: auto;}
-
-        @media (max-width: 850px), (orientation: portrait) {
-            .judul-interaktif { font-size: 2.2rem; }
-            .sub-judul { font-size: 0.9rem; margin-bottom: 10px; }
-            .panel { padding: 80px 15px 30px 15px; }
-            .nav-bar { top: 15px; left: 15px; right: 15px; }
-            .btn-format { width: 140px; font-size: 1.2rem; }
-            .card { width: 160px; padding: 15px 10px; }
-            
-            /* --- Layout Kamera Potret --- */
-            #kamera-container .nav-bar { top: 80px; } /* Turunkan tombol agar tidak tertutup Timer */
-            .pose-card-container { top: auto; bottom: 130px; left: 15px; transform: none; width: 135px; padding: 10px; } /* Perbesar Ide Pose */
-            .pose-card-container h3 { font-size: 0.95rem; margin-bottom: 5px; }
-            
-            /* Pertahankan Galeri Mini di sisi kanan vertikal */
-            .mini-gallery-container { top: 50%; right: 15px; transform: translateY(-50%); flex-direction: column; width: auto; max-height: 60vh; overflow-y: auto; overflow-x: hidden; padding: 12px; left: auto; }
-            .mini-slot { width: 65px; height: 50px; }
-            
-            .kamera-ui-bottom { bottom: 20px; flex-direction: column; gap: 10px; }
-            .btn-diafragma { width: 70px; height: 70px; }
-            .retake-floating-panel { padding: 10px 20px; flex-direction: column; text-align: center; }
-            
-            /* --- Panel Efek Custom Grid Agar Fit di Layar --- */
-            #effectOverlay { padding: 15px; justify-content: center; }
-            .effect-container { flex-direction: column; padding: 20px 15px; gap: 15px; width: 100%; max-height: none; margin: 0 auto; box-sizing: border-box; }
-            #effectPreviewContainer { width: 100%; display: flex; justify-content: center; }
-            #effectPreviewContainer > div { height: 45vh !important; max-width: 100% !important; flex-shrink: 1; }
-            
-            .effect-options-box { width: 100%; gap: 6px; display: grid; grid-template-columns: 1fr 1fr; align-items: center; }
-            .effect-options-box h2 { grid-column: span 2; font-size: 1.3rem !important; margin: 0; text-align: left; }
-            .effect-options-box > p { display: none; }
-            .effect-btn { padding: 6px 10px; font-size: 0.85rem; border-width: 2px; }
-            #livePhotoWrapper { grid-column: span 2; padding: 6px 10px; margin-top: 0; border-width: 2px; justify-content: center; }
-            #livePhotoWrapper label { font-size: 0.9rem !important; }
-            #btn-rakit { grid-column: span 2; padding: 8px !important; margin-top: 0 !important; font-size: 1rem; }
-            
-            /* --- Panel Hasil Final Custom Fit --- */
-            #finalPreviewOverlay { padding: 15px; align-items: center; justify-content: center; flex-direction: column; overflow-y: auto; }
-            .final-wrapper { flex-direction: column; align-items: center; justify-content: center; gap: 15px; height: auto; max-height: none; width: 100%; margin: auto 0; }
-            
-            /* Posisi Gambar Hasil Bersebelahan (Jika ada GIF) */
-            .image-showcase { height: 35vh !important; flex-direction: row !important; align-items: center; min-height: 0; width: 100%; gap: 10px !important; }
-            .image-showcase img { max-height: 100% !important; max-width: 48% !important; border-width: 2px; border-radius: 10px; box-shadow: 4px 4px 0px var(--ink) !important; }
-            
-            .card-hasil { padding: 15px; width: 100%; max-width: 100%; border-radius: 20px; box-sizing: border-box; flex-shrink: 0; }
-            .card-hasil h2 { font-size: 1.5rem; margin-bottom: 10px; }
-            .jumlah-kontrol { margin-bottom: 8px; border-width: 2px; }
-            .btn-jumlah { padding: 2px 10px; font-size: 1.2rem; }
-            #btn-action-cetak { padding: 8px !important; font-size: 1rem !important; margin-bottom: 5px !important; border-width: 2px; }
-            
-            /* Layout Box QR & WA Menjadi Simetris Vertikal */
-            .qr-box { padding: 12px; margin-top: 10px; flex-direction: column; gap: 5px; align-items: center; border-width: 2px; width: 100%; box-sizing: border-box;}
-            #qrCodeContainer { width: 110px; height: 110px; padding: 6px !important; margin: 0 auto; border-width: 2px !important; }
-            #qrCodeContainer img, #qrCodeContainer canvas { width: 100% !important; height: 100% !important; }
-            .qr-box > p { font-size: 0.85rem; margin-top: 5px; margin-bottom: 0; display: block; }
-            .qr-box > hr { margin: 8px 0; border-top: 2px dashed var(--ink); width: 100%; display: block; }
-            
-            .qr-box > div:last-child { width: 100%; margin-top: 5px !important; gap: 8px !important; flex-direction: row !important; display: flex; }
-            #inputWA { padding: 8px 12px !important; font-size: 0.9rem !important; flex: 1; border-width: 2px; text-align: left; }
-            #btnKirimWA { padding: 8px 15px !important; font-size: 0.9rem !important; margin: 0 !important; border-width: 2px; }
+        /* ========================================================= */
+        /* ✨ PANEL HASIL AKHIR ADAPTIVE 1/2/3 (SOFT DUSTY PINK)     */
+        /* ========================================================= */
+        #finalPreviewOverlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+            background: #fdf8f9; z-index: 999999; 
+            flex-direction: column !important; justify-content: center !important; align-items: center !important; 
+            padding: 25px 35px !important; box-sizing: border-box; overflow: hidden !important; 
+            background-image: radial-gradient(#f2dce2 1.5px, transparent 1.5px); background-size: 35px 35px;
         }
-        /* --- [BARU] ANIMASI & LOADING GIF --- */
-        @keyframes bounceInDoodle {
-            0% { transform: scale(0.1); opacity: 0; }
-            60% { transform: scale(1.05); opacity: 1; }
-            80% { transform: scale(0.95); }
-            100% { transform: scale(1); }
+
+        .hasil-header-badge {
+            display: inline-flex !important; flex-direction: column !important; width: fit-content !important; height: auto !important;
+            align-items: center !important; justify-content: center !important; background: #ffffff; border: 2px solid #f5d0dc;
+            padding: 10px 40px !important; border-radius: 50px !important; box-shadow: 0 10px 25px rgba(219, 112, 147, 0.12);
+            margin: 0 auto 20px auto !important; z-index: 10; flex-shrink: 0;
         }
-        @keyframes pulsePetunjuk {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.2); }
-            100% { transform: scale(1); }
+
+        .hasil-layout-grid {
+            display: grid !important; width: 100% !important; max-width: 1020px !important;
+            height: 72vh !important; max-height: 580px !important; margin: 0 auto !important;
+            align-items: center !important; justify-content: center !important; position: relative; z-index: 10;
         }
+
+        .hasil-layout-grid.layout-mode-1 { grid-template-columns: auto 340px !important; gap: 35px !important; justify-content: center !important; }
+        .hasil-layout-grid.layout-mode-1 #middle-anim-col { display: none !important; }
+
+        .hasil-layout-grid.layout-mode-2 { grid-template-columns: auto auto 340px !important; gap: 26px !important; justify-content: center !important; }
+        .hasil-layout-grid.layout-mode-2 #middle-anim-col { height: 72vh !important; max-height: 580px !important; justify-content: center !important; }
+        .hasil-layout-grid.layout-mode-2 .anim-preview-card { height: 100% !important; width: auto !important; }
+        .hasil-layout-grid.layout-mode-2 #box-preview-livephoto { aspect-ratio: 2 / 3 !important; }
+        .hasil-layout-grid.layout-mode-2 #box-preview-gif { aspect-ratio: 1 / 1 !important; height: 50vh !important; flex: none !important; align-self: center; }
+
+        .hasil-layout-grid.layout-mode-3 { grid-template-columns: auto 210px 340px !important; gap: 22px !important; justify-content: center !important; }
+        .hasil-layout-grid.layout-mode-3 #middle-anim-col {
+            display: flex !important; flex-direction: column !important; justify-content: center !important;
+            height: 72vh !important; max-height: 580px !important; width: 210px !important; gap: 14px !important;
+        }
+        .hasil-layout-grid.layout-mode-3 #box-preview-livephoto { width: 100% !important; height: auto !important; aspect-ratio: 2 / 3 !important; flex: none !important; }
+        .hasil-layout-grid.layout-mode-3 #box-preview-gif { width: 100% !important; height: auto !important; aspect-ratio: 1 / 1 !important; flex: none !important; }
+
+        .preview-frame-card {
+            background: #ffffff; border: 2px solid #f5d0dc; border-radius: 22px; padding: 12px;
+            box-shadow: 0 12px 28px rgba(219, 112, 147, 0.12); display: flex; flex-direction: column; align-items: center; justify-content: center;
+            position: relative; box-sizing: border-box; overflow: hidden;
+        }
+        #main-photo-card { height: 72vh !important; max-height: 580px !important; width: fit-content !important; padding: 14px !important; justify-content: flex-start !important; }
+
+        .preview-pill-tag {
+            font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+            padding: 5px 14px; border-radius: 50px; border: none; margin-bottom: 10px;
+            background: #fceef2; color: #9e4261; display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; z-index: 5;
+        }
+
+        .middle-col-hasil { display: flex; flex-direction: column; gap: 14px; align-items: center; justify-content: center; height: 100%; box-sizing: border-box; }
+        .ornament { position: absolute; z-index: 1; pointer-events: none; opacity: 0.55; animation: floatOrn 5s ease-in-out infinite; font-size: 2.2rem; }
+        @keyframes floatOrn { 0%, 100% { transform: translateY(0px) rotate(0deg); } 50% { transform: translateY(-10px) rotate(5deg); } }
+
+        .action-card-symmetric {
+            width: 340px !important; height: 72vh !important; max-height: 580px !important; margin: 0 auto !important;
+            padding: 20px !important; display: flex !important; flex-direction: column !important;
+            align-items: center !important; justify-content: space-between !important; gap: 12px !important;
+            border-radius: 26px !important; border: 2px solid #f5d0dc !important;
+            box-shadow: 0 12px 30px rgba(219, 112, 147, 0.12) !important; background: #ffffff !important; box-sizing: border-box !important;
+        }
+
+        .jumlah-kontrol {
+            display: flex; align-items: center; justify-content: space-between; width: 100%;
+            border-radius: 50px; border: 2px solid #f5d0dc; height: 44px; box-sizing: border-box; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02); margin: 0; padding: 0 5px; background: #fdf8f9;
+        }
+        .btn-jumlah { background: transparent; border: none; font-size: 1.4rem; font-weight: bold; width: 40px; cursor: pointer; color: #9e4261; transition: 0.2s; }
+        .btn-jumlah:hover { color: #db7093; }
+        .jumlah-kontrol span { flex: 1; text-align: center; font-weight: 700; font-size: 0.95rem; color: #1e293b; }
+
+        .btn-aksi {
+            width: 100%; padding: 12px 18px; font-size: 1rem; border-radius: 50px; margin: 0; 
+            display: flex; align-items: center; justify-content: center; gap: 8px; box-sizing: border-box;
+            font-weight: 600; font-family: 'Fredoka', sans-serif; cursor: pointer; border: none; transition: 0.2s ease;
+        }
+        /* Class tetap bernama btn-pastel-yellow agar cocok dengan HTML/JS Anda, tetapi warnanya Dusty Pink */
+        .btn-pastel-yellow { background: linear-gradient(135deg, #ec9ab5, #db7093); color: white !important; box-shadow: 0 6px 14px rgba(219, 112, 147, 0.28) !important; border: none !important; }
+        .btn-pastel-yellow:hover { transform: translateY(-2px); box-shadow: 0 10px 18px rgba(219, 112, 147, 0.36) !important; }
+        .btn-pastel-red { background: linear-gradient(135deg, #fb7185, #e11d48); color: white !important; box-shadow: 0 6px 14px rgba(225, 29, 72, 0.25) !important; border: none !important; }
+        .btn-pastel-red:hover { transform: translateY(-2px); box-shadow: 0 10px 18px rgba(225, 29, 72, 0.35) !important; }
+        .btn-pastel-green { background: linear-gradient(135deg, #34d399, #10b981); color: white !important; box-shadow: 0 6px 14px rgba(16, 185, 129, 0.25) !important; border: none !important; }
+        .btn-pastel-purple { background: linear-gradient(135deg, #ec9ab5, #db7093); color: white !important; border: none !important; box-shadow: 0 4px 10px rgba(219, 112, 147, 0.28) !important; }
+
+        .qr-dashed-inner {
+            width: 100% !important; flex: 1 !important; margin: 0 !important; padding: 14px !important;
+            background: #fdf8f9 !important; border: 2px dashed #eeb4c7 !important; border-radius: 20px !important;
+            display: flex !important; flex-direction: column !important; align-items: center !important;
+            justify-content: center !important; gap: 8px !important; box-sizing: border-box !important;
+        }
+
+        #qrCodeContainer { width: 130px; height: 130px; display: flex; align-items: center; justify-content: center; overflow: hidden; margin: 0 auto; }
+        #qrCodeContainer img { display: none !important; } 
+        #qrCodeContainer canvas { display: block !important; margin: auto; width: 100% !important; height: 100% !important; object-fit: contain; }
+
+        /* --- VIRTUAL NUMPAD SOFT DUSTY PINK --- */
+        #virtual-numpad { 
+            position: fixed; background: rgba(255, 255, 255, 0.96); padding: 22px; border-radius: 28px; 
+            box-shadow: 0 20px 40px rgba(219, 112, 147, 0.22); z-index: 9999999; border: 2px solid #f5d0dc; 
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            width: 280px; text-align: center; display: none; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        }
+        .numpad-header { 
+            color: #9e4261; font-family: 'Fredoka', sans-serif; font-size: 1.1rem; font-weight: 700; margin-bottom: 18px; 
+            cursor: grab; background: #fceef2; border-radius: 14px; padding: 10px; border: 1px solid #f5d0dc;
+        }
+        .numpad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        .numpad-grid button { 
+            width: 100%; height: 50px; font-size: 1.2rem; font-weight: 700; border-radius: 14px; 
+            background: #ffffff; color: #1e293b; cursor: pointer; transition: 0.15s ease; font-family: 'Fredoka', sans-serif; 
+            box-shadow: 0 4px 8px rgba(219, 112, 147, 0.1); border: 1px solid #f5d0dc;
+        }
+        .numpad-grid button:active { transform: translateY(2px); background: #fdf8f9; }
+        .numpad-grid .btn-del { background: #fee2e2; color: #ef4444; border-color: #fca5a5; }
+        .numpad-grid .btn-close { grid-column: span 3; background: #dcfce7; color: #16a34a; border-color: #86efac; margin-top: 5px; }
+
+        /* --- MODAL PEMBAYARAN EXTRA PASTEL --- */
+        #paymentModalOverlay { 
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+            background: rgba(30, 41, 59, 0.7); z-index: 999999999; justify-content: center; 
+            align-items: center; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+        }
+        .payment-modal { 
+            background: #ffffff; padding: 30px; border-radius: 32px; border: 2px solid #f5d0dc; 
+            box-shadow: 0 20px 40px rgba(219, 112, 147, 0.25); width: 360px; text-align: center; 
+            max-height: 90vh; overflow-y: auto; font-family: 'Fredoka', sans-serif;
+        }
+
+        .pulse-anim { animation: pulsePetunjuk 2s infinite ease-in-out; }
+        @keyframes pulsePetunjuk { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
         .anim-bounce { animation: bounceInDoodle 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-        
-        .gif-placeholder {
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            background: var(--paper-white); border: 4px dashed var(--ink); border-radius: 12px;
-            width: 100%; height: 100%; min-width: 150px; min-height: 250px; flex-shrink: 1;
+        @keyframes bounceInDoodle { 0% { transform: scale(0.1); opacity: 0; } 60% { transform: scale(1.05); opacity: 1; } 80% { transform: scale(0.95); } 100% { transform: scale(1); } }
+
+        /* --- RESPONSIVE POTRET --- */
+        @media (max-width: 900px), (orientation: portrait) {
+            .template-layout { flex-direction: column; height: 75vh; }
+            .format-sidebar { flex-direction: row; width: 100%; overflow-x: auto; padding-bottom: 10px; }
+            .format-tab { flex: 0 0 auto; padding: 10px 15px; font-size: 1.05rem; }
+            .card { width: 160px; padding: 10px; }
+            #kamera-container .nav-bar { top: 90px !important; left: 20px !important; right: 20px !important; }
+            .pose-card-container { bottom: 120px; left: 15px; width: 130px; }
+            .mini-gallery-container { right: 15px; padding: 10px; }
+            #effectOverlay, #finalPreviewOverlay { padding: 10px 15px !important; }
+            .effect-container { flex-direction: column; padding: 20px 15px; gap: 15px; }
+            .hasil-header-badge { margin-bottom: 10px !important; padding: 6px 20px !important; }
+            .hasil-header-badge h1 { font-size: 1.4rem !important; }
+            .hasil-layout-grid.layout-mode-1, .hasil-layout-grid.layout-mode-2, .hasil-layout-grid.layout-mode-3 { display: flex !important; flex-direction: column !important; gap: 12px !important; max-width: 95vw !important; height: auto !important; max-height: none !important; }
+            .portrait-top-showcase { display: flex !important; flex-direction: row; align-items: center; justify-content: center; gap: 14px; width: 100%; max-height: 44vh; }
+            #main-photo-card { height: 42vh !important; padding: 10px !important; width: auto !important; }
+            #finalImageResult { max-height: 100% !important; width: auto !important; }
+            .hasil-layout-grid.layout-mode-2 #middle-anim-col { height: 42vh !important; width: 140px !important; }
+            .hasil-layout-grid.layout-mode-3 #middle-anim-col { flex-direction: column !important; gap: 8px !important; height: 42vh !important; width: 130px !important; justify-content: space-between; }
+            .action-card-symmetric { max-width: 600px !important; width: 100% !important; height: auto !important; max-height: none !important; padding: 14px !important; display: grid !important; grid-template-columns: 1fr 1.2fr !important; gap: 14px !important; align-items: center !important; }
         }
-        .gif-placeholder span { font-size: 2.5rem; animation: pulsePetunjuk 1.5s infinite; }
     </style>
+    
 </head>
 <body>
 
@@ -309,78 +366,164 @@
                 </button>
             </div>
             <div id="mode-retake" class="retake-floating-panel">
-                <div style="display: flex; flex-direction: column; align-items: flex-start; margin-right: 15px;">
+                <div style="display: flex; flex-direction: column; align-items: flex-start; margin-right: 5px;">
                     <h3 id="teks-retake-judul">Bagaimana hasilnya?</h3>
-                    <span id="info-sisa-retake" style="font-size: 0.9rem; color: #ef4444; font-weight: 700;">Sisa retake: 3 kali</span>
+                    <span id="info-sisa-retake" style="font-size: 0.8rem; color: #ef4444; font-weight: 700;">Sisa retake: 3 kali</span>
                 </div>
-                <button id="btn-retake-action" onclick="pilihOpsiRetake('retake')" class="btn-aksi" style="background: #ef4444; color: var(--paper-white);">🔄 Ulangi</button>
-                <button onclick="pilihOpsiRetake('next')" class="btn-aksi" style="background: var(--green); color: var(--ink);">✅ Lanjut</button>
+                <button id="btn-retake-action" onclick="pilihOpsiRetake('retake')" class="btn-aksi">🔄 Ulangi</button>
+                <button onclick="pilihOpsiRetake('next')" class="btn-aksi btn-aksi-lanjut">✅ Lanjut</button>
             </div>
         </div>
     </div>
 
+    <!-- PANEL EFEK -->
     <div id="effectOverlay">
         <div class="effect-container">
-            <div class="effect-preview-box">
-                <div id="effectPreviewContainer" style="width: 100%; display: flex; justify-content: center; align-items: center;"></div>
-                <p style="color: var(--ink); opacity: 0.8; font-size: 0.95rem; margin-top: 15px; text-align: center; font-weight: 600;">💡 Tips: Klik, tahan, dan geser foto (Drag & Drop) untuk menukar urutan posisinya!</p>
+            <div style="flex: 1; display: flex; justify-content: center; align-items: center; flex-direction: column; width: 100%;">
+                <div id="effectPreviewContainer"></div>
+                <p style="color: #64748b; font-size: 0.9rem; margin-top: 15px; text-align: center; font-weight: 600;">💡 Tips: Klik, tahan, dan geser foto (Drag & Drop) untuk menukar urutan posisinya!</p>
             </div>
+            
             <div class="effect-options-box">
-                <h2 style="color: var(--ink); margin-top: 0; font-size: 2rem; margin-bottom: 5px;">Pilih Filter</h2>
-                <p style="color: var(--ink); opacity: 0.8; font-size: 0.95rem; margin-bottom: 15px;">Pilih efek warna untuk fotomu.</p>
-                <button class="effect-btn active" id="btn-efek-none" onclick="terapkanFilterLive('none', 'none', this)"><div class="color-circle" style="background: linear-gradient(45deg, #ff9a9e, #fecfef);"></div> Original</button>
-                <button class="effect-btn" id="btn-efek-mono" onclick="terapkanFilterLive('monochrome', 'grayscale(100%) contrast(120%) brightness(105%)', this)"><div class="color-circle" style="background: #374151;"></div> Monochrome</button>
-                <button class="effect-btn" id="btn-efek-sepia" onclick="terapkanFilterLive('sepia', 'sepia(80%) contrast(110%) brightness(95%)', this)"><div class="color-circle" style="background: #b48a66;"></div> Vintage Sepia</button>
-                <button class="effect-btn" id="btn-efek-soft" onclick="terapkanFilterLive('soft', 'saturate(130%) brightness(115%) contrast(90%)', this)"><div class="color-circle" style="background: #a7f3d0;"></div> Soft Pop</button>
+                <h2 style="font-family: 'Fredoka', sans-serif; color: #1e293b; margin: 0; font-size: 2.2rem; font-weight: 700;">Sentuhan Akhir ✨</h2>
+                <p style="color: #64748b; font-size: 0.9rem; margin: 0 0 10px 0; font-weight: 500;">Pilih efek warna untuk fotomu.</p>
                 
-                <div id="livePhotoWrapper" style="background: var(--bg-color); border: 2px dashed var(--ink); padding: 12px; border-radius: 12px; margin-top: 10px; display: flex; align-items: center; gap: 10px; cursor: pointer;" onclick="const cb = document.getElementById('chk-livePhoto-collage'); cb.checked = !cb.checked;">
-                    <input type="checkbox" id="chk-livePhoto-collage" checked style="width: 20px; height: 20px; accent-color: var(--pink); cursor: pointer;" onclick="event.stopPropagation()">
-                    <label style="font-weight: 700; color: var(--ink); font-size: 0.95rem; cursor: pointer;">🎬 Sertakan Video Live (GIF)</label>
+                <button class="effect-btn active" id="btn-efek-none" onclick="terapkanFilterLive('none', 'none', this)">
+                    <div class="color-circle" style="background: linear-gradient(45deg, #ff9a9e, #fecfef);"></div> Original
+                </button>
+                <button class="effect-btn" id="btn-efek-mono" onclick="terapkanFilterLive('monochrome', 'grayscale(100%) contrast(120%) brightness(105%)', this)">
+                    <div class="color-circle" style="background: #374151;"></div> Monochrome
+                </button>
+                <button class="effect-btn" id="btn-efek-sepia" onclick="terapkanFilterLive('sepia', 'sepia(80%) contrast(110%) brightness(95%)', this)">
+                    <div class="color-circle" style="background: #b48a66;"></div> Vintage Sepia
+                </button>
+                <button class="effect-btn" id="btn-efek-soft" onclick="terapkanFilterLive('soft', 'saturate(130%) brightness(115%) contrast(90%)', this)">
+                    <div class="color-circle" style="background: #a7f3d0;"></div> Soft Pop
+                </button>
+                
+                <div id="wrapper-chk-livePhoto" style="background: #f8fafc; border: 2px solid #e2e8f0; padding: 10px 14px; border-radius: 16px; margin-top: 5px; display: flex; align-items: center; gap: 10px; cursor: pointer;" onclick="const cb = document.getElementById('chk-livePhoto-collage'); cb.checked = !cb.checked;">
+                    <input type="checkbox" id="chk-livePhoto-collage" checked style="width: 20px; height: 20px; accent-color: #f59e0b; cursor: pointer;" onclick="event.stopPropagation()">
+                    <label style="font-weight: 700; color: #475569; font-size: 0.95rem; cursor: pointer;">🎬 Cetak + Live Photo</label>
                 </div>
                 
-                <button id="btn-rakit" onclick="rakitDanSimpanFinal()" class="btn-aksi" style="background: var(--yellow); color: var(--ink); margin-top: 15px; padding: 15px; width: 100%;">Lanjut Merakit & Simpan ›</button>
+                <div id="wrapper-chk-photoGif" style="background: #f8fafc; border: 2px solid #e2e8f0; padding: 10px 14px; border-radius: 16px; margin-top: 2px; display: flex; align-items: center; gap: 10px; cursor: pointer;" onclick="const cb = document.getElementById('chk-photoGif-collage'); cb.checked = !cb.checked;">
+                    <input type="checkbox" id="chk-photoGif-collage" checked style="width: 20px; height: 20px; accent-color: #f59e0b; cursor: pointer;" onclick="event.stopPropagation()">
+                    <label style="font-weight: 700; color: #475569; font-size: 0.95rem; cursor: pointer;">🎞️ Cetak + GIF</label>
+                </div>
+                
+                <button id="btn-rakit" onclick="rakitDanSimpanFinal()" class="btn-aksi btn-pastel-yellow" style="margin-top: 10px; justify-content: center; gap: 8px;">
+                    Lanjut Merakit ›
+                </button>
             </div>
         </div>
     </div>
 
+    <!-- PREVIEW HASIL AKHIR PASTEL UI (TUNGGAL & BERSIH) -->
     <div id="finalPreviewOverlay">
-        <div class="final-wrapper">
+        
+        <div class="ornament" style="top: 8%; left: 8%;">✨</div>
+        <div class="ornament" style="bottom: 12%; right: 10%; animation-delay: 1.5s;">🌟</div>
+        <div class="ornament" style="top: 15%; right: 8%; font-size: 2rem; opacity: 0.5; animation-delay: 0.5s;">📸</div>
+        <div class="ornament" style="bottom: 15%; left: 8%; font-size: 2rem; opacity: 0.5; animation-delay: 2s;">🤍</div>
+
+        <div class="hasil-header-badge">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 1.8rem;">🎉</span>
+                <h1 style="font-family: 'Fredoka', sans-serif; font-size: 2.2rem; font-weight: 700; color: #1e293b; margin: 0;">
+                    Yeay! Ini Dia Hasil Fotomu!
+                </h1>
+                <span style="font-size: 1.8rem;">✨</span>
+            </div>
+            <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.95rem; font-weight: 500;">— Bagikan momen ini —</p>
+        </div>
+        
+        <!-- GRID UTAMA ADAPTIVE -->
+        <div id="hasilGridContainer" class="hasil-layout-grid layout-mode-3">
             
-            <!-- Tempat Foto dan GIF (Kiri/Tengah) -->
-            <div class="image-showcase">
-                <img id="finalImageResult" src="" alt="Hasil Cetak">
-                <!-- Elemen GIF disembunyikan awalnya -->
-                <img id="img-hasil-gif" src="" style="display: none;" alt="Hasil GIF">
+            <div class="portrait-top-showcase" style="display: contents;">
                 
-                <!-- [BARU] Kotak Placeholder yang muncul saat GIF sedang diproses -->
-                <div id="gif-loading-box" class="gif-placeholder" style="display: none;">
-                    <span>🎬</span>
-                    <p style="font-weight: 700; color: var(--ink); margin-top: 10px; font-size: 0.9rem; text-align: center;">Memproses<br>Animasi...</p>
+                <!-- KOLOM 1: FOTO UTAMA -->
+                <div id="main-photo-card" class="preview-frame-card">
+                    <div class="preview-pill-tag" style="background: #fef3c7; color: #d97706; border: 1px solid #fde68a;">🖼️ Hasil Cetak Foto</div>
+                    <div style="flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; height: 100%; width: 100%; background: transparent; border: 1px solid #f1f5f9; border-radius: 12px; padding: 4px; box-sizing: border-box;">
+                        <img id="finalImageResult" src="" style="height: 100%; width: auto; max-width: 100%; object-fit: contain; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+                    </div>
+                </div>
+
+                <!-- KOLOM 2: LIVE PHOTO & GIF -->
+                <div id="middle-anim-col" class="middle-col-hasil">
+                    
+                    <div id="box-preview-livephoto" class="preview-frame-card anim-preview-card">
+                        <div class="preview-pill-tag" style="background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe;">🎬 Live Photo</div>
+                        <div style="flex: 1; width: 100%; height: 100%; min-height: 0; border-radius: 16px; border: 2px solid #e2e8f0; overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center; background: #f8fafc; padding: 4px; box-sizing: border-box;">
+                            <img id="img-hasil-livephoto" src="" style="display: none; max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; border-radius: 6px;">
+                            <div id="livephoto-loading-box" style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                                <span style="font-size: 1.8rem; animation: pulsePetunjuk 1.5s infinite;">⏳</span>
+                                <p style="font-weight: 600; color: #64748b; margin-top: 8px; font-size: 0.8rem; text-align: center;">Menyiapkan...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="box-preview-gif" class="preview-frame-card anim-preview-card">
+                        <div class="preview-pill-tag" style="background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe;">🎞️ Animasi GIF</div>
+                        <div style="flex: 1; width: 100%; height: 100%; min-height: 0; border-radius: 16px; border: 2px solid #e2e8f0; overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center; background: #f8fafc; padding: 4px; box-sizing: border-box;">
+                            <img id="img-hasil-gif" src="" style="display: none; max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; border-radius: 6px;">
+                            <div id="gif-loading-box" style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                                <span style="font-size: 1.8rem; animation: pulsePetunjuk 1.5s infinite;">⏳</span>
+                                <p style="font-weight: 600; color: #64748b; margin-top: 8px; font-size: 0.8rem; text-align: center;">Menyiapkan...</p>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
-            <!-- Panel Kontrol (Kanan) -->
-            <div class="card-hasil">
-                <h2>Hasil Karyamu!</h2>
-                <div class="jumlah-kontrol">
-                    <button class="btn-jumlah" onclick="ubahJumlahCetak(-1)">-</button>
-                    <span id="label-jumlah-cetak">1 Lembar</span>
-                    <button class="btn-jumlah" onclick="ubahJumlahCetak(1)">+</button>
-                </div>
-                <button id="btn-action-cetak" onclick="prosesCetakFinal()" class="btn-aksi" style="background: var(--blue); color: var(--ink); width: 100%; padding: 12px; font-size: 1.1rem; margin-bottom: 5px;">🖨️ Cetak (1 Lembar)</button>
-                
-                <div class="qr-box">
-                    <div id="qrCodeContainer" style="display: flex; justify-content: center; background: var(--paper-white); padding: 5px; border: 2px solid var(--ink); border-radius: 8px;"></div>
-                    <p>Scan QR untuk Unduh 📲</p>
-                    <hr>
-                    <p style="font-size: 0.9rem;">Atau Kirim Link via WhatsApp</p>
-                    <div style="display: flex; width: 100%; gap: 5px;">
-                        <input type="text" id="inputWA" readonly placeholder="Contoh: 0812..." style="flex: 1; padding: 8px 10px; border-radius: 8px; border: 2px solid var(--ink); outline: none; font-family: inherit; font-size: 0.9rem; font-weight: 600; width: 100%; box-sizing: border-box; background-color: var(--paper-white); color: var(--ink); cursor: pointer;">
-                        <button id="btnKirimWA" onclick="kirimFotoKeWA()" style="background: var(--pink); color: var(--ink); border: 2px solid var(--ink); padding: 0 12px; border-radius: 8px; font-weight: 700; cursor: pointer;">Kirim</button>
+            <!-- KOLOM 3: KARTU CETAK & QR SIMETRIS -->
+            <div id="right-action-col" style="display: flex; align-items: center; justify-content: center; height: 100%;">
+                <div class="action-card-symmetric">
+                    
+                    <div style="display: flex; flex-direction: column; gap: 10px; width: 100%; flex-shrink: 0;">
+                        <div class="jumlah-kontrol">
+                            <button class="btn-jumlah" onclick="ubahJumlahCetak(-1)">-</button>
+                            <span id="label-jumlah-cetak">1 Lembar</span>
+                            <button class="btn-jumlah" onclick="ubahJumlahCetak(1)">+</button>
+                        </div>
+                        <button id="btn-action-cetak" onclick="prosesCetakFinal()" class="btn-aksi btn-pastel-yellow">
+                            <span style="display:flex; align-items:center; gap:8px; margin: 0 auto;">🖨️ Cetak (1 Lembar)</span>
+                            <span style="font-size: 1.2rem;">›</span>
+                        </button>
                     </div>
+                    
+                    <div class="qr-dashed-inner">
+                        <div style="background: white; padding: 8px; border-radius: 16px; border: 2px solid #e2e8f0; box-shadow: 0 4px 10px rgba(0,0,0,0.03); display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+                            <!-- QR Container dikunci ukurannya di CSS -->
+                            <div id="qrCodeContainer"></div>
+                        </div>
+                        <div style="background: #fef3c7; color: #b45309; padding: 6px 14px; border-radius: 50px; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 6px; margin-top: 2px;">
+                            <span>📱</span> Scan QR untuk Unduh Digital
+                        </div>
+                        
+                        <div style="width: 100%; border-top: 1.5px solid #e2e8f0; margin: 8px 0 4px 0; position: relative;">
+                            <span style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #f8fafc; padding: 0 10px; color: #64748b; font-size: 0.7rem; font-weight: 600; white-space: nowrap;">Atau Kirim Link via WhatsApp</span>
+                        </div>
+                        
+                        <div style="display: flex; width: 100%; gap: 6px; align-items: stretch; justify-content: center;">
+                            <input type="text" id="inputWA" readonly placeholder="0812xxxx..." style="flex: 1; width: 100%; min-width: 0; padding: 12px 14px; border-radius: 12px; border: 2px solid #22c55e; background: white; outline: none; font-weight: 600; font-size: 0.95rem; color: #0f172a; cursor: pointer; box-sizing: border-box; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
+                            
+                            <!-- PERBAIKAN: Tombol kirim tidak mengambil flex: 1 -->
+                            <button id="btnKirimWA" onclick="kirimFotoKeWA()" class="btn-aksi btn-pastel-purple" style="width: auto !important; flex: 0 0 auto; border-radius: 12px; padding: 0 20px; margin: 0; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; gap: 8px; box-sizing: border-box; border: none;">
+                                <span id="ikon-wa-kirim" style="font-size: 1.1rem; line-height: 1;">📤</span> 
+                                <span id="teks-wa-kirim">Kirim</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button onclick="akhiriSesiDanKembali()" class="btn-aksi btn-pastel-red">
+                        <span style="display:flex; align-items:center; gap:8px; margin: 0 auto;">Selesai & Keluar 👋</span>
+                        <span style="font-size: 1.2rem;">›</span>
+                    </button>
+
                 </div>
-                
-                <button onclick="akhiriSesiDanKembali()" class="btn-aksi" style="margin-top: 15px; background: #ef4444; color: var(--paper-white); width: 100%;">Selesai & Akhiri Sesi</button>
             </div>
 
         </div>
@@ -405,27 +548,29 @@
         </div>
     </div>
 
-    <!-- MODAL PEMBAYARAN EXTRA CETAK -->
+  <!-- MODAL PEMBAYARAN EXTRA CETAK -->
     <div id="paymentModalOverlay">
         <div class="payment-modal">
-            <h2 style="margin-top: 0; font-size: 1.5rem;">Pembayaran Extra</h2>
-            <p id="payment-text-info" style="margin-bottom: 15px;">Silakan selesaikan pembayaran untuk tambahan cetak.</p>
+            <h2 style="margin-top: 0; font-size: 1.8rem; color: #1e293b; margin-bottom: 10px;">Pembayaran Extra</h2>
+            <p id="payment-text-info" style="margin-bottom: 15px; color: #64748b; font-size: 0.95rem;">Silakan selesaikan pembayaran untuk tambahan cetak.</p>
             
             <div id="qris-section" style="margin-bottom: 20px;">
-                <img id="qris-image-preview" src="" style="width: 200px; height: 200px; object-fit: contain; border: 2px dashed var(--ink); border-radius: 10px; margin: 0 auto; display: block;" alt="Gambar QRIS belum terupload di Dashboard">
-                <p style="font-size: 0.85rem; color: #666; margin-top: 5px;">Scan kode di atas dengan aplikasi e-Wallet</p>
+                <div style="background: #f8fafc; padding: 12px; border-radius: 20px; border: 2px dashed #cbd5e1; display: inline-block;">
+                    <img id="qris-image-preview" src="" style="width: 180px; height: 180px; object-fit: contain; border-radius: 12px;" alt="QRIS">
+                </div>
+                <p style="font-size: 0.85rem; color: #64748b; margin-top: 10px; font-weight: 500;">Scan kode di atas dengan aplikasi e-Wallet</p>
             </div>
 
             <div id="cash-validation-section" style="display: none; flex-direction: column; align-items: center; margin-bottom: 20px;">
-                <div style="font-size: 3rem; margin-bottom: 10px;">💵</div>
-                <p style="font-weight: 700; color: var(--ink); font-size: 1.1rem; margin-bottom: 15px;">⏳ Menunggu Admin memvalidasi pembayaran tunai Anda...</p>
-                <p style="font-size: 0.75rem; color: #888; font-style: italic;">(Admin: Tekan tombol 'Y' di keyboard untuk Acc)</p>
+                <div style="font-size: 4rem; margin-bottom: 10px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));">💵</div>
+                <p style="font-weight: 700; color: #1e293b; font-size: 1.1rem; margin-bottom: 5px;">Menunggu Validasi Admin...</p>
+                <p style="font-size: 0.8rem; color: #64748b;">(Admin: Tekan tombol 'Y' di keyboard untuk Acc)</p>
             </div>
 
             <div id="payment-buttons" style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
-                <button onclick="batalkanPaymentExtra()" class="btn-aksi" style="background: #ef4444; border: 2px solid var(--ink); flex: 1;">Batal</button>
-                <button onclick="pilihTunai()" class="btn-aksi" style="background: var(--yellow); border: 2px solid var(--ink); color: var(--ink); flex: 1;">Tunai 💵</button>
-                <button onclick="simulasikanPaymentSukses()" class="btn-aksi" style="background: var(--green); border: 2px solid var(--ink); color: var(--ink); width: 100%;">Sudah Bayar (QRIS) ✅</button>
+                <button onclick="batalkanPaymentExtra()" class="btn-aksi" style="background: #f1f5f9; color: #475569; border: none; flex: 1; padding: 12px;">Batal</button>
+                <button onclick="pilihTunai()" class="btn-aksi" style="background: #fef9c3; color: #ca8a04; border: none; flex: 1; padding: 12px;">Tunai 💵</button>
+                <button onclick="simulasikanPaymentSukses()" class="btn-aksi btn-pastel-green" style="width: 100%; border: none; padding: 14px; margin-top: 5px;">Sudah Bayar (QRIS) ✅</button>
             </div>
         </div>
     </div>
@@ -444,18 +589,40 @@
         let activeCameraMode = 'canon'; 
         let webcamStream = null;
         let qrisBase64Tersemat = "";
+        let settingLivePhotoMaster = false;
+        let settingPhotoGifMaster = false;
         // --- [BARU] PENANGKAP SINYAL GIF DARI BACKGROUND ---
         const socket = io();
         socket.on('gif-ready', (data) => {
             if (data.sessionId === currentSessionId && data.url) {
-                const elemenGif = document.getElementById('img-hasil-gif');
-                const loadingBox = document.getElementById('gif-loading-box');
-                
-                // Hilangkan kotak loading, munculkan GIF dengan animasi memantul
-                loadingBox.style.display = 'none';
-                elemenGif.src = data.url + "?t=" + Date.now();
-                elemenGif.style.display = 'block';
-                elemenGif.classList.add('anim-bounce');
+                const elLive = document.getElementById('img-hasil-livephoto');
+                const boxLive = document.getElementById('livephoto-loading-box');
+                if (boxLive) boxLive.style.display = 'none';
+                if (elLive) {
+                    elLive.src = data.url + "?t=" + Date.now();
+                    elLive.style.display = 'block';
+                    elLive.classList.add('anim-bounce');
+                }
+            }
+        });
+
+        socket.on('gif-failed', (data) => {
+            if (data.sessionId === currentSessionId) {
+                const boxLive = document.getElementById('livephoto-loading-box');
+                if (boxLive) boxLive.innerHTML = '<p style="color:red; font-weight:bold; font-size:0.8rem; text-align:center;">Gagal<br>Memproses</p>';
+            }
+        });
+
+        socket.on('photo-gif-ready', (data) => {
+            if (data.sessionId === currentSessionId && data.url) {
+                const elGif = document.getElementById('img-hasil-gif');
+                const boxGif = document.getElementById('gif-loading-box');
+                if (boxGif) boxGif.style.display = 'none';
+                if (elGif) {
+                    elGif.src = data.url + "?t=" + Date.now();
+                    elGif.style.display = 'block';
+                    elGif.classList.add('anim-bounce');
+                }
             }
         });
         // --- [BARU] PENANGKAP LINK QR CODE DARI BACKGROUND ---
@@ -537,9 +704,22 @@
                     // Jika statis, pakai harga ekstra statis dari global settings
                     hargaExtraCetakPerLembar = dataSet.global?.extraPrintPriceStatic || 15000;
                 }
-                if (dataSet.global?.livePhotoEnabled === false) {
-                    const lpWrapper = document.getElementById('livePhotoWrapper');
-                    if(lpWrapper) lpWrapper.style.display = 'none';
+                // Baca status Master Switch dari Tab Fitur GIF Dashboard
+                settingLivePhotoMaster = (dataSet.global?.livePhotoEnabled === true || dataSet.global?.livePhotoEnabled === "true");
+                settingPhotoGifMaster = (dataSet.global?.photoGifEnabled === true || dataSet.global?.photoGifEnabled === "true");
+
+                const wrapLive = document.getElementById('wrapper-chk-livePhoto');
+                const cbLive = document.getElementById('chk-livePhoto-collage');
+                if (wrapLive && cbLive) {
+                    wrapLive.style.display = settingLivePhotoMaster ? 'flex' : 'none';
+                    cbLive.checked = settingLivePhotoMaster;
+                }
+
+                const wrapGif = document.getElementById('wrapper-chk-photoGif');
+                const cbGif = document.getElementById('chk-photoGif-collage');
+                if (wrapGif && cbGif) {
+                    wrapGif.style.display = settingPhotoGifMaster ? 'flex' : 'none';
+                    cbGif.checked = settingPhotoGifMaster;
                 }
 
                 let mesinKamera = (dataSet.global && (dataSet.global.cameraEngine || dataSet.global.kameraUtama)) || 'canon';
@@ -670,19 +850,43 @@ function inisialisasiTabFormat() {
         }
 
         function masukKeKamera(idTemplate) {
-            templateTerpilih = idTemplate; fotoTerpilih = []; indexFotoSaatIni = 1; retakeCounts = new Array(targetJepretan).fill(settingMaxRetake);
-            document.getElementById('panel-template').classList.remove('active-panel'); document.getElementById('kamera-container').style.display = 'flex';
+            templateTerpilih = idTemplate; 
+            fotoTerpilih = []; 
+            indexFotoSaatIni = 1; 
+            retakeCounts = new Array(targetJepretan).fill(settingMaxRetake);
+            
+            document.getElementById('panel-template').classList.remove('active-panel'); 
+            document.getElementById('kamera-container').style.display = 'flex';
             
             // [BARU] Pindahkan Timer ke tengah saat layar kamera
             document.getElementById('sessionTimerDisplay').classList.add('center-mode');
 
-            siapkanMiniGallery(); document.getElementById('mode-jepret').style.display = 'flex'; document.getElementById('mode-retake').style.display = 'none'; document.getElementById('previewImage').style.display = 'none'; document.getElementById('liveView').style.display = 'block';
-            terapkanVisualKamera(); document.getElementById('liveView').style.filter = `brightness(${settingKecerahanLV}%)`;
+            siapkanMiniGallery(); 
+            document.getElementById('mode-jepret').style.display = 'flex'; 
+            document.getElementById('mode-retake').style.display = 'none'; 
+            document.getElementById('previewImage').style.display = 'none'; 
+            
+            terapkanVisualKamera(); 
+
             if (activeCameraMode === 'webcam') {
+                // Mode Insta360 / Webcam
+                document.getElementById('liveView').style.display = 'none';
+                document.getElementById('webcam-view').style.display = 'block';
                 jalankanWebcam();
             } else {
-                fetch('/toggle-liveview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: true }) });
-                isLiveViewRunning = true; jalankanLiveViewAman();
+                // Mode Profesional Canon EDSDK
+                document.getElementById('webcam-view').style.display = 'none';
+                document.getElementById('liveView').style.display = 'block';
+                document.getElementById('liveView').style.filter = `brightness(${settingKecerahanLV}%)`;
+                
+                fetch('/toggle-liveview', { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ state: true }) 
+                }).then(() => {
+                    isLiveViewRunning = true; 
+                    jalankanLiveViewAman();
+                });
             }
         }
 
@@ -848,12 +1052,29 @@ function inisialisasiTabFormat() {
         }
 
         function lanjutKeLiveView() {
-            document.getElementById('mode-jepret').style.display = 'flex'; document.getElementById('previewImage').style.display = 'none'; document.getElementById('liveView').style.display = 'block'; terapkanVisualKamera(); document.getElementById('liveView').style.filter = `brightness(${settingKecerahanLV}%)`; setTimeout(() => { fetch('/toggle-liveview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: true }) }).then(() => { if (activeCameraMode === 'webcam') {
-                jalankanWebcam();
-            } else {
-                fetch('/toggle-liveview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: true }) });
-                isLiveViewRunning = true; jalankanLiveViewAman();
-            } }); }, 800); 
+            document.getElementById('mode-jepret').style.display = 'flex'; 
+            document.getElementById('previewImage').style.display = 'none'; 
+            
+            terapkanVisualKamera(); 
+
+            setTimeout(() => { 
+                if (activeCameraMode === 'webcam') {
+                    // Logika khusus Webcam (Insta360 / UVC)
+                    document.getElementById('liveView').style.display = 'none';
+                    document.getElementById('webcam-view').style.display = 'block';
+                    jalankanWebcam();
+                } else {
+                    // Logika khusus Kamera Profesional (Canon EDSDK)
+                    document.getElementById('webcam-view').style.display = 'none';
+                    document.getElementById('liveView').style.display = 'block';
+                    document.getElementById('liveView').style.filter = `brightness(${settingKecerahanLV}%)`;
+                    
+                    fetch('/toggle-liveview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: true }) }).then(() => { 
+                        isLiveViewRunning = true; 
+                        jalankanLiveViewAman();
+                    });
+                } 
+            }, 800); 
         }
 
       async function bukaPanelEfek() {
@@ -994,6 +1215,8 @@ function inisialisasiTabFormat() {
         function terapkanFilterLive(namaServer, cssFilter, btnElem) { efekTerpilihServer = namaServer; const filterTarget = document.getElementById('filterTarget'); if(filterTarget) filterTarget.style.filter = cssFilter; document.querySelectorAll('.effect-btn').forEach(btn => btn.classList.remove('active')); btnElem.classList.add('active'); }
 
         async function rakitDanSimpanFinal() {
+            const useLivePhoto = settingLivePhotoMaster && (document.getElementById('chk-livePhoto-collage')?.checked ?? true);
+                    const usePhotoGif = settingPhotoGifMaster && (document.getElementById('chk-photoGif-collage')?.checked ?? true);
             const btnRakit = document.getElementById('btn-rakit'); btnRakit.disabled = true; btnRakit.innerText = "⏳ Sedang Merakit...";
             document.getElementById('loadingTeks').innerText = "✨ Merakit & Menyimpan ke Drive..."; document.getElementById('loadingTeks').style.display = 'block'; clearInterval(intervalTimerSesi); document.getElementById('sessionTimerDisplay').style.display = 'none';
             try { 
@@ -1004,10 +1227,12 @@ function inisialisasiTabFormat() {
                         templateId: templateTerpilih, 
                         selectedPhotos: fotoTerpilih, 
                         effect: efekTerpilihServer,
-                        livePhoto: document.getElementById('chk-livePhoto-studio') ? document.getElementById('chk-livePhoto-studio').checked : true,
-                        customOffsets: currentCustomOffsets, // <--- BARU: Kirim koordinat geser
-                        orientation: isPortrait ? 'potret' : 'lanskap' // <--- BARU: Kirim status potret
-                    }) 
+                        livePhoto: useLivePhoto,
+                        photoGif: usePhotoGif,
+                        customOffsets: currentCustomOffsets, 
+                        orientation: isPortrait ? 'potret' : 'lanskap',
+                        sessionId: currentSessionId
+                    })
                 });
                 const data = await response.json(); 
                 document.getElementById('loadingTeks').style.display = 'none'; 
@@ -1033,44 +1258,79 @@ function inisialisasiTabFormat() {
             
             namaFileTerbaruToCetak = urlFotoFinal; 
             document.getElementById('finalImageResult').src = urlFotoFinal + "?t=" + Date.now();
-            
-            const elemenGif = document.getElementById('img-hasil-gif');
-            const loadingBox = document.getElementById('gif-loading-box');
-            
-            // Hapus animasi lama jika ada (reset)
-            elemenGif.classList.remove('anim-bounce');
-            
-            if (urlGifFinal === 'processing') {
-                // Tampilkan kotak loading memutar, sembunyikan GIF aslinya
-                elemenGif.style.display = 'none';
-                loadingBox.style.display = 'flex';
-            } else if (urlGifFinal) {
-                // Jika entah kenapa server merakitnya super cepat, langsung tampilkan
-                loadingBox.style.display = 'none';
-                elemenGif.src = urlGifFinal + "?t=" + Date.now();
-                elemenGif.style.display = 'block';
+
+            const useLivePhoto = settingLivePhotoMaster && (document.getElementById('chk-livePhoto-collage')?.checked ?? true);
+            const usePhotoGif = settingPhotoGifMaster && (document.getElementById('chk-photoGif-collage')?.checked ?? true);
+
+            // ==========================================================
+            // 🎨 LOGIKA MUTASI LAYOUT OTOMATIS (1 / 2 / 3 KOTAK PREVIEW)
+            // ==========================================================
+            const gridContainer = document.getElementById('hasilGridContainer');
+            const middleCol = document.getElementById('middle-anim-col');
+            const boxLive = document.getElementById('box-preview-livephoto');
+            const boxGif = document.getElementById('box-preview-gif');
+
+            gridContainer.classList.remove('layout-mode-1', 'layout-mode-2', 'layout-mode-3');
+
+            if (!useLivePhoto && !usePhotoGif) {
+                gridContainer.classList.add('layout-mode-1');
+                middleCol.style.display = 'none';
+            } else if (useLivePhoto && usePhotoGif) {
+                gridContainer.classList.add('layout-mode-3');
+                middleCol.style.display = 'flex';
+                boxLive.style.display = 'flex';
+                boxGif.style.display = 'flex';
             } else {
-                // Tidak ada permintaan fitur GIF
-                loadingBox.style.display = 'none';
-                elemenGif.style.display = 'none';
-                elemenGif.src = '';
+                gridContainer.classList.add('layout-mode-2');
+                middleCol.style.display = 'flex';
+                boxLive.style.display = useLivePhoto ? 'flex' : 'none';
+                boxGif.style.display = usePhotoGif ? 'flex' : 'none';
             }
 
+            // --- Atur Tampilan Kotak Live Photo ---
+            const elemenLive = document.getElementById('img-hasil-livephoto');
+            const loadingLiveBox = document.getElementById('livephoto-loading-box');
+            elemenLive.classList.remove('anim-bounce');
+            if (useLivePhoto) {
+                elemenLive.style.display = 'none';
+                loadingLiveBox.style.display = 'flex';
+            }
+
+            // --- Atur Tampilan Kotak GIF ---
+            const elemenGif = document.getElementById('img-hasil-gif');
+            const loadingGifBox = document.getElementById('gif-loading-box');
+            elemenGif.classList.remove('anim-bounce');
+            if (usePhotoGif) {
+                elemenGif.style.display = 'none';
+                loadingGifBox.style.display = 'flex';
+            }
+
+            // --- Atur Kotak Loading QR Code ---
             const qrContainer = document.getElementById('qrCodeContainer'); 
             qrContainer.innerHTML = ''; 
             
             if (linkGoogleDriveUnik === "processing") {
-                // Tampilkan Jam Pasir mutar-mutar selagi backend mengambil link G-Drive
-                qrContainer.innerHTML = '<div style="display:flex; justify-content:center; align-items:center; width:100px; height:100px; font-size:2.5rem; animation: pulsePetunjuk 1s infinite;">⏳</div>';
+                qrContainer.innerHTML = '<div style="font-size:2rem; animation: pulsePetunjuk 1.5s infinite;">⏳</div>';
             } else {
-                new QRCode(qrContainer, { text: linkGoogleDriveUnik, width: 100, height: 100, colorDark : "#1a1b20", colorLight : "#ffffff" });
+                new QRCode(qrContainer, { text: linkGoogleDriveUnik, width: 105, height: 105, colorDark : "#1e293b", colorLight : "#ffffff" });
             }
             
             jumlahCetakDipilih = 1; updateUIJumlahCetak();
         }
 
         function ubahJumlahCetak(nilai) { let num = jumlahCetakDipilih + nilai; if (num < 1) num = 1; if (num > 10) num = 10; jumlahCetakDipilih = num; updateUIJumlahCetak(); }
-        function updateUIJumlahCetak() { document.getElementById('label-jumlah-cetak').innerText = jumlahCetakDipilih + " Lembar"; const btnAction = document.getElementById('btn-action-cetak'); if (isEventBerbayar && jumlahCetakDipilih > 1) { let biayaTambahan = (jumlahCetakDipilih - 1) * hargaExtraCetakPerLembar; btnAction.innerText = `💳 Bayar Extra & Cetak (${jumlahCetakDipilih} Lbr) - Rp ${biayaTambahan.toLocaleString('id-ID')}`; btnAction.style.background = "var(--yellow)"; } else { btnAction.innerText = `🖨️ Cetak (${jumlahCetakDipilih} Lembar)`; btnAction.style.background = "var(--blue)"; } }
+        function updateUIJumlahCetak() { 
+            document.getElementById('label-jumlah-cetak').innerText = jumlahCetakDipilih + " Lembar"; 
+            const btnAction = document.getElementById('btn-action-cetak'); 
+            if (isEventBerbayar && jumlahCetakDipilih > 1) { 
+                let biayaTambahan = (jumlahCetakDipilih - 1) * hargaExtraCetakPerLembar; 
+                btnAction.innerHTML = `<span style="display:flex; align-items:center; gap:8px; margin: 0 auto;">💳 Bayar Extra (Rp ${biayaTambahan.toLocaleString('id-ID')})</span><span style="font-size: 1.2rem;">›</span>`; 
+                btnAction.className = "btn-aksi btn-pastel-red"; 
+            } else { 
+                btnAction.innerHTML = `<span style="display:flex; align-items:center; gap:8px; margin: 0 auto;">🖨️ Cetak (${jumlahCetakDipilih} Lembar)</span><span style="font-size: 1.2rem;">›</span>`; 
+                btnAction.className = "btn-aksi btn-pastel-yellow"; 
+            } 
+        }
 
         async function prosesCetakFinal() {
             if (isEventBerbayar && jumlahCetakDipilih > 1) {
@@ -1164,16 +1424,58 @@ function inisialisasiTabFormat() {
         }
 
         async function kirimFotoKeWA() {
-            const inputWa = document.getElementById('inputWA'); const btnWa = document.getElementById('btnKirimWA'); const nomor = inputWa.value; if (nomor.length < 10) return; 
-            inputWa.disabled = true; btnWa.disabled = true; btnWa.innerText = "⏳";
+            const inputWa = document.getElementById('inputWA'); 
+            const btnWa = document.getElementById('btnKirimWA'); 
+            const ikonWa = document.getElementById('ikon-wa-kirim');
+            const teksWa = document.getElementById('teks-wa-kirim');
+            const nomor = inputWa.value;
+            
+            if (nomor.length < 10) return; 
+            
+            // Ubah state menjadi loading
+            inputWa.disabled = true; 
+            btnWa.disabled = true; 
+            if(ikonWa) ikonWa.innerText = "⏳"; 
+            if(teksWa) teksWa.innerText = "Kirim...";
+            
             try {
                 let linkFinal = linkGoogleDriveUnik || "https://drive.google.com/";
-                const res = await fetch('/api/send-wa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nomorWa: nomor, linkFoto: linkFinal }) }); const data = await res.json();
+                const res = await fetch('/api/send-wa', { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ nomorWa: nomor, linkFoto: linkFinal }) 
+                });
+                const data = await res.json();
+                
                 if (data.success) { 
-                    btnWa.innerText = "Terkirim ✅"; btnWa.style.background = "var(--green)"; 
-                    setTimeout(() => { inputWa.disabled = false; btnWa.disabled = false; btnWa.innerText = "Kirim"; btnWa.style.background = "var(--pink)"; inputWa.value = ""; }, 3000);
-                } else { inputWa.disabled = false; btnWa.disabled = false; btnWa.innerText = "Kirim"; alert("Gagal kirim WA: " + data.message); }
-            } catch (err) { inputWa.disabled = false; btnWa.disabled = false; btnWa.innerText = "Kirim"; alert("Kesalahan server."); }
+                    if(ikonWa) ikonWa.innerText = "✅"; 
+                    if(teksWa) teksWa.innerText = "Berhasil"; 
+                    btnWa.classList.remove('btn-pastel-purple');
+                    btnWa.classList.add('btn-pastel-green'); 
+                    
+                    setTimeout(() => { 
+                        inputWa.disabled = false; 
+                        btnWa.disabled = false; 
+                        if(ikonWa) ikonWa.innerText = "📤"; 
+                        if(teksWa) teksWa.innerText = "Kirim"; 
+                        btnWa.classList.add('btn-pastel-purple');
+                        btnWa.classList.remove('btn-pastel-green'); 
+                        inputWa.value = ""; 
+                    }, 3000);
+                } else { 
+                    inputWa.disabled = false; 
+                    btnWa.disabled = false; 
+                    if(ikonWa) ikonWa.innerText = "📤"; 
+                    if(teksWa) teksWa.innerText = "Kirim"; 
+                    alert("Gagal kirim WA: " + data.message);
+                }
+            } catch (err) { 
+                inputWa.disabled = false; 
+                btnWa.disabled = false; 
+                if(ikonWa) ikonWa.innerText = "📤"; 
+                if(teksWa) teksWa.innerText = "Kirim"; 
+                alert("Terjadi kesalahan jaringan.");
+            }
         }
         
         function jalankanWebcam() {
@@ -1184,6 +1486,59 @@ function inisialisasiTabFormat() {
             navigator.mediaDevices.getUserMedia({ video: { width: 1920, height: 1080 } })
                 .then(stream => { webcamStream = stream; vid.srcObject = stream; })
                 .catch(err => { alert("Webcam gagal diakses atau tidak diizinkan browser!"); });
+        }async function jalankanWebcam() {
+            const lv = document.getElementById('liveView');
+            if (lv) lv.style.display = 'none'; 
+            
+            const vid = document.getElementById('webcam-view');
+            if (!vid) return;
+            vid.style.display = 'block'; 
+
+            // Jika stream sudah jalan sebelumnya, tidak perlu request ulang
+            if (webcamStream && webcamStream.active) {
+                vid.srcObject = webcamStream;
+                vid.play().catch(()=>{});
+                return;
+            }
+            
+            try {
+                // 1. Cari semua daftar perangkat video yang tercolok di PC
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevices = devices.filter(d => d.kind === 'videoinput');
+                console.log("🎥 Daftar Kamera Terdeteksi:", videoDevices.map(d => d.label));
+
+                // 2. Prioritaskan memilih kamera yang mengandung nama "Insta360" atau "Ace"
+                const instaCam = videoDevices.find(d => 
+                    d.label.toLowerCase().includes('insta') || 
+                    d.label.toLowerCase().includes('ace') ||
+                    d.label.toLowerCase().includes('usb')
+                );
+
+                // Gunakan kata kunci 'ideal' agar tidak gagal jika kamera meminta resolusi berbeda
+                let videoConstraints = {
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 }
+                };
+
+                if (instaCam && instaCam.deviceId) {
+                    videoConstraints.deviceId = { exact: instaCam.deviceId };
+                }
+
+                // 3. Coba nyalakan dengan pengaturan ideal
+                webcamStream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints, audio: false });
+                vid.srcObject = webcamStream;
+                await vid.play();
+            } catch (err) {
+                console.warn("⚠️ Gagal mode ideal, mencoba mode fallback universal...", err);
+                try {
+                    // 4. FALLBACK DARURAT: Terima resolusi apa pun yang dikirim oleh kamera
+                    webcamStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                    vid.srcObject = webcamStream;
+                    await vid.play();
+                } catch (errFallback) {
+                    alert("❌ Kamera gagal diakses: " + errFallback.message + "\nPastikan aplikasi lain (Zoom/OBS/Camera) sudah ditutup.");
+                }
+            }
         }
 
         function matikanWebcam() {

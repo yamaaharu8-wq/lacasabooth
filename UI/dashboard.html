@@ -229,6 +229,7 @@
         <nav class="nav-menu">
             <a class="nav-item" onclick="bukaTab('tab-timer', this)"><span>⏱️</span> Pengaturan Waktu</a>
             <a class="nav-item" onclick="bukaTab('tab-hardware', this)"><span>🖥️</span> Hardware & Printer</a>
+            <a class="nav-item" onclick="bukaTab('tab-fitur-gif', this)"><span>🎬</span> Fitur GIF</a>
             <a class="nav-item" onclick="bukaTab('tab-kamera-pro', this)"><span>📸</span> Kamera Pro (Canon)</a>
             <a class="nav-item" onclick="bukaTab('tab-template', this)"><span>🖼️</span> Kelola Template</a>
             <a class="nav-item" onclick="bukaTab('tab-tema', this)"><span>🎨</span> Tema & Tampilan</a>
@@ -385,15 +386,6 @@
                     </div>
                     <hr style="border: 1px dashed #ccc; margin: 15px 0;">
                     <button type="button" class="btn-primary" style="background: #6a35a3; color: white; margin-top: 10px;" onclick="simpanPengaturan()">🎥 Simpan Setelan Kamera</button>
-<div class="form-group" style="background: rgba(239, 68, 68, 0.1); padding: 15px; border-radius: 10px; border: 2px dashed #ef4444;">
-    <label style="color: #ef4444; font-weight: bold; font-size: 1rem;">🔥 Fitur Live Photo / GIF</label>
-    <p style="font-size: 0.8rem; margin-bottom: 8px; color: #666;">Merekam video pendek saat jepretan. (⚠️ Membutuhkan CPU tinggi & FFmpeg di Windows)</p>
-    <select id="sys-livePhoto" style="font-weight: bold; border-color: #ef4444;">
-        <option value="false">OFF (Standar - Ringan untuk Mini PC)</option>
-        <option value="true">ON (Aktifkan Live Photo - PC High End)</option>
-    </select>
-    <button type="button" class="btn-primary" style="background: #ef4444; color: white; margin-top: 10px;" onclick="simpanPengaturan()">💾 Simpan Setelan GIF</button>
-</div>
                 </div>
                 <div class="card">
                     <div class="card-header">🎥 Video Panduan Pose (PIP)</div>
@@ -431,6 +423,65 @@
                 </div>
             </div>
         </div>
+
+        <!-- TAB BARU: FITUR GIF & LIVE PHOTO -->
+        <div id="tab-fitur-gif" class="tab-panel">
+            <div class="top-bar">
+                <h2>Fitur GIF & Live Photo 🎬</h2>
+                <p class="tab-desc">Atur perekaman Live Photo (Video Frame 4:6) dan pembuatan animasi GIF (Gabungan Foto Mentah 1:1) beserta tata letak otomatis di layar hasil akhir.</p>
+            </div>
+
+            <div class="grid-2">
+                <!-- KARTU 1: LIVE PHOTO -->
+                <div class="card" id="card-fitur-livephoto" style="border: 3px solid var(--ink); background: var(--paper-white);">
+                    <div class="card-header" style="border-bottom-color: var(--ink);">
+                        <span>📸 Fitur Live Photo</span>
+                        <span style="background: var(--pink); color: var(--ink); font-size: 0.75rem; padding: 4px 10px; border-radius: 20px; border: 2px solid var(--ink);">Rasio 4:6</span>
+                    </div>
+                    <p style="font-size: 0.88rem; color: #555; margin-bottom: 15px; line-height: 1.5;">
+                        Merekam gerakan video pendek saat pemotretan berlangsung lalu memasukkannya ke dalam bingkai template terpilih. (Membutuhkan CPU cukup tinggi & FFmpeg).
+                    </p>
+                    <div class="form-group" style="background: var(--bg-color); padding: 15px; border-radius: 12px; border: 2px dashed var(--ink);">
+                        <label>Status Fitur Live Photo:</label>
+                        <select id="sys-livePhoto" style="font-weight: bold; font-size: 1rem;">
+                            <option value="false">🔴 OFF (Nonaktif - Ringan untuk Mini PC)</option>
+                            <option value="true">🟢 ON (Aktifkan Live Photo)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- KARTU 2: GIF FOTO MENTAH -->
+                <div class="card" id="card-fitur-photogif" style="border: 3px solid var(--ink); background: var(--paper-white);">
+                    <div class="card-header" style="border-bottom-color: var(--ink);">
+                        <span>🎞️ Fitur GIF (Foto Mentah)</span>
+                        <span style="background: var(--blue); color: var(--ink); font-size: 0.75rem; padding: 4px 10px; border-radius: 20px; border: 2px solid var(--ink);">Persegi 1:1</span>
+                    </div>
+                    <p style="font-size: 0.88rem; color: #555; margin-bottom: 15px; line-height: 1.5;">
+                        Menggabungkan foto-foto mentah hasil jepretan tamu menjadi animasi GIF berurutan yang jernih. Proses sangat ringan dan cepat.
+                    </p>
+                    <div class="form-group" style="background: var(--bg-color); padding: 15px; border-radius: 12px; border: 2px dashed var(--ink);">
+                        <label>Status Fitur GIF Mentahan:</label>
+                        <select id="sys-photoGif" style="font-weight: bold; font-size: 1rem;">
+                            <option value="false">🔴 OFF (Nonaktif)</option>
+                            <option value="true">🟢 ON (Aktifkan Animasi GIF)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- INFO PANDUAN ADAPTIVE UI -->
+            <div class="card" style="background: var(--yellow); margin-bottom: 20px;">
+                <div class="card-header" style="border-bottom-color: var(--ink);">💡 Sistem Tata Letak Otomatis (Adaptive Result Page)</div>
+                <ul style="padding-left: 20px; font-size: 0.9rem; line-height: 1.6; font-weight: 500;">
+                    <li><b>Jika Keduanya OFF:</b> Layar akhir hanya menampilkan <b>1 Kotak Preview Foto Utama</b> + Menu Cetak & QR.</li>
+                    <li><b>Jika Salah Satu ON:</b> Layar akhir menampilkan <b>2 Kotak Preview Besar Sejajar</b> (Komposisi klasik) + Menu Cetak & QR.</li>
+                    <li><b>Jika Keduanya ON:</b> Layar akhir menampilkan <b>3 Kotak Preview</b> (Foto Utama di kiri, Live Photo 4:6 di tengah atas, dan GIF Persegi di tengah bawah).</li>
+                </ul>
+            </div>
+
+            <button type="button" class="btn-primary" style="background: var(--ink); color: white;" onclick="simpanPengaturan()">💾 Simpan Pengaturan Fitur GIF & Live Photo</button>
+        </div>
+
         <!-- TAB KAMERA PRO (CANON EDSDK) -->
         <div id="tab-kamera-pro" class="tab-panel">
             <div class="top-bar">
@@ -1404,8 +1455,11 @@ document.getElementById('sys-canonAv').value = data.global?.canonAv || "auto";
     document.getElementById('sys-cameraPort').value = data.global?.cameraPort || "";
 }
 document.getElementById('sys-brightness').value = data.global?.liveViewBrightness || "100";
-                document.getElementById('sys-flashWorkaround').value = data.global?.flashWorkaround !== undefined ? data.global.flashWorkaround.toString() : "true";
+               document.getElementById('sys-flashWorkaround').value = data.global?.flashWorkaround !== undefined ? data.global.flashWorkaround.toString() : "true";
                 document.getElementById('sys-livePhoto').value = data.global?.livePhotoEnabled ? "true" : "false";
+                if (document.getElementById('sys-photoGif')) {
+                    document.getElementById('sys-photoGif').value = data.global?.photoGifEnabled ? "true" : "false";
+                }
                 document.getElementById('sys-cloudStorage').value = data.global?.cloudStorage !== false ? "true" : "false";
                 document.getElementById('driveParentFolderId').value = data.global?.driveParentFolderId || "";
                 if (document.getElementById('input-cf-token')) document.getElementById('input-cf-token').value = data.global?.cloudflareToken || "";
@@ -1504,9 +1558,10 @@ if (document.getElementById('sys-printerA4')) localStorage.setItem('backup_print
                         qrisPriceStatic: parseInt(getVal('sys-qrisPriceStatic', currentData.global?.qrisPriceStatic)) || 35000,
                         cameraEngine: getVal('sys-cameraEngine', currentData.global?.cameraEngine || 'canon'),
                         cameraPort: getVal('sys-cameraPort', currentData.global?.cameraPort || ''),
-                        liveViewBrightness: parseInt(getVal('sys-brightness', currentData.global?.liveViewBrightness)) || 100, 
+                       liveViewBrightness: parseInt(getVal('sys-brightness', currentData.global?.liveViewBrightness)) || 100, 
                         flashWorkaround: getVal('sys-flashWorkaround', currentData.global?.flashWorkaround !== false ? 'true' : 'false') === "true",
                         livePhotoEnabled: getVal('sys-livePhoto', currentData.global?.livePhotoEnabled ? 'true' : 'false') === "true",
+                        photoGifEnabled: getVal('sys-photoGif', currentData.global?.photoGifEnabled ? 'true' : 'false') === "true",
                         cloudStorage: getVal('sys-cloudStorage', currentData.global?.cloudStorage !== false ? 'true' : 'false') === "true",
                         driveParentFolderId: getVal('driveParentFolderId', currentData.global?.driveParentFolderId || ''),
                         printer4R: document.getElementById('sys-printer4R') ? document.getElementById('sys-printer4R').value : (currentData.global?.printer4R || ''),  
@@ -2440,87 +2495,142 @@ let selectedDuration = '';
 
 // --- LOGIKA PEMBAYARAN LANGGANAN OTOMATIS VIA DOKU ---
 let saasPollingInterval = null;
+let currentSaasOrderId = null;
+let paymentWindow = null;
 
 window.tutupModalPaymentSaas = function() {
     if (saasPollingInterval) clearInterval(saasPollingInterval);
     document.getElementById('paymentModal').style.display = 'none';
 };
 
-window.bukaPayment = async function(tier) {
+window.cekStatusSaasManual = async function() {
+    if (!currentSaasOrderId) return;
+    const btnCek = document.getElementById('btn-cek-manual');
+    const statusEl = document.getElementById('saas-payment-status');
+    btnCek.innerHTML = "⏳ Mengecek..."; btnCek.disabled = true;
+
+    try {
+        const chkRes = await fetch(`/api/saas/check-status/${currentSaasOrderId}?t=${Date.now()}`);
+        const chkData = await chkRes.json();
+
+        if (chkData.success && chkData.status === 'PAID') {
+            if (saasPollingInterval) clearInterval(saasPollingInterval);
+            if (paymentWindow && !paymentWindow.closed) paymentWindow.close(); // Tutup jendela otomatis
+
+            statusEl.innerHTML = `<span style="color:#10b981; font-size:1.2rem;">🎉 PEMBAYARAN BERHASIL! Mengaktifkan Lisensi...</span>`;
+            const dur = selectedDuration || '1m';
+            const daysToAdd = (dur === '3d') ? 3 : (dur === '1w') ? 7 : (dur === '1m') ? 30 : 365;
+            const expiredDate = new Date(); expiredDate.setDate(expiredDate.getDate() + daysToAdd);
+            if (window.updateLicenseToFirebase) await window.updateLicenseToFirebase(selectedTier, expiredDate);
+        } else {
+            alert("⚠️ Pembayaran belum terdeteksi Lunas oleh sistem DOKU. Jika Anda sudah membayar, tunggu 1-2 menit lalu klik cek lagi.");
+            btnCek.innerHTML = "🔄 Cek Status Pembayaran"; btnCek.disabled = false;
+        }
+    } catch (e) {
+        btnCek.innerHTML = "🔄 Cek Status Pembayaran"; btnCek.disabled = false;
+    }
+};
+
+window.bukaPayment = function(tier) {
     const user = window.auth ? window.auth.currentUser : null;
     if (!user) return alert("⚠️ Silakan login menggunakan akun Google terlebih dahulu!");
 
     const selDur = document.getElementById(`sel-dur-${tier}`);
-    const dur = selDur ? selDur.value : '1m';
-    const durasiTeks = (dur === '3d') ? '3 Hari' : (dur === '1w') ? '7 Hari' : (dur === '1m') ? '1 Bulan' : '1 Tahun';
-    const daysToAdd = (dur === '3d') ? 3 : (dur === '1w') ? 7 : (dur === '1m') ? 30 : 365;
-    
-    const priceText = pricing[tier][dur].price;
-    const nominalAngka = parseInt(priceText.replace(/\D/g, ''));
-
+    selectedDuration = selDur ? selDur.value : '1m';
     selectedTier = tier;
-    selectedDuration = dur;
 
-    // Tampilkan Modal Loading
-    const modal = document.getElementById('paymentModal');
-    const descEl = document.getElementById('payment-desc');
+    const durasiTeks = (selectedDuration === '3d') ? '3 Hari' : (selectedDuration === '1w') ? '7 Hari' : (selectedDuration === '1m') ? '1 Bulan' : '1 Tahun';
+    const priceText = pricing[tier][selectedDuration].price;
+
+    // Reset isi pop-up ke mode pemilihan metode
+    document.getElementById('payment-method-selector').style.display = 'block';
+    document.getElementById('btn-generate-doku').style.display = 'flex';
+    document.getElementById('saas-payment-status').style.display = 'none';
+    document.getElementById('btn-lanjut-doku').style.display = 'none';
+    document.getElementById('btn-cek-manual').style.display = 'none';
+
+    document.getElementById('payment-desc').innerHTML = `Akun: <b>${user.email}</b><br>Paket: <b style="color:var(--ink); font-size:1.3rem;">${tier.toUpperCase()} (${durasiTeks})</b><br><span style="color:var(--blue); font-size:1.6rem; font-weight:bold;">${priceText}</span>`;
+    document.getElementById('paymentModal').style.display = 'flex';
+};
+
+window.prosesGenerateInvoice = async function() {
+    const user = window.auth.currentUser;
+    const durasiTeks = (selectedDuration === '3d') ? '3 Hari' : (selectedDuration === '1w') ? '7 Hari' : (selectedDuration === '1m') ? '1 Bulan' : '1 Tahun';
+    const daysToAdd = (selectedDuration === '3d') ? 3 : (selectedDuration === '1w') ? 7 : (selectedDuration === '1m') ? 30 : 365;
+    const priceText = pricing[selectedTier][selectedDuration].price;
+    const nominalAngka = parseInt(priceText.replace(/\D/g, ''));
+    
+    // Ambil pilihan metode bayar klien
+    const paymentMethod = document.getElementById('saas-pay-method').value;
+
     const statusEl = document.getElementById('saas-payment-status');
+    const btnGenerate = document.getElementById('btn-generate-doku');
     const btnBayarDoku = document.getElementById('btn-lanjut-doku');
+    const btnCekManual = document.getElementById('btn-cek-manual');
 
-    descEl.innerHTML = `Akun: <b>${user.email}</b><br>Paket: <b style="color:var(--ink); font-size:1.3rem;">${tier.toUpperCase()} (${durasiTeks})</b><br><span style="color:var(--blue); font-size:1.6rem; font-weight:bold;">${priceText}</span>`;
+    document.getElementById('payment-method-selector').style.display = 'none';
+    btnGenerate.style.display = 'none';
+    statusEl.style.display = 'block';
     statusEl.innerHTML = "⏳ Menghubungkan ke DOKU Payment Gateway...";
-    btnBayarDoku.style.display = 'none';
-    modal.style.display = 'flex';
 
     try {
         const res = await fetch('/api/saas/create-invoice', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                email: user.email,
-                tier: tier,
-                duration: durasiTeks,
-                amount: nominalAngka
+            body: JSON.stringify({ 
+                email: user.email, 
+                tier: selectedTier, 
+                duration: durasiTeks, 
+                amount: nominalAngka,
+                paymentMethod: paymentMethod // <-- Mengirimkan instruksi ke backend
             })
         });
         const data = await res.json();
 
         if (!data.success) {
             statusEl.innerHTML = `<span style="color:#ef4444;">❌ ${data.message}</span>`;
+            btnGenerate.style.display = 'flex';
             return;
         }
 
-        // Buka halaman pembayaran DOKU (mendukung semua metode di akun DOKU Anda)
-        statusEl.innerHTML = `✅ Tagihan DOKU Siap!<br><span style="font-size:0.85rem; color:#555;">Silakan selesaikan pembayaran di jendela DOKU. Sistem akan mengaktifkan paket <b>${tier.toUpperCase()}</b> secara otomatis begitu lunas.</span>`;
-        btnBayarDoku.style.display = 'flex';
-        btnBayarDoku.onclick = () => window.open(data.paymentUrl, '_blank', 'width=500,height=750');
+       currentSaasOrderId = data.orderId;
+        statusEl.innerHTML = `✅ Tagihan DOKU Siap!<br><span style="font-size:0.85rem; color:#555;">Silakan selesaikan pembayaran di jendela baru. Jika layar ini tidak tertutup otomatis setelah Anda membayar, klik tombol Cek Status di bawah.</span>`;
         
-        // Buka otomatis popup DOKU
-        window.open(data.paymentUrl, '_blank', 'width=500,height=750');
+        btnBayarDoku.style.display = 'flex';
+        btnCekManual.style.display = 'flex';
+        
+        // Simpan referensi ke jendela pop-up
+        paymentWindow = window.open(data.paymentUrl, '_blank', 'width=500,height=750');
+        
+        // Agar jika klien terlanjur menutupnya, mereka bisa membukanya kembali
+        btnBayarDoku.onclick = () => {
+            if (!paymentWindow || paymentWindow.closed) {
+                paymentWindow = window.open(data.paymentUrl, '_blank', 'width=500,height=750');
+            } else {
+                paymentWindow.focus();
+            }
+        };
 
-        // Mulai Polling Otomatis setiap 4 detik untuk cek lunas
         if (saasPollingInterval) clearInterval(saasPollingInterval);
         saasPollingInterval = setInterval(async () => {
             try {
-                const chkRes = await fetch(`/api/saas/check-status/${data.orderId}?t=${Date.now()}`);
+                const chkRes = await fetch(`/api/saas/check-status/${currentSaasOrderId}?t=${Date.now()}`);
                 const chkData = await chkRes.json();
 
                 if (chkData.success && chkData.status === 'PAID') {
                     clearInterval(saasPollingInterval);
+                    if (paymentWindow && !paymentWindow.closed) paymentWindow.close(); // Tutup jendela otomatis
+
                     statusEl.innerHTML = `<span style="color:#10b981; font-size:1.2rem;">🎉 PEMBAYARAN BERHASIL! Mengaktifkan Lisensi...</span>`;
-                    
-                    const expiredDate = new Date();
-                    expiredDate.setDate(expiredDate.getDate() + daysToAdd);
-                    
-                    if (window.updateLicenseToFirebase) {
-                        await window.updateLicenseToFirebase(tier, expiredDate);
-                    }
+                    const expiredDate = new Date(); expiredDate.setDate(expiredDate.getDate() + daysToAdd);
+                    if (window.updateLicenseToFirebase) await window.updateLicenseToFirebase(selectedTier, expiredDate);
                 }
             } catch (err) {}
         }, 4000);
 
     } catch (e) {
         statusEl.innerHTML = `<span style="color:#ef4444;">❌ Gagal menghubungi server pembayaran.</span>`;
+        btnGenerate.style.display = 'flex';
     }
 };
 // === LOGIC PENGECEKAN PEMBARUAN KE GITHUB & IPC LISTENERS ===
@@ -2971,9 +3081,10 @@ document.addEventListener('DOMContentLoaded', loadQrisSettings);
             // ==========================================
             // 🛑 TIER 1: FREE
             // ==========================================
-            if (tier === 'free') {
+           if (tier === 'free') {
                 // 1. Pasang Gembok di Elemen Spesifik
-                pasangGembok('sys-livePhoto', 'Live Photo khusus paket Plus & Prime.', true);
+                pasangGembok('card-fitur-livephoto', 'Fitur Live Photo khusus paket Plus & Prime.');
+                pasangGembok('card-fitur-photogif', 'Fitur Animasi GIF khusus paket Plus & Prime.');
                 pasangGembok('formTemplateUpload', 'Upload Custom Template khusus paket Plus & Prime.');
                 pasangGembok('formIdleScreen', 'Custom Layar Utama khusus paket Plus & Prime.');
                 pasangGembok('sys-cloudStorage', 'Pengiriman Online G-Drive khusus paket Plus & Prime.', true);
@@ -3015,6 +3126,7 @@ document.addEventListener('DOMContentLoaded', loadQrisSettings);
                         let butuhUpdate = false;
                         if (data.global && data.global.cloudStorage !== false) { data.global.cloudStorage = false; butuhUpdate = true; }
                         if (data.global && data.global.livePhotoEnabled !== false) { data.global.livePhotoEnabled = false; butuhUpdate = true; }
+                        if (data.global && data.global.photoGifEnabled !== false) { data.global.photoGifEnabled = false; butuhUpdate = true; }
                         if (data.global && data.global.customIdleScreen !== null) {
                             data.global.customIdleScreen = null; butuhUpdate = true;
                             const statusIdle = document.getElementById('status-idle-screen');
@@ -3228,12 +3340,29 @@ document.addEventListener('DOMContentLoaded', loadQrisSettings);
         <h3 style="font-size: 1.6rem; margin-bottom: 10px;">Pembayaran Langganan</h3>
         <p id="payment-desc" style="margin-bottom: 15px; line-height: 1.5;"></p>
         
-        <div id="saas-payment-status" style="background: var(--bg-color); padding: 15px; border-radius: 15px; border: 2px dashed var(--ink); margin-bottom: 15px; font-weight: 600;">
+        <!-- DROPDOWN BARU UNTUK MEMILIH METODE -->
+        <div id="payment-method-selector" style="margin-bottom: 15px; text-align: left;">
+            <label style="font-weight: 600; font-size: 0.9rem; color: var(--ink); margin-bottom: 5px; display: block;">Pilih Metode Pembayaran:</label>
+            <select id="saas-pay-method" style="width: 100%; padding: 12px; border-radius: 12px; border: 2px solid var(--ink); font-weight: bold; background: var(--bg-color); outline: none;">
+                <option value="qris">QRIS (Sesuai Harga / Bebas Biaya Admin)</option>
+                <option value="other">Transfer Bank / Minimarket (+ Biaya Admin Rp 4.500)</option>
+            </select>
+        </div>
+
+        <div id="saas-payment-status" style="background: var(--bg-color); padding: 15px; border-radius: 15px; border: 2px dashed var(--ink); margin-bottom: 15px; font-weight: 600; display: none;">
             ⏳ Mempersiapkan metode pembayaran...
         </div>
 
+        <!-- TOMBOL PEMICU INVOICE DOKU -->
+        <button id="btn-generate-doku" class="btn-primary" style="background: var(--blue); color: var(--ink); margin-bottom: 10px;" onclick="window.prosesGenerateInvoice()">
+            📝 Buat Tagihan DOKU
+        </button>
+        
         <button id="btn-lanjut-doku" class="btn-primary" style="background: #ef4444; color: white; margin-bottom: 10px; display: none;">
             🔗 Buka Halaman Pembayaran DOKU
+        </button>
+        <button id="btn-cek-manual" class="btn-primary" style="background: var(--yellow); color: var(--ink); margin-bottom: 10px; display: none;" onclick="window.cekStatusSaasManual()">
+            🔄 Cek Status Pembayaran
         </button>
         <button onclick="window.tutupModalPaymentSaas()" class="btn-primary" style="background: #e2e8f0; color: var(--ink);">
             Batal / Tutup

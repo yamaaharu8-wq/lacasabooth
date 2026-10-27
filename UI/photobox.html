@@ -8,231 +8,289 @@
     <script src="/socket.io/socket.io.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/assets/theme.css">
-    <style>
-        /* ========================================== */
-        /* 🎨 TEMA AESTHETIC DOODLE / BRUTALISM      */
-        /* ========================================== */
-
+<style>
+        /* ========================================================= */
+        /* 💜 TEMA CLEAN PASTEL LAVENDER (SOFT & MUTED PURPLE)       */
+        /* ========================================================= */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         html, body {
             width: 100%; min-height: 100vh; overflow-x: hidden; position: relative;
-            background-color: var(--bg-color); color: var(--ink); 
+            background-color: #faf8ff; color: #1e293b; 
             font-family: 'Fredoka', sans-serif; text-align: center;
-            background-image: radial-gradient(var(--dot-color) 2px, transparent 2px);
-            background-size: 40px 40px; touch-action: manipulation; user-select: none;
+            background-image: radial-gradient(#e2dcf0 1.5px, transparent 1.5px);
+            background-size: 35px 35px; touch-action: manipulation; user-select: none;
         }
 
-        /* --- TIMER SESI GLOBAL (FLOATING) --- */
+        /* --- TIMER SESI GLOBAL (FLOATING CLEAN LAVENDER) --- */
         #sessionTimerDisplay {
-            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-            background: var(--paper-white); color: var(--ink); padding: 10px 30px;
-            font-size: 1.8rem; font-weight: 700; z-index: 999999;
-            border: var(--doodle-border); border-radius: 50px;
-            box-shadow: 5px 5px 0px var(--ink); display: none; align-items: center; gap: 10px;
-            transition: all 0.3s ease; font-family: 'Fredoka', sans-serif;
+            position: fixed; top: 22px; left: 50%; transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(8px);
+            color: #1e293b; padding: 8px 26px; font-size: 1.35rem; font-weight: 700; 
+            z-index: 999999; border: 2px solid #e9d5ff; border-radius: 50px;
+            box-shadow: 0 8px 20px rgba(147, 51, 234, 0.12); display: none; 
+            align-items: center; gap: 10px; transition: all 0.3s ease; font-family: 'Fredoka', sans-serif;
         }
-        .timer-warning { background: var(--pink) !important; animation: shake 0.5s infinite; color: white !important;}
-        .timer-warning span { color: white !important; }
+        .timer-warning { background: #ffe4e6 !important; border-color: #fda4af !important; animation: shake 0.5s infinite; color: #e11d48 !important; }
+        .timer-warning span { color: #e11d48 !important; }
         @keyframes shake { 0%, 100% { transform: translateX(-50%) rotate(0deg); } 25% { transform: translateX(calc(-50% - 2px)) rotate(-2deg); } 75% { transform: translateX(calc(-50% + 2px)) rotate(2deg); } }
 
         /* --- PENGATURAN PANEL --- */
-        .panel { display: none; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 100vh; padding: 85px 20px 20px 20px; box-sizing: border-box; position: relative; z-index: 10; }
-        .active-panel { display: flex !important; animation: doodlePop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        @keyframes doodlePop { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        .panel { display: none; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 100vh; padding: 85px 25px 25px 25px; box-sizing: border-box; position: relative; z-index: 10; }
+        .active-panel { display: flex !important; animation: doodlePop 0.35s ease-out; }
+        @keyframes doodlePop { from { opacity: 0; transform: scale(0.98) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
         
         /* --- TYPOGRAPHY --- */
-        .judul-interaktif { font-family: 'Caveat', cursive; font-size: 4rem; color: var(--ink); margin-bottom: 5px; font-weight: 700; line-height: 1.1; }
-        .sub-judul { font-size: 1.1rem; color: #555; margin-bottom: 25px; font-weight: 500; }
+        .judul-interaktif { font-family: 'Fredoka', sans-serif; font-size: 2.6rem; color: #1e293b; margin-bottom: 6px; font-weight: 700; line-height: 1.2; }
+        .sub-judul { font-size: 1.05rem; color: #64748b; margin-bottom: 25px; font-weight: 500; }
 
-        /* --- NAVIGASI & TOMBOL DOODLE --- */
-        .nav-bar { position: fixed; top: 25px; left: 30px; right: 30px; display: flex; justify-content: space-between; z-index: 1000; pointer-events: none; align-items: center; flex-wrap: wrap; gap: 10px; }
+        /* --- NAVIGASI & TOMBOL PASTEL --- */
+        .nav-bar { position: fixed; top: 25px; left: 35px; right: 35px; display: flex; justify-content: space-between; z-index: 999998; pointer-events: none; align-items: center; flex-wrap: wrap; gap: 10px; }
         .btn-doodle {
-            pointer-events: auto; background: var(--paper-white); color: var(--ink);
-            border: var(--doodle-border); padding: 10px 20px; font-size: 1rem; cursor: pointer; 
+            pointer-events: auto; background: #ffffff; color: #1e293b;
+            border: 2px solid #e9d5ff; padding: 10px 22px; font-size: 1rem; cursor: pointer; 
             border-radius: 50px; font-weight: 600; font-family: 'Fredoka', sans-serif;
-            transition: 0.2s; box-shadow: 4px 4px 0px var(--ink); display: flex; align-items: center; gap: 8px; justify-content: center;
+            transition: 0.2s ease; box-shadow: 0 6px 15px rgba(147, 51, 234, 0.1); 
+            display: flex; align-items: center; gap: 8px; justify-content: center;
         }
-        .btn-doodle:hover { background: var(--yellow); transform: translateY(-3px); box-shadow: 6px 6px 0px var(--ink); }
-        .btn-doodle:active { transform: translate(2px, 2px); box-shadow: 0px 0px 0px var(--ink); }
-        select.btn-doodle { appearance: none; outline: none; padding-right: 40px; cursor: pointer; }
+        .btn-doodle:hover { background: #f3e8ff; border-color: #d8b4fe; color: #6b21a8; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(147, 51, 234, 0.18); }
+        .btn-doodle:active { transform: translateY(1px); }
+        select.btn-doodle { appearance: none; outline: none; padding-right: 30px; cursor: pointer; color: #6b21a8; background: #f3e8ff; }
 
-        /* --- CARD WAKTU --- */
-        .grid-waktu { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin-top: 10px; max-width: 1000px;}
+        /* --- CARD PILIH WAKTU (CLEAN LAVENDER) --- */
+        .grid-waktu { display: flex; gap: 22px; justify-content: center; flex-wrap: wrap; margin-top: 15px; max-width: 1000px; }
         .btn-waktu { 
-            background: var(--paper-white); border: var(--doodle-border); color: var(--ink); 
-            padding: 30px 20px; border-radius: var(--doodle-radius); cursor: pointer; 
-            font-size: 1.3rem; transition: all 0.2s ease; width: 210px; 
-            box-shadow: 6px 6px 0px var(--ink); font-weight: 700; display: flex; flex-direction: column; align-items: center; gap: 10px; 
+            background: #ffffff; border: 2px solid #e9d5ff; color: #1e293b; 
+            padding: 30px 20px; border-radius: 26px; cursor: pointer; 
+            font-size: 1.3rem; transition: all 0.25s ease; width: 205px; 
+            box-shadow: 0 12px 28px rgba(147, 51, 234, 0.08); font-weight: 700; 
+            display: flex; flex-direction: column; align-items: center; gap: 14px; 
         }
-        .icon-waktu { font-size: 3rem; background: var(--bg-color); width: 75px; height: 75px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px dashed var(--ink); transition: 0.2s; }
-        .btn-waktu:hover { transform: translateY(-5px); background: var(--blue); box-shadow: 8px 8px 0px var(--ink); }
-        .btn-waktu:hover .icon-waktu { background: var(--paper-white); border-style: solid; transform: scale(1.1) rotate(5deg); }
+        .icon-waktu { font-size: 2.6rem; background: #faf5ff; width: 75px; height: 75px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px dashed #d8b4fe; transition: 0.25s; }
+        .btn-waktu:hover { transform: translateY(-6px); background: #ffffff; border-color: #c084fc; box-shadow: 0 16px 35px rgba(147, 51, 234, 0.18); color: #6b21a8; }
+        .btn-waktu:hover .icon-waktu { background: #f3e8ff; border-style: solid; border-color: #c084fc; transform: scale(1.08); }
 
-        /* --- KAMERA & PIP VIDEO --- */
-        #panel-kamera { padding: 0; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #e5e5e5; overflow: hidden; z-index: 50; }
+        /* --- KAMERA & PIP VIDEO (SOFT LAVENDER) --- */
+        #panel-kamera { padding: 0; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #faf8ff; overflow: hidden; z-index: 50; }
         #liveView { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1; transition: filter 0.3s; }
         #previewImageOverlay { display: none; width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 15; }
         .mirrored { transform: scaleX(-1) !important; }
         
-        .pip-video { position: absolute; bottom: 40px; left: 40px; width: 180px; height: 270px; background: white; border-radius: 20px; overflow: hidden; border: 4px solid var(--ink); box-shadow: 6px 6px 0px var(--ink); z-index: 5; pointer-events: none; }
+        .pip-video { position: absolute; bottom: 35px; left: 35px; width: 150px; height: 225px; background: white; border-radius: 22px; overflow: hidden; border: 2px solid #e9d5ff; box-shadow: 0 12px 30px rgba(147, 51, 234, 0.2); z-index: 25; pointer-events: none; }
         .pip-video video { width: 100%; height: 100%; object-fit: cover; }
-        .pip-label { position: absolute; bottom: 0; left: 0; width: 100%; background: var(--yellow); padding: 8px 0; color: var(--ink); border-top: 3px solid var(--ink); font-family: 'Caveat', cursive; font-size: 1.5rem; line-height: 1; font-weight: 700; text-align: center; }
+        .pip-label { position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(255,255,255,0.92); backdrop-filter: blur(5px); padding: 8px 0; color: #7e22ce; border-top: 1px solid #e9d5ff; font-family: 'Fredoka', sans-serif; font-size: 0.95rem; font-weight: 700; text-align: center; }
 
         /* --- MINI GALLERY KAMERA --- */
-        .mini-gallery-container { position: absolute; top: 50%; right: 40px; transform: translateY(-50%); display: flex; flex-direction: column; gap: 10px; z-index: 10; background: rgba(255,255,255,0.8); padding: 15px; border-radius: 20px; border: 3px solid var(--ink); box-shadow: 5px 5px 0px var(--ink); max-height: 70vh; overflow-y: auto; backdrop-filter: blur(5px); }
-        .mini-slot { width: 80px; height: 60px; background: var(--bg-color); border: 2px solid var(--ink); border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; transition: 0.3s; cursor: pointer; flex-shrink: 0; }
-        .mini-slot:hover { transform: scale(1.05); border-color: var(--pink); }
+        .mini-gallery-container { position: absolute; top: 50%; right: 30px; transform: translateY(-50%); display: flex; flex-direction: column; gap: 10px; z-index: 25; background: rgba(255,255,255,0.88); padding: 12px; border-radius: 22px; border: 2px solid #e9d5ff; box-shadow: 0 12px 30px rgba(147, 51, 234, 0.15); max-height: 68vh; overflow-y: auto; backdrop-filter: blur(8px); }
+        .mini-slot { width: 72px; height: 54px; background: #faf5ff; border: 2px solid #d8b4fe; border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; transition: 0.25s; cursor: pointer; flex-shrink: 0; }
+        .mini-slot:hover { transform: scale(1.06); border-color: #9333ea; }
         .mini-slot img { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; }
-        .mini-slot .overlay-review { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); color: white; display: none; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold; }
+        .mini-slot .overlay-review { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(126, 34, 206, 0.65); color: white; display: none; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 600; }
         .mini-slot:hover .overlay-review { display: flex; }
         
-        #btn-tutup-preview { display: none; position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 20; background: var(--pink); color: white; border: 3px solid var(--ink); padding: 15px 30px; font-size: 1.2rem; font-weight: bold; border-radius: 50px; cursor: pointer; box-shadow: 5px 5px 0px var(--ink); }
+        #btn-tutup-preview { display: none; position: absolute; bottom: 35px; left: 50%; transform: translateX(-50%); z-index: 30; background: #ffffff; color: #e11d48; border: 2px solid #fecdd3; padding: 12px 28px; font-size: 1.05rem; font-weight: 700; border-radius: 50px; cursor: pointer; box-shadow: 0 10px 25px rgba(0,0,0,0.2); font-family: 'Fredoka', sans-serif; }
 
-        /* --- TOMBOL JEPRET --- */
-        .kamera-ui-bottom { position: absolute; bottom: 35px; left: 0; width: 100vw; z-index: 10; display: flex; align-items: center; justify-content: center; gap: 15px; }
-        .btn-diafragma { background: var(--paper-white); color: var(--ink); border: 4px solid var(--ink); border-radius: 50%; width: 90px; height: 90px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 5px 5px 0px var(--ink); transition: 0.2s; pointer-events: auto; }
-        .btn-diafragma:hover:not(:disabled) { transform: scale(1.1) rotate(10deg); background: var(--pink); }
-        .btn-diafragma:active { transform: scale(0.95); box-shadow: 0px 0px 0px var(--ink); }
-        .btn-diafragma:disabled { background: #d1d5db; cursor: not-allowed; opacity: 0.7; box-shadow: 0 0 0 transparent; transform: none; }
+        /* --- TOMBOL JEPRET BAWAH --- */
+        .kamera-ui-bottom { position: absolute; bottom: 30px; left: 0; width: 100vw; z-index: 25; display: flex; align-items: center; justify-content: center; gap: 18px; pointer-events: none; }
+        .btn-diafragma { background: #ffffff; color: #7e22ce; border: 3px solid #e9d5ff; border-radius: 50%; width: 82px; height: 82px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 10px 25px rgba(147, 51, 234, 0.3); transition: 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: auto; }
+        .btn-diafragma:hover:not(:disabled) { transform: scale(1.1); background: #f3e8ff; border-color: #c084fc; }
+        .btn-diafragma:active { transform: scale(0.95); }
+        .btn-diafragma:disabled { background: #e2e8f0; color: #94a3b8; border-color: #cbd5e1; cursor: not-allowed; opacity: 0.7; box-shadow: none; transform: none; }
         
-        .teks-petunjuk-jepret { font-family: 'Caveat', cursive; font-size: 1.8rem; font-weight: 700; color: var(--ink); background: var(--paper-white); padding: 5px 25px; border: 3px solid var(--ink); border-radius: 50px; box-shadow: 4px 4px 0px var(--ink); pointer-events: none; animation: pulsePetunjuk 2s infinite ease-in-out; }
-        @keyframes pulsePetunjuk { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
-        /* --- [BARU] ANIMASI MEMANTUL (BOUNCE) & KOTAK LOADING GIF --- */
-        @keyframes bounceInDoodle {
-            0% { transform: scale(0.1); opacity: 0; }
-            60% { transform: scale(1.05); opacity: 1; }
-            80% { transform: scale(0.95); }
-            100% { transform: scale(1); }
-        }
+        .teks-petunjuk-jepret { font-family: 'Fredoka', sans-serif; font-size: 1.1rem; font-weight: 700; color: #1e293b; background: #ffffff; padding: 10px 24px; border: 2px solid #e9d5ff; border-radius: 50px; box-shadow: 0 8px 25px rgba(147, 51, 234, 0.2); pointer-events: auto; animation: pulsePetunjuk 2s infinite ease-in-out; }
+        @keyframes pulsePetunjuk { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+        @keyframes bounceInDoodle { 0% { transform: scale(0.1); opacity: 0; } 60% { transform: scale(1.05); opacity: 1; } 80% { transform: scale(0.95); } 100% { transform: scale(1); } }
         .anim-bounce { animation: bounceInDoodle 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
 
-        .gif-placeholder {
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            background: var(--paper-white); border: 4px dashed var(--ink); border-radius: 20px;
-            width: 100%; height: 100%; min-width: 150px; min-height: 250px; flex-shrink: 1;
-        }
-        .gif-placeholder span { font-size: 2.5rem; animation: pulsePetunjuk 1.5s infinite; }
-
         /* --- UI COUNTDOWN & LOADING --- */
-        #jepretCountdown { display: none; flex-direction: column; align-items: center; justify-content: center; position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); color: white; font-weight: 700; z-index: 20; text-shadow: 3px 3px 0px var(--ink), -2px -2px 0px var(--ink); }
-        .ikon-atas { font-family: 'Caveat', cursive; font-size: 4rem; line-height: 1; margin-bottom: 5px; color: var(--yellow); }
-        .angka-kamera { font-size: 15rem; line-height: 1; font-family: 'Fredoka', sans-serif; }
+        #jepretCountdown { display: none; flex-direction: column; align-items: center; justify-content: center; position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); color: white; font-weight: 700; z-index: 200; text-shadow: 0 4px 15px rgba(0,0,0,0.45); font-family: 'Fredoka', sans-serif; }
+        .ikon-atas { font-family: 'Fredoka', sans-serif; font-size: 2.5rem; line-height: 1; margin-bottom: 5px; color: #e9d5ff; }
+        .angka-kamera { font-size: 11rem; line-height: 1; font-family: 'Fredoka', sans-serif; }
         
-        #loadingTeks { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--paper-white); padding: 25px 50px; border-radius: 50px; border: 3px solid var(--ink); font-family: 'Caveat', cursive; font-size: 2.5rem; font-weight: 700; color: var(--ink); z-index: 30; box-shadow: 6px 6px 0px var(--ink); }
+        #loadingTeks { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #ffffff; padding: 18px 38px; border-radius: 50px; border: 2px solid #e9d5ff; font-family: 'Fredoka', sans-serif; font-size: 1.35rem; font-weight: 700; color: #1e293b; z-index: 999999; box-shadow: 0 15px 35px rgba(147, 51, 234, 0.25); }
 
-        /* --- GRID TEMPLATE & FOTO --- */
+        /* --- GRID TEMPLATE & PILIH FOTO (CLEAN CARDS) --- */
         .grid-template, .grid-foto { display: grid; gap: 20px; width: 100%; margin: 15px auto 30px auto; justify-content: center; }
-        .grid-template { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); max-width: 900px; }
-        .grid-foto { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); max-width: 1000px; }
+        .grid-template { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); max-width: 950px; }
+        .grid-foto { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); max-width: 1020px; }
         
-        .card-doodle { background: var(--paper-white); padding: 15px; border: var(--doodle-border); border-radius: var(--doodle-radius); box-shadow: 5px 6px 0px var(--ink); cursor: pointer; transition: 0.2s; position: relative; }
-        .card-doodle:hover { transform: translateY(-5px) rotate(-1deg); box-shadow: 8px 8px 0px var(--ink); }
-        .card-doodle.selected { background: var(--blue); border-color: var(--ink); transform: scale(1.02); }
-        .card-doodle img { width: 100%; border-radius: 10px; border: 2px solid var(--ink); pointer-events: none; object-fit: cover; }
+        .card-doodle { background: #ffffff; padding: 14px; border: 2px solid #f1f5f9; border-radius: 20px; box-shadow: 0 10px 25px rgba(147, 51, 234, 0.08); cursor: pointer; transition: 0.25s ease; position: relative; }
+        .card-doodle:hover { transform: translateY(-5px); border-color: #d8b4fe; box-shadow: 0 14px 30px rgba(147, 51, 234, 0.16); }
+        .card-doodle.selected { background: #f3e8ff; border-color: #a855f7; transform: scale(1.02); box-shadow: 0 12px 25px rgba(147, 51, 234, 0.2); }
+        .card-doodle img { width: 100%; border-radius: 12px; border: 1px solid #e2e8f0; pointer-events: none; object-fit: cover; }
         .card-foto img { height: 135px; }
-        .nama-template { font-weight: 700; font-size: 1.1rem; margin-top: 10px; font-family: 'Caveat', cursive; font-size: 1.5rem; line-height: 1;}
+        .nama-template { font-weight: 700; font-size: 1.1rem; margin-top: 10px; font-family: 'Fredoka', sans-serif; color: #1e293b; }
         
-        .badge-count { position: absolute; top: -10px; right: -10px; font-size: 1.3rem; font-weight: bold; color: var(--ink); background: var(--yellow); border: 2px solid var(--ink); border-radius: 50%; width: 35px; height: 35px; display: none; align-items: center; justify-content: center; box-shadow: 2px 2px 0px var(--ink); }
-        .card-template.selected::after { content: '✓'; position: absolute; top: -10px; right: -10px; font-size: 1.2rem; font-weight: bold; color: var(--ink); background: var(--yellow); border: 2px solid var(--ink); border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; box-shadow: 2px 2px 0px var(--ink); }
+        .badge-count { position: absolute; top: -8px; right: -8px; font-size: 1.1rem; font-weight: 700; color: white; background: #9333ea; border: 2px solid #ffffff; border-radius: 50%; width: 34px; height: 34px; display: none; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(147, 51, 234, 0.3); }
+        .card-template.selected::after { content: '✓'; position: absolute; top: -8px; right: -8px; font-size: 1.1rem; font-weight: bold; color: white; background: #9333ea; border: 2px solid #ffffff; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(147, 51, 234, 0.3); }
 
-        /* --- PREVIEW EFEK & DRAG DROP PANEL --- */
-        .effect-container { display: flex; gap: 30px; align-items: center; background: var(--paper-white); padding: 25px; border-radius: 20px; box-shadow: 8px 8px 0px var(--ink); border: 4px solid var(--ink); max-width: 950px; width: 100%; margin: 10px auto; }
+        /* --- PANEL EFEK & DRAG DROP --- */
+        .effect-container { display: flex; gap: 35px; align-items: center; justify-content: center; background: #ffffff; padding: 25px 35px; border-radius: 32px; box-shadow: 0 20px 40px rgba(147, 51, 234, 0.14); border: 2px solid #e9d5ff; max-width: 980px; width: 100%; margin: 10px auto; box-sizing: border-box; }
         .effect-preview-box { flex: 1; display: flex; flex-direction: column; align-items: center; width: 100%; min-height: 300px; }
         #effectPreviewContainer { width: 100%; display: flex; justify-content: center; align-items: center; }
-        #effectPreviewContainer > div { min-width: 320px !important; flex-shrink: 0; } /* Paksa lebar minimum agar gambar tidak hilang/mengkerut */
-        .effect-options-box { width: 320px; display: flex; flex-direction: column; gap: 10px; }
-        .effect-options-box h2 { font-size: 1.6rem; margin: 0; color: var(--ink); }
-        .effect-btn { background: var(--paper-white); border: 3px solid var(--ink); padding: 12px 15px; border-radius: 12px; font-size: 1rem; font-weight: 700; color: var(--ink); cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 10px; text-align: left; font-family: 'Fredoka', sans-serif; box-shadow: 3px 3px 0px var(--ink); }
-        .effect-btn:hover { background: var(--yellow); transform: translate(-2px, -2px); box-shadow: 5px 5px 0px var(--ink); }
-        .effect-btn.active { background: var(--green); color: var(--ink); box-shadow: 5px 5px 0px var(--ink); transform: translate(-2px, -2px); }
-        .color-circle { width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--ink); flex-shrink: 0; }
+        #effectPreviewContainer > div { min-width: 280px !important; max-height: 55vh !important; flex-shrink: 0; border-radius: 14px; border: 2px solid #e9d5ff; }
+        .effect-options-box { width: 330px; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
+        .effect-options-box h2 { font-size: 1.8rem; margin: 0; color: #1e293b; }
+        .effect-btn { background: #f8fafc; border: 2px solid #e2e8f0; padding: 11px 16px; border-radius: 16px; font-size: 1rem; font-weight: 600; color: #475569; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 12px; text-align: left; font-family: 'Fredoka', sans-serif; box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
+        .effect-btn:hover { background: #ffffff; transform: translateX(4px); box-shadow: 0 8px 15px rgba(147, 51, 234, 0.1); }
+        .effect-btn.active { background: #f3e8ff; color: #7e22ce; border-color: #c084fc; transform: translateX(6px); box-shadow: 0 8px 15px rgba(147, 51, 234, 0.15); }
+        .color-circle { width: 22px; height: 22px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.1); flex-shrink: 0; }
 
-        /* --- MODALS & HASIL --- */
-        #customWaktuModal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(253, 251, 247, 0.9); z-index: 10000; justify-content: center; align-items: center; flex-direction: column; }
-        .confirm-box { background: var(--paper-white); padding: 30px; border-radius: 30px; border: 3px solid var(--ink); box-shadow: 10px 10px 0px var(--ink); text-align: center; max-width: 400px; width: 90%; }
-        
-        .card-hasil { background: var(--paper-white); padding: 20px 25px; border-radius: 30px; border: 3px solid var(--ink); box-shadow: 8px 10px 0px var(--ink); width: 100%; max-width: 360px; text-align: center; box-sizing: border-box; }
-        .qr-box { background: var(--bg-color); padding: 15px; border-radius: 20px; margin-top: 15px; border: 3px dashed var(--ink); display: flex; flex-direction: column; align-items: center; box-shadow: inset 3px 3px 0px rgba(0,0,0,0.05); width: 100%; box-sizing: border-box;}
-        
-        .jumlah-kontrol { display: flex; align-items: center; background: var(--paper-white); border: 3px solid var(--ink); border-radius: 12px; overflow: hidden; box-shadow: 3px 3px 0px var(--ink); margin-bottom: 12px; width: 100%; }
-        .btn-jumlah { background: var(--bg-color); border: none; font-size: 1.5rem; font-weight: bold; width: 50px; cursor: pointer; color: var(--ink); transition: 0.2s; padding: 8px; }
-        .btn-jumlah:hover { background: var(--yellow); }
-        .jumlah-kontrol span { flex: 1; font-weight: 700; font-size: 1.1rem; text-align: center; }
+        /* ========================================================= */
+        /* ✨ PANEL HASIL AKHIR ADAPTIVE 1/2/3 (MUTED LAVENDER)      */
+        /* ========================================================= */
+        #panel-hasil {
+            justify-content: center !important; align-items: center !important;
+            padding: 20px 35px !important; height: 100vh !important; max-height: 100vh !important;
+            overflow: hidden !important; position: relative; background: #faf8ff;
+        }
 
-        /* --- VIRTUAL NUMPAD DOODLE --- */
-        #virtual-numpad { position: fixed; background: var(--paper-white); padding: 20px; border-radius: 25px; box-shadow: 8px 10px 0px var(--ink); z-index: 99999; border: 3px solid var(--ink); width: 280px; top: 50%; left: 50%; transform: translate(-50%, -50%); }
-        .numpad-header { color: var(--ink); text-align: center; font-family: 'Fredoka', sans-serif; font-size: 1.1rem; font-weight: bold; margin-bottom: 15px; background: var(--yellow); padding: 8px; border-radius: 8px; border: 2px solid var(--ink); cursor: grab; }
+        .hasil-header-badge {
+            display: inline-flex !important; flex-direction: column !important; width: fit-content !important; height: auto !important;
+            align-items: center !important; justify-content: center !important; background: #ffffff; border: 2px solid #e9d5ff;
+            padding: 10px 40px !important; border-radius: 50px !important; box-shadow: 0 10px 25px rgba(147, 51, 234, 0.12);
+            margin: 0 auto 20px auto !important; z-index: 10; flex-shrink: 0;
+        }
+
+        .hasil-layout-grid {
+            display: grid !important; width: 100% !important; max-width: 1020px !important;
+            height: 72vh !important; max-height: 580px !important; margin: 0 auto !important;
+            align-items: center !important; justify-content: center !important; position: relative; z-index: 10;
+        }
+
+        /* 🟢 MODE 1: HANYA FOTO UTAMA */
+        .hasil-layout-grid.layout-mode-1 { grid-template-columns: auto 340px !important; gap: 35px !important; justify-content: center !important; }
+        .hasil-layout-grid.layout-mode-1 #middle-anim-col { display: none !important; }
+
+        /* 🔵 MODE 2: SALAH SATU AKTIF */
+        .hasil-layout-grid.layout-mode-2 { grid-template-columns: auto auto 340px !important; gap: 26px !important; justify-content: center !important; }
+        .hasil-layout-grid.layout-mode-2 #middle-anim-col { height: 72vh !important; max-height: 580px !important; justify-content: center !important; }
+        .hasil-layout-grid.layout-mode-2 .anim-preview-card { height: 100% !important; width: auto !important; }
+        .hasil-layout-grid.layout-mode-2 #box-preview-livephoto { aspect-ratio: 2 / 3 !important; }
+        .hasil-layout-grid.layout-mode-2 #box-preview-gif { aspect-ratio: 1 / 1 !important; height: 50vh !important; flex: none !important; align-self: center; }
+
+        /* 🟣 MODE 3: KEDUANYA AKTIF */
+        .hasil-layout-grid.layout-mode-3 { grid-template-columns: auto 210px 340px !important; gap: 22px !important; justify-content: center !important; }
+        .hasil-layout-grid.layout-mode-3 #middle-anim-col {
+            display: flex !important; flex-direction: column !important; justify-content: center !important;
+            height: 72vh !important; max-height: 580px !important; width: 210px !important; gap: 14px !important;
+        }
+        .hasil-layout-grid.layout-mode-3 #box-preview-livephoto { width: 100% !important; height: auto !important; aspect-ratio: 2 / 3 !important; flex: none !important; }
+        .hasil-layout-grid.layout-mode-3 #box-preview-gif { width: 100% !important; height: auto !important; aspect-ratio: 1 / 1 !important; flex: none !important; }
+
+        .preview-frame-card {
+            background: #ffffff; border: 2px solid #e9d5ff; border-radius: 22px; padding: 12px;
+            box-shadow: 0 12px 28px rgba(147, 51, 234, 0.12); display: flex; flex-direction: column; align-items: center; justify-content: center;
+            position: relative; box-sizing: border-box; overflow: hidden;
+        }
+        #main-photo-card { height: 72vh !important; max-height: 580px !important; width: fit-content !important; padding: 14px !important; justify-content: flex-start !important; }
+
+        .preview-pill-tag {
+            font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+            padding: 5px 14px; border-radius: 50px; border: none; margin-bottom: 10px;
+            background: #f3e8ff; color: #6b21a8; display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; z-index: 5;
+        }
+
+        .middle-col-hasil { display: flex; flex-direction: column; gap: 14px; align-items: center; justify-content: center; height: 100%; box-sizing: border-box; }
+        .ornament { position: absolute; z-index: 1; pointer-events: none; opacity: 0.55; animation: floatOrn 5s ease-in-out infinite; font-size: 2.2rem; }
+        @keyframes floatOrn { 0%, 100% { transform: translateY(0px) rotate(0deg); } 50% { transform: translateY(-10px) rotate(5deg); } }
+
+        /* --- KARTU KANAN (CETAK & QR) 100% SIMETRIS --- */
+        .action-card-symmetric {
+            width: 340px !important; height: 72vh !important; max-height: 580px !important; margin: 0 auto !important;
+            padding: 20px !important; display: flex !important; flex-direction: column !important;
+            align-items: center !important; justify-content: space-between !important; gap: 12px !important;
+            border-radius: 26px !important; border: 2px solid #e9d5ff !important;
+            box-shadow: 0 12px 30px rgba(147, 51, 234, 0.12) !important; background: #ffffff !important; box-sizing: border-box !important;
+        }
+
+        .jumlah-kontrol {
+            display: flex; align-items: center; justify-content: space-between; width: 100%;
+            border-radius: 50px; border: 2px solid #e9d5ff; height: 44px; box-sizing: border-box; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02); margin: 0; padding: 0 5px; background: #faf5ff;
+        }
+        .btn-jumlah { background: transparent; border: none; font-size: 1.4rem; font-weight: bold; width: 40px; cursor: pointer; color: #7e22ce; transition: 0.2s; }
+        .btn-jumlah:hover { color: #a855f7; }
+        .jumlah-kontrol span { flex: 1; text-align: center; font-weight: 700; font-size: 0.95rem; color: #1e293b; }
+
+        .btn-aksi {
+            width: 100%; padding: 12px 18px; font-size: 1rem; border-radius: 50px; margin: 0; 
+            display: flex; align-items: center; justify-content: center; gap: 8px; box-sizing: border-box;
+            font-weight: 600; font-family: 'Fredoka', sans-serif; cursor: pointer; border: none; transition: 0.2s ease;
+        }
+        .btn-pastel-lavender { background: linear-gradient(135deg, #c084fc, #9333ea); color: white !important; box-shadow: 0 6px 14px rgba(147, 51, 234, 0.25) !important; border: none !important; }
+        .btn-pastel-lavender:hover { transform: translateY(-2px); box-shadow: 0 10px 18px rgba(147, 51, 234, 0.35) !important; }
+        .btn-pastel-red { background: linear-gradient(135deg, #fb7185, #f43f5e); color: white !important; box-shadow: 0 6px 14px rgba(244, 63, 94, 0.25) !important; border: none !important; }
+        .btn-pastel-red:hover { transform: translateY(-2px); box-shadow: 0 10px 18px rgba(244, 63, 94, 0.35) !important; }
+        .btn-pastel-green { background: linear-gradient(135deg, #34d399, #10b981); color: white !important; box-shadow: 0 6px 14px rgba(16, 185, 129, 0.25) !important; border: none !important; }
+
+        .qr-dashed-inner {
+            width: 100% !important; flex: 1 !important; margin: 0 !important; padding: 14px !important;
+            background: #faf5ff !important; border: 2px dashed #d8b4fe !important; border-radius: 20px !important;
+            display: flex !important; flex-direction: column !important; align-items: center !important;
+            justify-content: center !important; gap: 8px !important; box-sizing: border-box !important;
+        }
+
+        /* --- PERBAIKAN BUG QR DOUBLE --- */
+        #qrCodeContainer { width: 130px; height: 130px; display: flex; align-items: center; justify-content: center; overflow: hidden; margin: 0 auto; }
+        #qrCodeContainer img { display: none !important; } 
+        #qrCodeContainer canvas { display: block !important; margin: auto; width: 100% !important; height: 100% !important; object-fit: contain; }
+
+        /* --- MODALS & VIRTUAL NUMPAD (CLEAN LAVENDER) --- */
+        #customWaktuModal, #paymentModalOverlay { 
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+            background: rgba(30, 41, 59, 0.65); z-index: 99999999; justify-content: center; 
+            align-items: center; flex-direction: column; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+        }
+        .confirm-box, .payment-modal { 
+            background: #ffffff; padding: 30px; border-radius: 30px; border: 2px solid #e9d5ff; 
+            box-shadow: 0 20px 40px rgba(147, 51, 234, 0.22); text-align: center; max-width: 380px; width: 90%; 
+        }
+
+        #virtual-numpad { 
+            position: fixed; background: rgba(255, 255, 255, 0.96); padding: 22px; border-radius: 28px; 
+            box-shadow: 0 20px 40px rgba(147, 51, 234, 0.22); z-index: 9999999; border: 2px solid #e9d5ff; 
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            width: 280px; text-align: center; display: none; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        }
+        .numpad-header { 
+            color: #6b21a8; font-family: 'Fredoka', sans-serif; font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; 
+            background: #f3e8ff; padding: 10px; border-radius: 14px; border: 1px solid #e9d5ff; cursor: grab; 
+        }
         .numpad-header:active { cursor: grabbing; }
         .numpad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        .numpad-grid button { width: 100%; height: 55px; font-size: 1.2rem; font-weight: bold; border: 2px solid var(--ink); border-radius: 15px; background: var(--paper-white); color: var(--ink); cursor: pointer; transition: 0.1s; font-family: 'Fredoka', sans-serif; box-shadow: 4px 4px 0px var(--ink); }
-        .numpad-grid button:active { transform: translateY(4px); box-shadow: 0 0 0 transparent; }
-        .numpad-grid button:hover { background: var(--yellow); }
-        .numpad-grid .btn-del { background: var(--pink); color: white; }
-        .numpad-grid .btn-close { grid-column: span 3; background: var(--green); }
-
-        /* --- MODAL PEMBAYARAN EXTRA --- */
-        #paymentModalOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 99999999; justify-content: center; align-items: center; }
-        .payment-modal { background: var(--paper-white); padding: 30px; border-radius: 20px; border: 4px solid var(--ink); box-shadow: 10px 10px 0px var(--ink); width: 340px; text-align: center; max-height: 90vh; overflow-y: auto;}
+        .numpad-grid button { 
+            width: 100%; height: 50px; font-size: 1.2rem; font-weight: 700; border: 1px solid #e9d5ff; 
+            border-radius: 14px; background: #ffffff; color: #1e293b; cursor: pointer; transition: 0.15s; 
+            font-family: 'Fredoka', sans-serif; box-shadow: 0 4px 8px rgba(147, 51, 234, 0.08); 
+        }
+        .numpad-grid button:hover { background: #faf5ff; }
+        .numpad-grid button:active { transform: translateY(2px); }
+        .numpad-grid .btn-del { background: #fee2e2; color: #ef4444; border-color: #fca5a5; }
+        .numpad-grid .btn-close { grid-column: span 3; background: #dcfce7; color: #16a34a; border-color: #86efac; margin-top: 4px; }
 
         /* ========================================== */
-        /* 📱 RESPONSIVE MOBILE & POTRET FULLSCREEN  */
+        /* 📱 RESPONSIVE MOBILE & POTRET FULLSCREEN   */
         /* ========================================== */
-        @media (max-width: 850px), (orientation: portrait) {
-            .judul-interaktif { font-size: 2.2rem !important; margin-bottom: 5px; }
+        @media (max-width: 900px), (orientation: portrait) {
+            .judul-interaktif { font-size: 2rem !important; margin-bottom: 5px; }
             .sub-judul { font-size: 0.9rem; margin-bottom: 10px; }
-            .panel { padding: 60px 15px 15px 15px !important; }
-            .nav-bar { top: 10px; left: 10px; right: 10px; }
-            
-            /* Kamera Layout */
-            #panel-kamera .nav-bar { top: 80px; } /* Turunkan posisi tombol agar tidak menabrak timer di tengah */
-            
-            .pip-video { width: 135px; height: 200px; bottom: 120px; left: 15px; } /* Perbesar ukuran card Ide Pose */
-            .pip-label { font-size: 1.2rem; padding: 6px 0; }
-            
-            /* Kembalikan Mini Gallery ke sisi kanan secara vertikal */
-            .mini-gallery-container { right: 15px; top: 50%; transform: translateY(-50%); flex-direction: column; width: auto; max-height: 60vh; overflow-y: auto; overflow-x: hidden; padding: 12px; }
-            .mini-slot { width: 65px; height: 50px; }
-            
-           /* --- Panel Efek Custom Grid Agar Fit di Layar --- */
-            .effect-container { flex-direction: column; padding: 15px; gap: 10px; width: 100%; max-height: none; margin: 0 auto; box-sizing: border-box; }
-            #effectPreviewContainer { width: 100%; display: flex; justify-content: center; }
-            #effectPreviewContainer > div { height: 48vh !important; width: auto !important; max-width: 100% !important; max-height: none !important; object-fit: contain; } /* Diperbesar agar penuh namun tidak terpotong */
-
-            .effect-options-box { width: 100%; gap: 6px; display: grid; grid-template-columns: 1fr 1fr; align-items: center; }
-            .effect-options-box h2 { grid-column: span 2; font-size: 1.2rem; margin: 0; text-align: left; }
-            .effect-options-box > p { display: none; } /* Sembunyikan p deskripsi agar hemat ruang vertikal */
-            
-            .effect-btn { padding: 6px 10px; font-size: 0.85rem; border-width: 2px; }
-            .effect-options-box > div[onclick] { grid-column: span 2; padding: 6px 10px; margin-top: 0; border-width: 2px; justify-content: center; }
-            .effect-options-box > div[onclick] label { font-size: 0.9rem; }
-            #btn-rakit { grid-column: span 2; padding: 8px; margin-top: 0; font-size: 1rem; }
-            
-            /* --- Panel Hasil Custom Fit --- */
-            #panel-hasil { padding-top: 55px !important; }
-            #panel-hasil > div { flex-direction: column; gap: 10px; max-height: calc(100vh - 90px); justify-content: flex-start; }
-            
-            /* Posisi Gambar Hasil Bersebelahan */
-            .image-showcase { height: 30vh !important; flex-direction: row !important; align-items: center; min-height: 0; width: 100%; gap: 10px !important; }
-            #hasilAkhir, #img-hasil-gif { max-height: 100% !important; max-width: 48% !important; border-width: 2px; border-radius: 10px; box-shadow: 4px 4px 0px var(--ink) !important; }
-            
-            /* Box Kontrol dan Tombol */
-            .card-hasil { padding: 12px; width: 100%; max-width: 100%; border-radius: 20px; box-sizing: border-box; }
-            .jumlah-kontrol { margin-bottom: 8px; border-width: 2px; }
-            .btn-jumlah { padding: 2px 10px; font-size: 1.2rem; }
-            #btn-action-cetak { padding: 8px; font-size: 1rem; margin-bottom: 5px; }
-            
-           /* Modifikasi Layout Box QR & WA Menjadi Simetris Vertikal */
-            .qr-box { padding: 12px; margin-top: 10px; flex-direction: column; gap: 5px; align-items: center; border-width: 2px; width: 100%; }
-            #qrCodeContainer { width: 110px; height: 110px; padding: 6px !important; margin: 0 auto; border-width: 2px !important; }
-            #qrCodeContainer img, #qrCodeContainer canvas { width: 100% !important; height: 100% !important; }
-            .qr-box > p, .qr-box > hr { display: block; } /* Kembalikan teks panduan */
-            .qr-box > p { font-size: 0.85rem; margin-top: 5px; margin-bottom: 0; }
-            .qr-box > hr { margin: 8px 0; border-top: 2px dashed var(--ink); width: 100%; }
-            
-            .qr-box > div:last-child { width: 100%; margin-top: 5px !important; gap: 8px !important; flex-direction: row !important; display: flex; }
-            #inputWA { padding: 8px 12px !important; font-size: 0.9rem !important; flex: 1; border-width: 2px; text-align: left; }
-            #btnKirimWA { padding: 8px 15px !important; font-size: 0.9rem !important; margin: 0 !important; }
+            .panel { padding: 65px 15px 15px 15px !important; }
+            .nav-bar { top: 15px; left: 15px; right: 15px; }
+            #panel-kamera .nav-bar { top: 85px !important; }
+            .pip-video { width: 130px; height: 195px; bottom: 120px; left: 15px; }
+            .mini-gallery-container { right: 15px; padding: 10px; }
+            .effect-container { flex-direction: column; padding: 18px; gap: 15px; }
+            #panel-hasil { padding: 10px 15px !important; }
+            .hasil-header-badge { margin-bottom: 10px !important; padding: 6px 20px !important; }
+            .hasil-header-badge h1 { font-size: 1.4rem !important; }
+            .hasil-layout-grid.layout-mode-1, .hasil-layout-grid.layout-mode-2, .hasil-layout-grid.layout-mode-3 { display: flex !important; flex-direction: column !important; gap: 12px !important; max-width: 95vw !important; height: auto !important; max-height: none !important; }
+            .portrait-top-showcase { display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: center !important; gap: 14px !important; width: 100% !important; max-height: 44vh; }
+            #main-photo-card { height: 42vh !important; padding: 10px !important; width: auto !important; }
+            #hasilAkhir { max-height: 100% !important; width: auto !important; }
+            .hasil-layout-grid.layout-mode-2 #middle-anim-col { height: 42vh !important; width: 140px !important; }
+            .hasil-layout-grid.layout-mode-3 #middle-anim-col { flex-direction: column !important; gap: 8px !important; height: 42vh !important; width: 130px !important; justify-content: space-between; }
+            .action-card-symmetric { max-width: 600px !important; width: 100% !important; height: auto !important; max-height: none !important; padding: 14px !important; display: grid !important; grid-template-columns: 1fr 1.2fr !important; gap: 14px !important; align-items: center !important; }
         }
     </style>
 </head>
@@ -358,17 +416,17 @@
         <div class="nav-bar">
             <button class="btn-doodle" onclick="bukaPanel('panel-pilih-foto')">‹ Ganti Foto</button>
         </div>
-        <h1 class="judul-interaktif" style="font-size: 3rem; margin-bottom: 0;">Geser & Beri Filter 🪄</h1>
+        <h1 class="judul-interaktif" style="font-size: 2.3rem; margin-bottom: 5px;">Geser & Beri Filter 🪄</h1>
         <div class="effect-container">
             <div class="effect-preview-box">
                 <div id="effectPreviewContainer" style="width: 100%; display: flex; justify-content: center; align-items: center;"></div>
-                <p style="color: var(--ink); opacity: 0.8; font-size: 0.85rem; margin-top: 10px; text-align: center; font-weight: 600;">
+                <p style="color: #64748b; font-size: 0.88rem; margin-top: 12px; text-align: center; font-weight: 600;">
                     💡 Tips: Klik, tahan, dan geser foto (Drag & Drop) untuk menukar posisinya!
                 </p>
             </div>
             <div class="effect-options-box">
-                <h2>Pilih Filter</h2>
-                <p style="color: var(--ink); opacity: 0.8; font-size: 0.85rem; margin-bottom: 5px;">Pilih efek warna untuk fotomu.</p>
+                <h2 style="font-family: 'Fredoka', sans-serif; color: #1e293b;">Sentuhan Akhir ✨</h2>
+                <p style="color: #64748b; font-size: 0.88rem; margin-bottom: 5px;">Pilih efek warna untuk fotomu.</p>
                 
                 <button class="effect-btn active" id="btn-efek-none" onclick="terapkanFilterLive('none', 'none', this)">
                     <div class="color-circle" style="background: linear-gradient(45deg, #ff9a9e, #fecfef);"></div> Original
@@ -382,56 +440,134 @@
                 <button class="effect-btn" id="btn-efek-soft" onclick="terapkanFilterLive('soft', 'saturate(130%) brightness(115%) contrast(90%)', this)">
                     <div class="color-circle" style="background: #a7f3d0;"></div> Soft Pop
                 </button>
-                <div style="background: var(--paper-white); border: 2px dashed var(--ink); padding: 12px; border-radius: 12px; margin-top: 10px; display: flex; align-items: center; gap: 10px; cursor: pointer;" onclick="const cb = document.getElementById('chk-livePhoto-studio'); cb.checked = !cb.checked;">
-                    <input type="checkbox" id="chk-livePhoto-studio" checked style="width: 20px; height: 20px; accent-color: var(--pink); cursor: pointer;" onclick="event.stopPropagation()">
-                    <label style="font-weight: 700; color: var(--ink); font-size: 1rem; font-family: 'Fredoka', sans-serif; cursor: pointer;">🎬 Cetak + Video Live (GIF)</label>
+
+                <div id="wrapper-chk-livePhoto" style="background: #faf5ff; border: 2px solid #e9d5ff; padding: 10px 14px; border-radius: 16px; margin-top: 5px; display: flex; align-items: center; gap: 10px; cursor: pointer;" onclick="const cb = document.getElementById('chk-livePhoto-studio'); cb.checked = !cb.checked;">
+                    <input type="checkbox" id="chk-livePhoto-studio" checked style="width: 20px; height: 20px; accent-color: #9333ea; cursor: pointer;" onclick="event.stopPropagation()">
+                    <label style="font-weight: 700; color: #475569; font-size: 0.95rem; cursor: pointer;">🎬 Cetak + Live Photo</label>
                 </div>
-                <button id="btn-rakit" onclick="validasiDanRakit(false)" class="btn-doodle" style="background: var(--yellow); color: var(--ink); margin-top: 5px; padding: 12px; width: 100%; font-size: 1.1rem;">Rakit Sekarang ›</button>
+                
+                <div id="wrapper-chk-photoGif" style="background: #faf5ff; border: 2px solid #e9d5ff; padding: 10px 14px; border-radius: 16px; margin-top: 2px; display: flex; align-items: center; gap: 10px; cursor: pointer;" onclick="const cb = document.getElementById('chk-photoGif-studio'); cb.checked = !cb.checked;">
+                    <input type="checkbox" id="chk-photoGif-studio" checked style="width: 20px; height: 20px; accent-color: #9333ea; cursor: pointer;" onclick="event.stopPropagation()">
+                    <label style="font-weight: 700; color: #475569; font-size: 0.95rem; cursor: pointer;">🎞️ Cetak + GIF</label>
+                </div>
+
+                <button id="btn-rakit" onclick="validasiDanRakit(false)" class="btn-aksi btn-pastel-lavender" style="margin-top: 8px; padding: 13px; width: 100%; font-size: 1.05rem;">
+                    Rakit Sekarang ›
+                </button>
             </div>
         </div>
     </div>
 
-    <div id="panel-hasil" class="panel" style="justify-content: center; padding-top: 80px;">
-        <h1 class="judul-interaktif" style="font-size: 3rem; margin-bottom: 10px;">Voila! Karya Ajaibmu 🎉</h1>
+    <div id="panel-hasil" class="panel">
         
-        <div style="display: flex; gap: 30px; align-items: center; justify-content: center; flex-wrap: wrap; width: 100%; padding: 0 10px; box-sizing: border-box; max-height: 85vh;">
-            
-           <div class="image-showcase" style="display: flex; gap: 20px; align-items: center; justify-content: center; min-width: 0; flex-shrink: 1; height: 100%;">
-                <img id="hasilAkhir" src="" style="max-height: 65vh; max-width: 100%; object-fit: contain; border-radius: 20px; border: 4px solid var(--ink); box-shadow: 10px 10px 0px var(--ink); background: white; flex-shrink: 1; min-width: 0;">
-                <img id="img-hasil-gif" src="" style="display: none; max-height: 65vh; max-width: 100%; object-fit: contain; border-radius: 20px; border: 4px solid var(--ink); box-shadow: 10px 10px 0px var(--ink); background: white; flex-shrink: 1; min-width: 0;">
-                
-                <!-- [BARU] Kotak Placeholder yang muncul saat GIF sedang diproses di background -->
-                <div id="gif-loading-box" class="gif-placeholder" style="display: none;">
-                    <span>🎬</span>
-                    <p style="font-weight: 700; color: var(--ink); margin-top: 10px; font-size: 0.9rem; text-align: center; font-family: 'Fredoka', sans-serif;">Memproses<br>Animasi...</p>
-                </div>
+        <!-- Ornamen Estetik Latar Belakang -->
+        <div class="ornament" style="top: 8%; left: 8%;">✨</div>
+        <div class="ornament" style="bottom: 12%; right: 10%; animation-delay: 1.5s;">💜</div>
+        <div class="ornament" style="top: 15%; right: 8%; font-size: 2rem; opacity: 0.5; animation-delay: 0.5s;">📸</div>
+        <div class="ornament" style="bottom: 15%; left: 8%; font-size: 2rem; opacity: 0.5; animation-delay: 2s;">🤍</div>
+
+        <!-- Judul Header -->
+        <div class="hasil-header-badge">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 1.8rem;">🎉</span>
+                <h1 style="font-family: 'Fredoka', sans-serif; font-size: 2.2rem; font-weight: 700; color: #1e293b; margin: 0;">
+                    Yeay! Ini Dia Hasil Fotomu!
+                </h1>
+                <span style="font-size: 1.8rem;">✨</span>
             </div>
-            <div class="card-hasil" style="flex-shrink: 0;">
-                <div class="jumlah-kontrol">
-                    <button class="btn-jumlah" onclick="ubahJumlahCetak(-1)">-</button>
-                    <span id="label-jumlah-cetak">1 Lembar</span>
-                    <button class="btn-jumlah" onclick="ubahJumlahCetak(1)">+</button>
-                </div>
+            <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.95rem; font-weight: 500;">— Abadikan momen spesialmu —</p>
+        </div>
+        
+        <!-- GRID UTAMA (Otomatis berubah class menjadi layout-mode-1 / 2 / 3) -->
+        <div id="hasilGridContainer" class="hasil-layout-grid layout-mode-3">
+            
+            <div class="portrait-top-showcase" style="display: contents;">
                 
-                <button id="btn-action-cetak" onclick="prosesCetakFinal()" class="btn-doodle" style="background: var(--blue); width: 100%; padding: 12px; font-size: 1.1rem; justify-content: center; margin-bottom: 5px;">🖨️ Cetak (1 Lembar)</button>
-                
-                <div class="qr-box">
-                    <div id="qrCodeContainer" style="padding: 10px; background: white; border: 2px solid var(--ink); border-radius: 15px;"></div>
-                    <p style="font-weight: 700; margin-top: 10px; color: var(--ink); text-align: center; font-size: 0.9rem;">Scan QR untuk Unduh 📲</p>
-                    <hr style="width: 100%; border: 0; border-top: 2px dashed var(--ink); margin: 10px 0;">
-                    <p style="color: var(--ink); font-weight: 700; font-size: 0.9rem; margin: 0; text-align: center;">Atau Kirim Link via WA</p>
-                    
-                    <div style="display: flex; width: 100%; gap: 5px; margin-top: 10px; align-items: center; justify-content: space-between;">
-                        <input type="text" id="inputWA" readonly placeholder="Contoh: 0812..." style="flex: 1; min-width: 0; padding: 10px 12px; border-radius: 12px; border: 2px solid var(--ink); outline: none; font-family: inherit; font-size: 0.9rem; box-sizing: border-box; background: white; font-weight: 600; cursor: pointer;">
-                        <button id="btnKirimWA" onclick="kirimFotoKeWA()" class="btn-doodle" style="background: var(--pink); color: var(--ink); border-radius: 12px; padding: 10px 15px; margin: 0;">Kirim</button>
+                <!-- KOLOM 1: PREVIEW FOTO CETAK UTAMA -->
+                <div id="main-photo-card" class="preview-frame-card">
+                    <div class="preview-pill-tag" style="background: #f3e8ff; color: #7e22ce; border: 1px solid #e9d5ff;">🖼️ Hasil Cetak Foto</div>
+                    <div style="flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; height: 100%; width: 100%; background: transparent; border: 1px solid #f1f5f9; border-radius: 12px; padding: 4px; box-sizing: border-box;">
+                        <img id="hasilAkhir" src="" style="height: 100%; width: auto; max-width: 100%; object-fit: contain; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
                     </div>
                 </div>
-                
-                <button onclick="window.location.href='/idle.html'" class="btn-doodle" style="width: 100%; justify-content: center; margin-top: 15px; background: #ef4444; color: white; padding: 12px; font-size: 1.1rem;">Selesai & Keluar 👋</button>
+
+                <!-- KOLOM 2: PREVIEW ANIMASI (LIVE PHOTO & GIF) -->
+                <div id="middle-anim-col" class="middle-col-hasil">
+                    
+                    <!-- Kotak Atas: Live Photo (Rasio 4:6) -->
+                    <div id="box-preview-livephoto" class="preview-frame-card anim-preview-card">
+                        <div class="preview-pill-tag" style="background: #fce7f3; color: #be185d; border: 1px solid #fbcfe8;">🎬 Live Photo</div>
+                        <div style="flex: 1; width: 100%; height: 100%; min-height: 0; border-radius: 16px; border: 2px solid #e2e8f0; overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center; background: #f8fafc; padding: 4px; box-sizing: border-box;">
+                            <img id="img-hasil-livephoto" src="" style="display: none; max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; border-radius: 6px;">
+                            <div id="livephoto-loading-box" style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                                <span style="font-size: 1.8rem; animation: pulsePetunjuk 1.5s infinite;">⏳</span>
+                                <p style="font-weight: 600; color: #64748b; margin-top: 8px; font-size: 0.8rem; text-align: center;">Menyiapkan...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Kotak Bawah: GIF (Rasio Persegi 1:1) -->
+                    <div id="box-preview-gif" class="preview-frame-card anim-preview-card">
+                        <div class="preview-pill-tag" style="background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe;">🎞️ Animasi GIF</div>
+                        <div style="flex: 1; width: 100%; height: 100%; min-height: 0; border-radius: 16px; border: 2px solid #e2e8f0; overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center; background: #f8fafc; padding: 4px; box-sizing: border-box;">
+                            <img id="img-hasil-gif" src="" style="display: none; max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; border-radius: 6px;">
+                            <div id="gif-loading-box" style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                                <span style="font-size: 1.8rem; animation: pulsePetunjuk 1.5s infinite;">⏳</span>
+                                <p style="font-weight: 600; color: #64748b; margin-top: 8px; font-size: 0.8rem; text-align: center;">Menyiapkan...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
             </div>
+
+            <!-- KOLOM 3: KARTU KONTROL CETAK, QR CODE & WA SIMETRIS -->
+            <div id="right-action-col" style="display: flex; align-items: center; justify-content: center; height: 100%;">
+                <div class="action-card-symmetric">
+                    
+                    <div style="display: flex; flex-direction: column; gap: 10px; width: 100%; flex-shrink: 0;">
+                        <div class="jumlah-kontrol">
+                            <button class="btn-jumlah" onclick="ubahJumlahCetak(-1)">-</button>
+                            <span id="label-jumlah-cetak">1 Lembar</span>
+                            <button class="btn-jumlah" onclick="ubahJumlahCetak(1)">+</button>
+                        </div>
+                        <button id="btn-action-cetak" onclick="prosesCetakFinal()" class="btn-aksi btn-pastel-lavender">
+                            <span style="display:flex; align-items:center; gap:8px; margin: 0 auto;">🖨️ Cetak (1 Lembar)</span>
+                            <span style="font-size: 1.2rem;">›</span>
+                        </button>
+                    </div>
+                    
+                    <div class="qr-dashed-inner">
+                        <div style="background: white; padding: 8px; border-radius: 16px; border: 2px solid #e9d5ff; box-shadow: 0 4px 10px rgba(0,0,0,0.03); display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+                            <div id="qrCodeContainer"></div>
+                        </div>
+                        <div style="background: #f3e8ff; color: #6b21a8; padding: 6px 14px; border-radius: 50px; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 6px; margin-top: 2px;">
+                            <span>📱</span> Scan QR untuk Unduh Digital
+                        </div>
+                        
+                        <div style="width: 100%; border-top: 1.5px solid #e9d5ff; margin: 8px 0 4px 0; position: relative;">
+                            <span style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #faf5ff; padding: 0 10px; color: #64748b; font-size: 0.7rem; font-weight: 600; white-space: nowrap;">Atau Kirim Link via WhatsApp</span>
+                        </div>
+                        
+                        <div style="display: flex; width: 100%; gap: 6px; align-items: stretch; justify-content: center;">
+                            <input type="text" id="inputWA" readonly placeholder="0812xxxx..." style="flex: 1; width: 100%; min-width: 0; padding: 12px 14px; border-radius: 12px; border: 2px solid #22c55e; background: white; outline: none; font-weight: 600; font-size: 0.95rem; color: #0f172a; cursor: pointer; box-sizing: border-box;">
+                            <button id="btnKirimWA" onclick="kirimFotoKeWA()" class="btn-aksi btn-pastel-lavender" style="width: auto !important; flex: 0 0 auto; border-radius: 12px; padding: 0 18px; margin: 0; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; gap: 6px; box-sizing: border-box;">
+                                <span id="ikon-wa-kirim">📤</span> <span id="teks-wa-kirim">Kirim</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button onclick="window.location.href='/idle.html'" class="btn-aksi btn-pastel-red">
+                        <span style="display:flex; align-items:center; gap:8px; margin: 0 auto;">Selesai & Keluar 👋</span>
+                        <span style="font-size: 1.2rem;">›</span>
+                    </button>
+
+                </div>
+            </div>
+
         </div>
     </div>
-    
+
     <div id="virtual-numpad" style="display: none;">
         <div class="numpad-header" id="numpad-drag-handle">☰ Geser Numpad</div>
         <div class="numpad-grid">
@@ -452,24 +588,26 @@
 
     <div id="paymentModalOverlay">
         <div class="payment-modal">
-            <h2 style="margin-top: 0; font-size: 1.8rem; font-family: 'Fredoka', sans-serif;">Pembayaran Extra</h2>
-            <p id="payment-text-info" style="margin-bottom: 15px; font-weight: 500;">Silakan selesaikan pembayaran untuk tambahan cetak.</p>
+            <h2 style="margin-top: 0; font-size: 1.8rem; color: #1e293b; margin-bottom: 10px;">Pembayaran Extra</h2>
+            <p id="payment-text-info" style="margin-bottom: 15px; color: #64748b; font-size: 0.95rem;">Silakan selesaikan pembayaran untuk tambahan cetak.</p>
             
             <div id="qris-section" style="margin-bottom: 20px;">
-                <img id="qris-image-preview" src="" style="width: 200px; height: 200px; object-fit: contain; border: 2px dashed var(--ink); border-radius: 10px; margin: 0 auto; display: block;" alt="Loading QRIS...">
-                  <p style="font-size: 0.85rem; color: #666; margin-top: 5px;">Scan kode di atas dengan aplikasi e-Wallet</p>
+                <div style="background: #faf5ff; padding: 12px; border-radius: 20px; border: 2px dashed #d8b4fe; display: inline-block;">
+                    <img id="qris-image-preview" src="" style="width: 180px; height: 180px; object-fit: contain; border-radius: 12px; display: block;" alt="Loading QRIS...">
+                </div>
+                <p style="font-size: 0.85rem; color: #64748b; margin-top: 10px; font-weight: 500;">Scan kode di atas dengan aplikasi e-Wallet</p>
             </div>
 
             <div id="cash-validation-section" style="display: none; flex-direction: column; align-items: center; margin-bottom: 20px;">
-                <div style="font-size: 3rem; margin-bottom: 10px;">💵</div>
-                <p style="font-weight: 700; color: var(--ink); font-size: 1.1rem; margin-bottom: 15px;">⏳ Menunggu Admin memvalidasi pembayaran tunai Anda...</p>
-                <p style="font-size: 0.75rem; color: #888; font-style: italic;">(Admin: Tekan tombol 'Y' di keyboard untuk Acc)</p>
+                <div style="font-size: 4rem; margin-bottom: 10px;">💵</div>
+                <p style="font-weight: 700; color: #1e293b; font-size: 1.1rem; margin-bottom: 5px;">⏳ Menunggu Validasi Admin...</p>
+                <p style="font-size: 0.8rem; color: #64748b;">(Admin: Tekan tombol 'Y' di keyboard untuk Acc)</p>
             </div>
 
             <div id="payment-buttons" style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
-                <button onclick="batalkanPaymentExtra()" class="btn-doodle" style="background: #ef4444; color: white; flex: 1;">Batal</button>
-                <button onclick="pilihTunai()" class="btn-doodle" style="background: var(--yellow); flex: 1;">Tunai 💵</button>
-                <button onclick="simulasikanPaymentSukses()" class="btn-doodle" style="background: var(--green); width: 100%;">Sudah Bayar (QRIS) ✅</button>
+                <button onclick="batalkanPaymentExtra()" class="btn-aksi" style="background: #f1f5f9; color: #475569; flex: 1; padding: 12px;">Batal</button>
+                <button onclick="pilihTunai()" class="btn-aksi" style="background: #fef9c3; color: #ca8a04; flex: 1; padding: 12px;">Tunai 💵</button>
+                <button onclick="simulasikanPaymentSukses()" class="btn-aksi btn-pastel-green" style="width: 100%; padding: 14px; margin-top: 5px;">Sudah Bayar (QRIS) ✅</button>
             </div>
         </div>
     </div>
@@ -510,35 +648,59 @@
         let isAutoRendering = false;
         let databaseTemplate = {};
         let currentCustomOffsets = {}; 
+        let settingLivePhotoMaster = false; // Status saklar Live Photo dari Dashboard
+        let settingPhotoGifMaster = false;  // Status saklar GIF dari Dashboard
         // --- [BARU] PENANGKAP SINYAL DARI BACKGROUND NODE.JS ---
         const socket = io();
         
         socket.on('gif-ready', (data) => {
             if (data.sessionId === currentSessionId && data.url) {
-                const elemenGif = document.getElementById('img-hasil-gif');
-                const loadingBox = document.getElementById('gif-loading-box');
-                
-                loadingBox.style.display = 'none';
-                elemenGif.src = data.url + "?t=" + Date.now();
-                elemenGif.style.display = 'block';
-                elemenGif.classList.add('anim-bounce');
-            }
-        });
-        
-        socket.on('gif-failed', (data) => {
-            if (data.sessionId === currentSessionId) {
-                const loadingBox = document.getElementById('gif-loading-box');
-                if(loadingBox) loadingBox.style.display = 'none';
+                const elLive = document.getElementById('img-hasil-livephoto');
+                const boxLive = document.getElementById('livephoto-loading-box');
+                if (boxLive) boxLive.style.display = 'none';
+                if (elLive) {
+                    elLive.src = data.url + "?t=" + Date.now();
+                    elLive.style.display = 'block';
+                    elLive.classList.add('anim-bounce');
+                }
             }
         });
 
+        socket.on('gif-failed', (data) => {
+            if (data.sessionId === currentSessionId) {
+                const boxLive = document.getElementById('livephoto-loading-box');
+                if (boxLive) boxLive.innerHTML = '<p style="color:red; font-weight:bold; font-size:0.8rem; text-align:center;">Gagal<br>Memproses</p>';
+            }
+        });
+
+        socket.on('photo-gif-ready', (data) => {
+            if (data.sessionId === currentSessionId && data.url) {
+                const elGif = document.getElementById('img-hasil-gif');
+                const boxGif = document.getElementById('gif-loading-box');
+                if (boxGif) boxGif.style.display = 'none';
+                if (elGif) {
+                    elGif.src = data.url + "?t=" + Date.now();
+                    elGif.style.display = 'block';
+                    elGif.classList.add('anim-bounce');
+                }
+            }
+        });
         socket.on('qr-ready', (data) => {
             if (data.sessionId === currentSessionId && data.url) {
                 linkGoogleDriveUnik = data.url;
                 const qrContainer = document.getElementById('qrCodeContainer');
                 if (qrContainer) {
-                    qrContainer.innerHTML = '';
-                    new QRCode(qrContainer, { text: data.url, width: 130, height: 130, colorDark: "#292524", colorLight: "#ffffff" });
+                    // Bersihkan animasi jam pasir ⏳
+                    qrContainer.innerHTML = ''; 
+                    
+                    new QRCode(qrContainer, { 
+                     text: data.url, 
+                     width: 130, 
+                     height: 130, 
+                     colorDark: "#1e293b", 
+                     colorLight: "#ffffff",
+                     correctLevel: QRCode.CorrectLevel.M
+                 });
                 }
             }
         });
@@ -570,9 +732,22 @@
                 if (data.global?.flashWorkaround !== undefined) settingFlashWorkaround = data.global.flashWorkaround;
                 if (data.global?.liveViewBrightness) settingKecerahanLV = data.global.liveViewBrightness;
                 
-                if (data.global?.livePhotoEnabled === false) {
-                    const lpWrapper = document.getElementById('livePhotoWrapper');
-                    if(lpWrapper) lpWrapper.style.display = 'none';
+                // Baca status Master Switch dari Tab Fitur GIF Dashboard
+                settingLivePhotoMaster = (data.global?.livePhotoEnabled === true || data.global?.livePhotoEnabled === "true");
+                settingPhotoGifMaster = (data.global?.photoGifEnabled === true || data.global?.photoGifEnabled === "true");
+
+                const wrapLive = document.getElementById('wrapper-chk-livePhoto');
+                const cbLive = document.getElementById('chk-livePhoto-studio');
+                if (wrapLive && cbLive) {
+                    wrapLive.style.display = settingLivePhotoMaster ? 'flex' : 'none';
+                    cbLive.checked = settingLivePhotoMaster;
+                }
+
+                const wrapGif = document.getElementById('wrapper-chk-photoGif');
+                const cbGif = document.getElementById('chk-photoGif-studio');
+                if (wrapGif && cbGif) {
+                    wrapGif.style.display = settingPhotoGifMaster ? 'flex' : 'none';
+                    cbGif.checked = settingPhotoGifMaster;
                 }
                 
                 if (data.global) {
@@ -673,8 +848,14 @@
             if (idPanel !== 'panel-template') window.scrollTo(0, 0); 
             
             if (idPanel === 'panel-kamera') {
-                if (activeCameraMode === 'webcam') { jalankanWebcam(); } 
+                if (activeCameraMode === 'webcam') { 
+                    document.getElementById('liveView').style.display = 'none';
+                    document.getElementById('webcam-view').style.display = 'block';
+                    jalankanWebcam(); 
+                } 
                 else {
+                    document.getElementById('webcam-view').style.display = 'none';
+                    document.getElementById('liveView').style.display = 'block';
                     await fetch('/toggle-liveview', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ state: true }) });
                     document.getElementById('liveView').style.filter = `brightness(${settingKecerahanLV}%)`;
                     isLiveViewActive = true; updateLiveView();
@@ -873,11 +1054,17 @@
             await new Promise(r => setTimeout(r, 1500)); 
 
             if (activePanelId === 'panel-kamera') {
-                document.getElementById('liveView').classList.remove('mirrored'); 
-                document.getElementById('liveView').style.filter = `brightness(${settingKecerahanLV}%)`;
                 updateTransformKamera(); 
-                if (activeCameraMode === 'webcam') { jalankanWebcam(); } 
+                if (activeCameraMode === 'webcam') { 
+                    document.getElementById('liveView').style.display = 'none';
+                    document.getElementById('webcam-view').style.display = 'block';
+                    jalankanWebcam(); 
+                } 
                 else {
+                    document.getElementById('webcam-view').style.display = 'none';
+                    document.getElementById('liveView').style.display = 'block';
+                    document.getElementById('liveView').classList.remove('mirrored'); 
+                    document.getElementById('liveView').style.filter = `brightness(${settingKecerahanLV}%)`;
                     fetch('/toggle-liveview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: true }) }).then(() => { 
                         isLiveViewActive = true; clearTimeout(liveViewTimer); updateLiveView(); 
                     });
@@ -1123,6 +1310,10 @@
             if(isAuto) { document.getElementById('loadingTeks').innerText = "Waktu Habis! Merakit Otomatis..."; document.getElementById('loadingTeks').style.display = 'block'; }
 
             try {
+                // Fitur hanya aktif jika Master Switch di Dashboard ON dan Checkbox dicentang
+                const useLivePhoto = settingLivePhotoMaster && (document.getElementById('chk-livePhoto-studio')?.checked ?? true);
+                const usePhotoGif = settingPhotoGifMaster && (document.getElementById('chk-photoGif-studio')?.checked ?? true);
+
                 const data = await (await fetch('/api/generate-photobox', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' }, 
                     body: JSON.stringify({ 
@@ -1130,40 +1321,68 @@
                         selectedPhotos: fotoTerpilih, 
                         sessionId: currentSessionId, 
                         effect: efekTerpilihServer,
-                        livePhoto: document.getElementById('chk-livePhoto-studio')?.checked ?? true,
+                        livePhoto: useLivePhoto,
+                        photoGif: usePhotoGif,
                         orientation: orientasiKamera, 
                         customOffsets: currentCustomOffsets 
                     })
                 })).json();
                 
                 if (data.success) {
-                    if (intervalTimerSesi) clearInterval(intervalTimerSesi); document.getElementById('sessionTimerDisplay').style.display = 'none';
-                    if(isAuto) document.getElementById('loadingTeks').style.display = 'none';
+                    if (intervalTimerSesi) clearInterval(intervalTimerSesi); 
+                    document.getElementById('sessionTimerDisplay').style.display = 'none';
+                    if (isAuto) document.getElementById('loadingTeks').style.display = 'none';
+                    
+                    // ==========================================================
+                    // 🎨 LOGIKA MUTASI LAYOUT OTOMATIS (1 / 2 / 3 KOTAK PREVIEW)
+                    // ==========================================================
+                    const gridContainer = document.getElementById('hasilGridContainer');
+                    const middleCol = document.getElementById('middle-anim-col');
+                    const boxLive = document.getElementById('box-preview-livephoto');
+                    const boxGif = document.getElementById('box-preview-gif');
+
+                    gridContainer.classList.remove('layout-mode-1', 'layout-mode-2', 'layout-mode-3');
+
+                    if (!useLivePhoto && !usePhotoGif) {
+                        // Keduanya OFF -> Hanya 1 Kotak Foto Utama + Menu QR
+                        gridContainer.classList.add('layout-mode-1');
+                        middleCol.style.display = 'none';
+                    } else if (useLivePhoto && usePhotoGif) {
+                        // Keduanya ON -> 3 Kotak Preview (Komposisi Baru)
+                        gridContainer.classList.add('layout-mode-3');
+                        middleCol.style.display = 'flex';
+                        boxLive.style.display = 'flex';
+                        boxGif.style.display = 'flex';
+                    } else {
+                        // Hanya Salah Satu ON -> 2 Kotak Preview Sejajar (Komposisi Lama)
+                        gridContainer.classList.add('layout-mode-2');
+                        middleCol.style.display = 'flex';
+                        boxLive.style.display = useLivePhoto ? 'flex' : 'none';
+                        boxGif.style.display = usePhotoGif ? 'flex' : 'none';
+                    }
+
                     bukaPanel('panel-hasil');
                     
                     document.getElementById('hasilAkhir').src = data.file + "?t=" + Date.now(); 
                     namaFileCetak = data.file;
 
-                    const elemenGif = document.getElementById('img-hasil-gif');
-                    const loadingBox = document.getElementById('gif-loading-box');
-                    
-                    // Reset animasi sebelumnya (jika ada)
-                    elemenGif.classList.remove('anim-bounce');
-                    
-                    // Logika tampilan GIF vs Kotak Loading
-                    if (data.livePhoto === 'processing') {
-                        elemenGif.style.display = 'none';
-                        loadingBox.style.display = 'flex';
-                    } else if (data.livePhoto) {
-                        loadingBox.style.display = 'none';
-                        elemenGif.src = data.livePhoto + "?t=" + Date.now();
-                        elemenGif.style.display = 'block';
-                    } else {
-                        loadingBox.style.display = 'none';
-                        elemenGif.style.display = 'none';
-                        elemenGif.src = '';
+                    // --- Atur Tampilan Kotak Live Photo ---
+                    const elemenLive = document.getElementById('img-hasil-livephoto');
+                    const loadingLiveBox = document.getElementById('livephoto-loading-box');
+                    elemenLive.classList.remove('anim-bounce');
+                    if (useLivePhoto) {
+                        elemenLive.style.display = 'none';
+                        loadingLiveBox.style.display = 'flex';
                     }
 
+                    // --- Atur Tampilan Kotak GIF ---
+                    const elemenGif = document.getElementById('img-hasil-gif');
+                    const loadingGifBox = document.getElementById('gif-loading-box');
+                    elemenGif.classList.remove('anim-bounce');
+                    if (usePhotoGif) {
+                        elemenGif.style.display = 'none';
+                        loadingGifBox.style.display = 'flex';
+                    }
                     if (data.driveLink) linkGoogleDriveUnik = data.driveLink;
                     
                     const qrContainer = document.getElementById('qrCodeContainer');
@@ -1193,15 +1412,17 @@
         function ubahJumlahCetak(nilai) { let num = jumlahCetakDipilih + nilai; if (num < 1) num = 1; if (num > 10) num = 10; jumlahCetakDipilih = num; updateUIJumlahCetak(); }
         
         function updateUIJumlahCetak() {
-            document.getElementById('label-jumlah-cetak').innerText = jumlahCetakDipilih + " Lembar"; const btnAction = document.getElementById('btn-action-cetak');
-            if (isEventBerbayar && jumlahCetakDipilih > 1) {
-                let biayaTambahan = (jumlahCetakDipilih - 1) * hargaExtraCetakPerLembar;
-                btnAction.innerText = `💳 Bayar Extra & Cetak (${jumlahCetakDipilih} Lbr) - Rp ${biayaTambahan.toLocaleString('id-ID')}`;
-                btnAction.style.background = "var(--yellow)";
-            } else {
-                btnAction.innerText = `🖨️ Cetak (${jumlahCetakDipilih} Lembar)`; btnAction.style.background = "var(--blue)";
-            }
-        }
+         document.getElementById('label-jumlah-cetak').innerText = jumlahCetakDipilih + " Lembar"; 
+         const btnAction = document.getElementById('btn-action-cetak');
+         if (isEventBerbayar && jumlahCetakDipilih > 1) {
+             let biayaTambahan = (jumlahCetakDipilih - 1) * hargaExtraCetakPerLembar;
+             btnAction.innerHTML = `<span style="display:flex; align-items:center; gap:8px; margin: 0 auto;">💳 Bayar Extra (Rp ${biayaTambahan.toLocaleString('id-ID')})</span><span style="font-size: 1.2rem;">›</span>`;
+             btnAction.className = "btn-aksi btn-pastel-red";
+         } else {
+             btnAction.innerHTML = `<span style="display:flex; align-items:center; gap:8px; margin: 0 auto;">🖨️ Cetak (${jumlahCetakDipilih} Lembar)</span><span style="font-size: 1.2rem;">›</span>`;
+             btnAction.className = "btn-aksi btn-pastel-lavender";
+         }
+     }
 
         let extraPrintOrderId = null;
         let extraPrintCheckInterval = null;
@@ -1310,28 +1531,90 @@
         }
 
         async function kirimFotoKeWA() {
-            const inputWa = document.getElementById('inputWA'); const btnWa = document.getElementById('btnKirimWA'); const nomor = inputWa.value;
-            if (nomor.length < 10) return;
-            inputWa.disabled = true; btnWa.disabled = true; btnWa.innerText = "⏳";
-            try {
-                let linkFinal = linkGoogleDriveUnik || "https://drive.google.com/";
-                const res = await fetch('/api/send-wa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nomorWa: nomor, linkFoto: linkFinal }) }); 
-                const data = await res.json();
-                if (data.success) {
-                    btnWa.innerText = "Terkirim ✅"; btnWa.style.background = "var(--green)"; btnWa.style.color = "var(--ink)"; 
-                    setTimeout(() => { inputWa.disabled = false; btnWa.disabled = false; btnWa.innerText = "Kirim"; btnWa.style.background = "var(--pink)"; btnWa.style.color = "var(--ink)"; inputWa.value = ""; }, 3000);
-                } else { 
-                    inputWa.disabled = false; btnWa.disabled = false; btnWa.innerText = "Kirim"; alert("Gagal kirim WA: " + data.message); 
-                }
-            } catch (err) { inputWa.disabled = false; btnWa.disabled = false; btnWa.innerText = "Kirim"; alert("Kesalahan server."); }
-        }
+         const inputWa = document.getElementById('inputWA'); 
+         const btnWa = document.getElementById('btnKirimWA'); 
+         const ikonWa = document.getElementById('ikon-wa-kirim');
+         const teksWa = document.getElementById('teks-wa-kirim');
+         const nomor = inputWa.value;
+         if (nomor.length < 10) return;
 
-        function jalankanWebcam() {
-            document.getElementById('liveView').style.display = 'none'; 
-            const vid = document.getElementById('webcam-view'); vid.style.display = 'block'; 
-            navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1920 }, height: { ideal: 1080 } } })
-                .then(stream => { webcamStream = stream; vid.srcObject = stream; })
-                .catch(err => { alert("Webcam gagal diakses atau tidak diizinkan browser!"); });
+         inputWa.disabled = true; btnWa.disabled = true; 
+         if (ikonWa) ikonWa.innerText = "⏳";
+         if (teksWa) teksWa.innerText = "Kirim...";
+
+         try {
+             let linkFinal = linkGoogleDriveUnik || "https://drive.google.com/";
+             const res = await fetch('/api/send-wa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nomorWa: nomor, linkFoto: linkFinal }) }); 
+             const data = await res.json();
+             if (data.success) {
+                 if (ikonWa) ikonWa.innerText = "✅";
+                 if (teksWa) teksWa.innerText = "Berhasil";
+                 btnWa.classList.remove('btn-pastel-lavender');
+                 btnWa.classList.add('btn-pastel-green');
+                 setTimeout(() => { 
+                     inputWa.disabled = false; btnWa.disabled = false; 
+                     if (ikonWa) ikonWa.innerText = "📤";
+                     if (teksWa) teksWa.innerText = "Kirim";
+                     btnWa.classList.add('btn-pastel-lavender');
+                     btnWa.classList.remove('btn-pastel-green');
+                     inputWa.value = ""; 
+                 }, 3000);
+             } else { 
+                 inputWa.disabled = false; btnWa.disabled = false; 
+                 if (ikonWa) ikonWa.innerText = "📤";
+                 if (teksWa) teksWa.innerText = "Kirim";
+                 alert("Gagal kirim WA: " + data.message); 
+             }
+         } catch (err) { 
+             inputWa.disabled = false; btnWa.disabled = false; 
+             if (ikonWa) ikonWa.innerText = "📤";
+             if (teksWa) teksWa.innerText = "Kirim";
+             alert("Kesalahan server."); 
+         }
+     }
+     
+        async function jalankanWebcam() {
+            const lv = document.getElementById('liveView');
+            if (lv) lv.style.display = 'none'; 
+            
+            const vid = document.getElementById('webcam-view');
+            if (!vid) return;
+            vid.style.display = 'block'; 
+
+            if (webcamStream && webcamStream.active) {
+                vid.srcObject = webcamStream;
+                vid.play().catch(()=>{});
+                return;
+            }
+            
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevices = devices.filter(d => d.kind === 'videoinput');
+
+                const instaCam = videoDevices.find(d => 
+                    d.label.toLowerCase().includes('insta') || 
+                    d.label.toLowerCase().includes('ace') ||
+                    d.label.toLowerCase().includes('usb')
+                );
+
+                let videoConstraints = { width: { ideal: 1920 }, height: { ideal: 1080 } };
+                if (instaCam && instaCam.deviceId) {
+                    videoConstraints.deviceId = { exact: instaCam.deviceId };
+                }
+
+                webcamStream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints, audio: false });
+                vid.srcObject = webcamStream;
+                await vid.play();
+            } catch (err) {
+                console.warn("Mencoba fallback mode kamera universal...");
+                try {
+                    webcamStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                    vid.srcObject = webcamStream;
+                    await vid.play();
+                } catch (errFallback) {
+                    alert("❌ Kamera gagal diakses. Pastikan tidak sedang digunakan aplikasi lain.");
+                }
+            }
         }
 
         function matikanWebcam() {

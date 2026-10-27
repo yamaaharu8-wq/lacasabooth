@@ -177,6 +177,7 @@ if (!fs.existsSync(settingsPath)) {
             flashWorkaround: false,
             mirrorCamera: true,
             livePhotoEnabled: false,
+            photoGifEnabled: false,
             cloudStorage: true,
             driveParentFolderId: "",
             printer4R: "",
@@ -214,7 +215,6 @@ expressApp.use('/assets', express.static(customAssetsDir));
 expressApp.use(express.static(uiDir)); 
 expressApp.use('/uploads', express.static(uploadDir));
 expressApp.use('/frames', express.static(frameDir));
-expressApp.use('/assets', express.static(customAssetsDir));
 expressApp.use('/assets', express.static(assetsDir));
 
 const upload = multer({ dest: tempDir });
@@ -629,13 +629,7 @@ autoUpdater.on('update-downloaded', () => {
     }, 3000); 
 });
 
-// =======================================================
-// FUNGSI JENDELA APLIKASI (TETAP DIPERTAHANKAN)
-// =======================================================
-electronApp.on('window-all-closed', () => { if (process.platform !== 'darwin') electronApp.quit(); });
 
-ipcMain.on('minimize-window', () => { BrowserWindow.getFocusedWindow().minimize(); });
-// Fungsi universal untuk menutup semua jembatan belakang layar dengan bersih
 const matikanSistem = async () => {
     console.log("🛑 Mematikan mesin & membersihkan sesi latar belakang...");
     try { await waClient.destroy(); } catch (e) {} // Matikan bot WA dengan aman
@@ -1039,14 +1033,17 @@ expressApp.post('/api/factory-reset', (req, res) => {
         const qrisDataPath = path.join(userDataPath, 'qris_data.json');
         const defaultQris = {
             type: 'static', 
+            gateway: 'midtrans',
             staticImageUrl: '/assets/qris_static.png',
             dynamicPrice: 35000,
-            midtransServerKey: '',  // <-- Server Key dikosongkan
-            midtransClientKey: '',  // <-- Client Key dikosongkan
-            cloudflareToken: ''     // <-- Token CF dikosongkan
+            dynamicExtraPrice: 15000,
+            key1: '',
+            key2: '',
+            key3: '',
+            cloudflareToken: ''
         };
+        qrisSettings = { ...defaultQris }; // Reset juga variabel yang ada di RAM!
         fs.writeFileSync(qrisDataPath, JSON.stringify(defaultQris, null, 2));
-        
         // Hentikan Cloudflare Tunnel yang berjalan karena tokennya sudah dihapus
         if (cfTunnelProcess) {
             cfTunnelProcess.removeAllListeners('close');
@@ -1797,20 +1794,25 @@ expressApp.post('/api/generate-photobox', async (req, res) => {
 
         let isOnlineMode = true; 
         let parentFolderId = "1scPtcs7JaGmnF4TYfpUL2DIcN_7iU9DB"; 
-        let urlLivePhoto = 'processing';
         let isLivePhotoOn = false;
+        let isPhotoGifOn = false;
 
         try {
             if (fs.existsSync(settingsPath)) {
                 const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
                 if (settings.global && settings.global.cloudStorage !== undefined) isOnlineMode = settings.global.cloudStorage;
                 if (settings.global && settings.global.driveParentFolderId) parentFolderId = settings.global.driveParentFolderId;
-                if (settings.global && (settings.global.livePhotoEnabled === true || settings.global.livePhotoEnabled === "true")) isLivePhotoOn = true;
+                
+                // Cek apakah fitur diaktifkan di Dashboard DAN dicentang oleh user di layar
+                const dashLive = (settings.global?.livePhotoEnabled === true || settings.global?.livePhotoEnabled === "true");
+                const dashGif = (settings.global?.photoGifEnabled === true || settings.global?.photoGifEnabled === "true");
+                
+                isLivePhotoOn = dashLive && (req.body.livePhoto !== false);
+                isPhotoGifOn = dashGif && (req.body.photoGif !== false);
             }
         } catch (e) {}
 
-        if (!isLivePhotoOn) urlLivePhoto = null;
-
+        let urlLivePhoto = isLivePhotoOn ? 'processing' : null;
         // 🚀 3. KIRIM BALASAN KE LAYAR KLIEN DETIK INI JUGA!
         res.json({ 
             success: true, 
@@ -1825,8 +1827,12 @@ expressApp.post('/api/generate-photobox', async (req, res) => {
         (async () => {
             const datePrefix = new Date().toISOString().replace(/T/, '_').replace(/\..+/, '').replace(/:/g, '-');
             const driveFolderName = `${datePrefix}_${lockedSessionId}`;
+            
             let pathGif = null;
             const namaGif = `live_${lockedSessionId}.gif`;
+
+            let pathPhotoGif = null;
+            const namaPhotoGif = `slideshow_${lockedSessionId}.gif`;
 
             // ---> TUGAS A: GOOGLE DRIVE (Mendapatkan Link Folder Spesifik)
             const driveTask = (async () => {
@@ -1844,7 +1850,7 @@ expressApp.post('/api/generate-photobox', async (req, res) => {
                 }
             })();
 
-            // ---> TUGAS B: FFMPEG (Merakit GIF Tanpa Membekukan CPU & Anti Bentrok)
+            // ---> TUGAS B: FFMPEG (Merakit GIF BOOMERANG WEBCAM / LIVE PHOTO)
             const gifTask = (async () => {
                 if (isLivePhotoOn && req.body.selectedPhotos && req.body.selectedPhotos.length > 0) {
                     pathGif = path.join(sessionDir, namaGif);
@@ -1878,7 +1884,6 @@ expressApp.post('/api/generate-photobox', async (req, res) => {
                             isFallback = true; 
                         }
 
-                        // Penulisan ratusan file secara Asynchronous (Tidak nge-freeze mesin)
                         const writePromises = framesBuffer.map((buf, idx) => {
                             return fsPromises.writeFile(path.join(slotDir, `frame_${String(idx).padStart(3, '0')}.jpg`), buf);
                         });
@@ -1938,12 +1943,56 @@ expressApp.post('/api/generate-photobox', async (req, res) => {
                 }
             })();
 
-            // ---> TUGAS C: UPLOAD SISA FILE KE DRIVE SETELAH GIF / JPG SELESAI
-            await Promise.all([driveTask, gifTask]);
+            // ---> TUGAS C: FFMPEG (Merakit GIF SLIDESHOW DARI FOTO MENTAH)
+            const photoGifTask = (async () => {
+                if (isPhotoGifOn && req.body.selectedPhotos && req.body.selectedPhotos.length > 0) {
+                    pathPhotoGif = path.join(sessionDir, namaPhotoGif);
+                    const slotDir = path.join(tempDir, `slideshow_${lockedSessionId}`);
+                    if (!fs.existsSync(slotDir)) fs.mkdirSync(slotDir, { recursive: true });
+
+                    // Salin foto mentah pilihan user ke folder sementara (diurutkan)
+                    let fotoCount = 0;
+                    for (const fotoName of req.body.selectedPhotos) {
+                        const src = path.join(sessionDir, fotoName);
+                        const dst = path.join(slotDir, `frame_${String(fotoCount).padStart(3, '0')}.jpg`);
+                        if (fs.existsSync(src)) {
+                            // Jika foto berorientasi potret dari kamera, putar dulu secara fisik
+                            if (statusRotasiFoto[fotoCount]) {
+                                await sharp(src).rotate(90).toFile(dst);
+                            } else {
+                                fs.copyFileSync(src, dst);
+                            }
+                            fotoCount++;
+                        }
+                    }
+
+                    if (fotoCount > 0) {
+                        const ffmpegPath = path.join(__dirname, 'ffmpeg.exe').replace('app.asar', 'app.asar.unpacked');
+                        // Kecepatan 1.5 FPS = 1 foto tampil sekitar 0.66 detik, dengan kualitas warna tinggi
+                        const ffmpegCmd = `"${ffmpegPath}" -y -framerate 1.5 -i "${path.join(slotDir, 'frame_%03d.jpg').replace(/\\/g, '/')}" -vf "scale=600:-1,split[s0][s1];[s0]palettegen=stats_mode=diff[p];[s1][p]paletteuse=dither=bayer:bayer_scale=5" -loop 0 "${pathPhotoGif.replace(/\\/g, '/')}"`;
+
+                        await new Promise((resolve) => {
+                            exec(ffmpegCmd, (error) => {
+                                if (!error) {
+                                    io.emit('photo-gif-ready', { sessionId: lockedSessionId, url: `/uploads/${lockedSessionId}/${namaPhotoGif}` });
+                                }
+                                try { fs.rmSync(slotDir, { recursive: true, force: true }); } catch(e){}
+                                resolve();
+                            });
+                        });
+                    }
+                }
+            })();
+
+            // ---> TUGAS D: UPLOAD SEMUA FILE KE DRIVE SETELAH SELESAI
+            await Promise.all([driveTask, gifTask, photoGifTask]);
             
             if (isOnlineMode && typeof uploadToDrive === 'function') {
                 if (isLivePhotoOn && fs.existsSync(pathGif)) {
                     try { await uploadToDrive(pathGif, driveFolderName, parentFolderId); } catch(err) {}
+                }
+                if (isPhotoGifOn && fs.existsSync(pathPhotoGif)) {
+                    try { await uploadToDrive(pathPhotoGif, driveFolderName, parentFolderId); } catch(err) {}
                 }
                 const allRawFiles = fs.readdirSync(sessionDir).filter(f => f.endsWith('_mentah.jpg'));
                 for (let fotoName of allRawFiles) {
@@ -1953,7 +2002,7 @@ expressApp.post('/api/generate-photobox', async (req, res) => {
                     }
                 }
             }
-        })(); 
+        })();
         
     } catch (error) { 
         res.status(500).json({ success: false, message: error.message }); 
@@ -2302,36 +2351,67 @@ const SAAS_DOKU_IS_PROD = true; // Ubah ke false jika ingin tes pakai Sandbox DO
 
 expressApp.post('/api/saas/create-invoice', async (req, res) => {
     try {
-        const { email, tier, duration, amount } = req.body;
+        // Tangkap paymentMethod dari pilihan UI Dashboard klien
+        const { email, tier, duration, amount, paymentMethod } = req.body;
         if (!email || !tier || !amount) {
             return res.status(400).json({ success: false, message: "Data transaksi tidak lengkap." });
         }
 
-        const orderId = `SUBS-${tier.toUpperCase()}-${duration.toUpperCase()}-${Date.now()}`;
+        // Hapus spasi dari durasi agar Signature API DOKU tidak error/mismatch
+        const durasiTanpaSpasi = (duration || '1Bulan').toString().replace(/\s+/g, '');
+        const orderId = `SUBS-${tier.toUpperCase()}-${durasiTanpaSpasi}-${Date.now()}`;
         const dokuBaseUrl = SAAS_DOKU_IS_PROD ? 'https://api.doku.com' : 'https://api-sandbox.doku.com';
         const cleanClientId = SAAS_DOKU_CLIENT_ID.replace('SB-', '');
-
-        // Menggunakan DOKU Checkout V1 agar mendukung SEMUA metode pembayaran di akun DOKU Anda
         const targetPath = '/checkout/v1/payment';
         const timestamp = new Date().toISOString().slice(0, 19) + 'Z';
         const requestId = crypto.randomUUID ? crypto.randomUUID() : 'req-saas-' + Date.now();
 
+        // --- LOGIKA PEMISAHAN BIAYA ADMIN & PENGUNCI JALUR DOKU ---
+        let finalAmount = parseInt(amount);
+        let lineItems = [
+            { name: `Langganan Lacasabooth ${tier.toUpperCase()} (${duration})`, price: finalAmount, quantity: 1 }
+        ];
+        let allowedMethods = [];
+
+        if (paymentMethod === 'qris') {
+            // Jika QRIS: Harga Normal (Sesuai Aturan BI) dan DOKU HANYA menampilkan QRIS
+            allowedMethods = ["QRIS"];
+        } else {
+            // Jika VA / Retail / E-Wallet: Tambah Biaya Admin Rp 4.500 dan DOKU menyembunyikan QRIS
+            const BIAYA_ADMIN = 4500;
+            finalAmount += BIAYA_ADMIN;
+            lineItems.push({ name: "Biaya Layanan (Admin Fee)", price: BIAYA_ADMIN, quantity: 1 });
+            
+            // Daftar LENGKAP seluruh metode pembayaran DOKU (Kecuali "QRIS")
+            allowedMethods = [
+                // Transfer Bank (Virtual Account)
+                "VIRTUAL_ACCOUNT_BCA", "VIRTUAL_ACCOUNT_BANK_MANDIRI", "VIRTUAL_ACCOUNT_BRI", 
+                "VIRTUAL_ACCOUNT_BNI", "VIRTUAL_ACCOUNT_CIMB", "VIRTUAL_ACCOUNT_DANAMON", 
+                "VIRTUAL_ACCOUNT_PERMATA", "VIRTUAL_ACCOUNT_BANK_SYARIAH_INDONESIA",
+                "VIRTUAL_ACCOUNT_BNC", "VIRTUAL_ACCOUNT_MAYBANK",
+                
+                // Minimarket / Gerai Retail
+                "ONLINE_TO_OFFLINE_ALFA", "ONLINE_TO_OFFLINE_INDOMARET", 
+                
+                // E-Wallet (Direct App / Tanpa Scan QRIS)
+                "E_WALLET_OVO", "E_WALLET_SHOPEEPAY", "E_WALLET_DANA", "E_WALLET_LINKAJA", "E_WALLET_ASTRAPAY",
+                
+                // Kartu Kredit & Cicilan (Paylater)
+                "CREDIT_CARD", "AKULAKU", "KREDIVO", "INDODANA"
+            ];
+        }
+
         const bodyPayload = {
             order: {
-                amount: parseInt(amount),
+                amount: finalAmount,
                 invoice_number: orderId,
                 currency: "IDR",
                 callback_url: "https://lacasaphoto.id",
-                line_items: [
-                    {
-                        name: `Langganan Lacasabooth ${tier.toUpperCase()} (${duration})`,
-                        price: parseInt(amount),
-                        quantity: 1
-                    }
-                ]
+                line_items: lineItems
             },
             payment: {
-                payment_due_date: 60
+                payment_due_date: 60,
+                payment_method_types: allowedMethods // Kunci opsi metode bayar di layar DOKU
             },
             customer: {
                 id: email,
@@ -2388,6 +2468,7 @@ expressApp.get('/api/saas/check-status/:orderId', async (req, res) => {
         const requestId = 'chk-saas-' + Date.now();
         const targetPath = `/orders/v1/status/${orderId}`;
 
+        // DOKU GET Request TIDAK menggunakan Digest
         const sigComponent = `Client-Id:${cleanClientId}\nRequest-Id:${requestId}\nRequest-Timestamp:${timestamp}\nRequest-Target:${targetPath}`;
         const signatureDoku = 'HMACSHA256=' + crypto.createHmac('sha256', SAAS_DOKU_SECRET_KEY).update(sigComponent).digest('base64');
 
@@ -2402,12 +2483,19 @@ expressApp.get('/api/saas/check-status/:orderId', async (req, res) => {
         });
 
         const dokuData = await dokuRes.json();
-        if (dokuRes.ok && dokuData.transaction && dokuData.transaction.status === 'SUCCESS') {
+        
+        // Pengecekan berlapis untuk menangkap berbagai variasi respon SUCCESS dari DOKU
+       const trxStatus = (dokuData?.transaction?.status || dokuData?.order?.status || '').toString().toUpperCase();
+      const isSuccess = (trxStatus === 'SUCCESS' || trxStatus === 'PAID' || trxStatus === 'SETTLEMENT');
+      
+        if (dokuRes.ok && isSuccess) {
             return res.json({ success: true, status: 'PAID' });
         }
-        return res.json({ success: true, status: 'PENDING' });
+        
+        return res.json({ success: true, status: 'PENDING', debug: dokuData.transaction?.status || 'WAITING' });
     } catch (error) {
-        return res.json({ success: false, status: 'PENDING' });
+        console.error("Error Check Status DOKU:", error);
+        return res.json({ success: false, status: 'ERROR' });
     }
 });
 
@@ -2580,7 +2668,7 @@ expressApp.all('/api/payment/qris-dynamic', async (req, res) => {
             qrString = dkData.qrString; 
         } 
         
-      // 🧠 5. OTAK DOKU (AUTO-ROUTING)
+     // 🧠 5. OTAK DOKU (STANDAR ASPI v1.1.1 + FALLBACK JOKUL & RENDER LOKAL)
         else if (gateway === 'doku') {
             if (!key1 || !key2) throw new Error("Secret Key dan Client ID DOKU belum diisi!");
             
@@ -2588,57 +2676,44 @@ expressApp.all('/api/payment/qris-dynamic', async (req, res) => {
             const cleanClientId = key2.replace('SB-', ''); 
             const dokuBaseUrl = isProd ? 'https://api.doku.com' : 'https://api-sandbox.doku.com';
 
-            const bodyPayload = { order: { invoice_number: orderId, amount: amount } };
-            const digest = crypto.createHash('sha256').update(JSON.stringify(bodyPayload)).digest('base64');
-            
-            // Daftar 3 pintu Acquirer QRIS DOKU
-            const qrisPaths = [
-                '/doku-qris/v2/order',     // Pintu 1: DOKU Utama
-                '/nobu-qris/v2/order',     // Pintu 2: Nobu Bank
-                '/shopeepay-qris/v2/order' // Pintu 3: ShopeePay
-            ];
-            
-            let lastError = "Layanan QRIS belum aktif di akun DOKU Anda.";
+            const targetPath = '/qr/generate/v1.1.1'; 
+            const timestamp = new Date().toISOString().slice(0, 19) + 'Z';
+            const requestId = crypto.randomUUID ? crypto.randomUUID() : 'qr-' + Date.now();
 
-            // Mesin mencoba mengetuk pintu satu per satu secara otomatis
-            for (let targetPath of qrisPaths) {
-                const timestamp = new Date().toISOString().slice(0, 19) + 'Z';
-                const requestId = crypto.randomUUID ? crypto.randomUUID() : 'req-' + Date.now() + Math.floor(Math.random() * 1000);
-                
-                const sigComponent = `Client-Id:${cleanClientId}\nRequest-Id:${requestId}\nRequest-Timestamp:${timestamp}\nRequest-Target:${targetPath}\nDigest:${digest}`;
-                const signatureDoku = 'HMACSHA256=' + crypto.createHmac('sha256', key1).update(sigComponent).digest('base64');
-
-                try {
-                    const dokuRes = await fetch(dokuBaseUrl + targetPath, {
-                        method: 'POST',
-                        headers: {
-                            'Client-Id': cleanClientId, 'Request-Id': requestId, 'Request-Timestamp': timestamp,
-                            'Signature': signatureDoku, 'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(bodyPayload)
-                    });
-                    
-                    const dokuData = await dokuRes.json();
-                    
-                    if (dokuRes.ok && dokuData.qr_code) {
-                        qrString = dokuData.qr_code;
-                        break; // Pintu ditemukan! Langsung keluar dari loop
-                    } else if (dokuRes.ok && dokuData.generate_qr_code) {
-                        qrString = dokuData.generate_qr_code;
-                        break;
-                    } else {
-                        // Tangkap error jika pintu ini tertutup (404 / 401)
-                        if (dokuData.error && dokuData.error.message) lastError = dokuData.error.message;
-                        else if (dokuData.message) lastError = dokuData.message;
-                        else lastError = JSON.stringify(dokuData);
-                    }
-                } catch (err) {
-                    lastError = err.message;
+            const bodyPayload = {
+                order: {
+                    invoice_number: orderId,
+                    amount: parseInt(amount)
                 }
-            }
-            
-            if (!qrString) {
-                throw new Error(`DOKU: ${lastError} (Semua jalur ditolak)`);
+            };
+
+            const digest = crypto.createHash('sha256').update(JSON.stringify(bodyPayload)).digest('base64');
+            const sigComponent = `Client-Id:${cleanClientId}\nRequest-Id:${requestId}\nRequest-Timestamp:${timestamp}\nRequest-Target:${targetPath}\nDigest:${digest}`;
+            const signatureDoku = 'HMACSHA256=' + crypto.createHmac('sha256', key1).update(sigComponent).digest('base64');
+
+            const dokuRes = await fetch(dokuBaseUrl + targetPath, {
+                method: 'POST',
+                headers: {
+                    'Client-Id': cleanClientId, 
+                    'Request-Id': requestId, 
+                    'Request-Timestamp': timestamp,
+                    'Signature': signatureDoku, 
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(bodyPayload)
+            });
+
+            const dokuData = await dokuRes.json().catch(() => ({}));
+
+            // Tangkap semua kemungkinan letak string QR dari DOKU
+            const extractedQr = dokuData?.response?.qr_content || dokuData?.qr_content || dokuData?.qr_code || dokuData?.generate_qr_code;
+
+            if (dokuRes.ok && extractedQr) {
+                // Simpan ke qrString agar dirender menjadi Base64 oleh library 'qrcode' lokal di bawah!
+                qrString = extractedQr;
+            } else {
+                let errMsg = dokuData?.error?.message || dokuData?.response?.message || dokuData?.message || JSON.stringify(dokuData);
+                throw new Error(`DOKU: ${errMsg}`);
             }
         }
         // 🧠 6. OTAK NEETPAY (Non-Custodial)
@@ -2710,9 +2785,10 @@ expressApp.post('/api/payment/universal-webhook', async (req, res) => {
             nominal = notif.amount;
         }
         else if (gateway === 'doku') {
-            isLunas = (notif.transaction && notif.transaction.status === 'SUCCESS');
-            invoiceId = notif.order ? notif.order.invoice_number : "";
-            nominal = notif.order ? notif.order.amount : 0;
+            const trxStatus = (notif?.transaction?.status || notif?.order?.status || '').toString().toUpperCase();
+            isLunas = (trxStatus === 'SUCCESS' || trxStatus === 'PAID' || trxStatus === 'SETTLEMENT');
+            invoiceId = notif?.order?.invoice_number || "";
+            nominal = notif?.order?.amount || 0;
         }
         // 🚀 TAMBAHKAN LOGIKA NEETPAY DI SINI:
         else if (gateway === 'neetpay') {
@@ -2819,11 +2895,12 @@ expressApp.get('/api/payment/check-status/:orderId', async (req, res) => {
                 }
             });
             
-            const dokuData = await dokuRes.json();
-            if (dokuRes.ok && dokuData.transaction && dokuData.transaction.status === 'SUCCESS') {
-                return res.json({ success: true, status: 'settlement' });
-            }
-            return res.json({ success: true, status: 'pending' });
+            const dokuData = await dokuRes.json().catch(() => ({}));
+          const trxStatus = (dokuData?.transaction?.status || dokuData?.order?.status || '').toString().toUpperCase();
+          if (dokuRes.ok && (trxStatus === 'SUCCESS' || trxStatus === 'PAID' || trxStatus === 'SETTLEMENT')) {
+              return res.json({ success: true, status: 'settlement' });
+          }
+          return res.json({ success: true, status: 'pending' });
         }
         
         
