@@ -4,32 +4,46 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lacasaphoto - Payment</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/assets/theme.css">
     
     <style>
-        /* KUNCI TOTAL HTML */
+        :root {
+            --brand-pink: #f7a8b8;
+            --brand-pink-soft: #fdf2f4;
+            --brand-teal: #76cbc4;
+            --brand-teal-soft: #eefaf9;
+            --brand-purple: #b9a5e2;
+            --brand-purple-soft: #f5f2fc;
+            --brand-dark: #1e293b;
+            --brand-muted: #64748b;
+        }
+
+        /* KUNCI TOTAL HTML - CLEAN AESTHETIC PASTEL */
         html, body {
             margin: 0; padding: 0; width: 100vw; height: 100vh;
-            overflow: hidden; background-color: var(--bg-color); color: var(--ink);
-            font-family: 'Poppins', sans-serif; user-select: none;
-            background-image: radial-gradient(var(--dot-color) 2px, transparent 2px);
-            background-size: 40px 40px;
+            overflow: hidden; background-color: #fafbfc; color: var(--brand-dark);
+            font-family: 'Fredoka', 'Poppins', sans-serif; user-select: none;
+            background-image: 
+                radial-gradient(circle at 12% 18%, rgba(247, 168, 184, 0.15) 0%, transparent 38%),
+                radial-gradient(circle at 88% 82%, rgba(118, 203, 196, 0.16) 0%, transparent 40%),
+                radial-gradient(#cbd5e1 1.5px, transparent 1.5px);
+            background-size: 100% 100%, 100% 100%, 35px 35px;
         }
 
         /* HEADER NAV */
         .nav-bar {
-            position: absolute; top: 30px; left: 40px; right: 40px;
+            position: absolute; top: 28px; left: 40px; right: 40px;
             display: flex; justify-content: space-between; align-items: center; z-index: 50;
         }
         .btn-back {
-            background: var(--paper-white); color: var(--ink); border: 3px solid var(--ink);
-            padding: 10px 25px; border-radius: 15px; font-weight: 700; cursor: pointer;
-            transition: 0.2s; box-shadow: 4px 4px 0px var(--ink); font-family: 'Poppins', sans-serif;
-            font-size: 1rem;
+            background: #ffffff; color: var(--brand-dark); border: 2px solid #e2e8f0;
+            padding: 10px 24px; border-radius: 50px; font-weight: 700; cursor: pointer;
+            transition: 0.2s ease; box-shadow: 0 6px 15px rgba(0,0,0,0.05); font-family: 'Fredoka', sans-serif;
+            font-size: 1rem; display: flex; align-items: center; gap: 8px;
         }
-        .btn-back:hover { background: var(--yellow); transform: translate(-2px, -2px); box-shadow: 6px 6px 0px var(--ink); }
-        .btn-back:active { transform: translate(2px, 2px); box-shadow: 0px 0px 0px var(--ink); }
+        .btn-back:hover { background: var(--brand-pink-soft); border-color: var(--brand-pink); color: #be185d; transform: translateY(-2px); }
+        .btn-back:active { transform: translateY(1px); }
 
         /* KONTEN UTAMA */
         .main-container {
@@ -38,63 +52,149 @@
             padding: 20px; box-sizing: border-box; overflow-y: auto;
         }
 
-        .header-title { font-size: 3rem; margin: 0 0 5px 0; font-weight: 700; color: var(--ink); line-height: 1.1; text-align: center; }
-        .sub-judul { font-size: 1.1rem; color: var(--ink); margin-bottom: 30px; text-align: center; opacity: 0.9; font-weight: 500; }
+        .header-title { font-size: 2.8rem; margin: 0 0 6px 0; font-weight: 700; color: var(--brand-dark); line-height: 1.1; text-align: center; }
+        .sub-judul { font-size: 1.05rem; color: var(--brand-muted); margin-bottom: 26px; text-align: center; font-weight: 500; }
 
         /* DUA KOLOM: KIRI (PILIH METODE), KANAN (PROSES/QRIS) */
         .payment-wrapper { 
-            display: flex; gap: 30px; background: var(--paper-white); padding: 30px; 
-            border-radius: 20px; border: 4px solid var(--ink); box-shadow: 10px 10px 0px var(--ink); 
-            width: 100%; max-width: 900px; box-sizing: border-box; align-items: stretch;
+            display: flex; gap: 28px; background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(12px);
+            padding: 28px; border-radius: 32px; border: 2px solid #e2e8f0; 
+            box-shadow: 0 20px 50px rgba(66, 70, 77, 0.08); 
+            width: 100%; max-width: 920px; box-sizing: border-box; align-items: stretch;
         }
         
-        .col-metode { flex: 1; display: flex; flex-direction: column; gap: 15px; }
+        .col-metode { flex: 0.95; display: flex; flex-direction: column; gap: 15px; justify-content: center; }
         .col-proses { 
-            flex: 1; background: var(--bg-color); border-radius: 15px; padding: 25px; 
+            flex: 1.15; background: #f8fafc; border-radius: 24px; padding: 24px; 
             display: flex; flex-direction: column; align-items: center; justify-content: center; 
-            border: 3px dashed var(--ink); text-align: center; position: relative; 
+            border: 2px dashed #cbd5e1; text-align: center; position: relative; min-height: 380px;
+            overflow: hidden;
         }
 
         /* KARTU METODE */
         .metode-card {
-            background: var(--paper-white); border: 3px solid var(--ink); border-radius: 15px; 
-            padding: 20px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 20px;
-            box-shadow: 4px 4px 0px var(--ink);
+            background: #ffffff; border: 2px solid #e2e8f0; border-radius: 22px; 
+            padding: 20px; cursor: pointer; transition: all 0.25s ease; display: flex; align-items: center; gap: 18px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.03);
         }
-        .metode-card:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0px var(--ink); }
-        .metode-card.active { background: var(--yellow); border-color: var(--ink); box-shadow: 0px 0px 0px var(--ink); transform: translate(4px, 4px); }
+        .metode-card:hover { transform: translateY(-3px); border-color: var(--brand-teal); box-shadow: 0 12px 25px rgba(118, 203, 196, 0.15); }
+        .metode-card.active { background: var(--brand-teal-soft); border-color: var(--brand-teal); box-shadow: 0 10px 25px rgba(118, 203, 196, 0.2); }
         
-        .metode-icon { font-size: 2.5rem; background: var(--paper-white); width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 3px solid var(--ink); }
-        .metode-card.active .metode-icon { background: var(--ink); }
+        .metode-icon { font-size: 2.2rem; background: #f8fafc; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 18px; border: 2px solid #e2e8f0; flex-shrink: 0; transition: 0.25s; }
+        .metode-card.active .metode-icon { background: #ffffff; border-color: var(--brand-teal); transform: scale(1.05); }
         .metode-text { text-align: left; }
-        .metode-text h3 { margin: 0 0 5px 0; font-size: 1.2rem; color: var(--ink); font-weight: 700; }
-        .metode-text p { margin: 0; font-size: 0.9rem; color: var(--ink); opacity: 0.8; font-weight: 500; }
+        .metode-text h3 { margin: 0 0 4px 0; font-size: 1.2rem; color: var(--brand-dark); font-weight: 700; }
+        .metode-text p { margin: 0; font-size: 0.88rem; color: var(--brand-muted); font-weight: 500; line-height: 1.35; }
 
-        /* QRIS & CASH AREA */
+        /* ========================================================= */
+        /* 📲 PEMISAHAN ATURAN QRIS STATIS VS QRIS DINAMIS            */
+        /* ========================================================= */
         .qris-placeholder { 
-            width: 200px; height: 200px; background: var(--paper-white); border: 3px solid var(--ink); 
-            border-radius: 15px; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: 4px 4px 0px var(--ink);
+            background: #ffffff; border: 2px solid #e2e8f0; border-radius: 22px; 
+            margin-bottom: 12px; display: flex; align-items: center; justify-content: center; 
+            position: relative; box-sizing: border-box;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.04);
         }
-        .qris-placeholder img { width: 100%; height: 100%; object-fit: contain; }
-        
-        .btn-confirm { 
-            background: var(--green); color: var(--ink); border: 3px solid var(--ink); 
-            padding: 12px 25px; border-radius: 12px; font-weight: 700; font-size: 1.1rem; 
-            cursor: pointer; transition: 0.2s; width: 100%; margin-top: 15px; box-shadow: 4px 4px 0px var(--ink); font-family: 'Poppins', sans-serif;
-        }
-        .btn-confirm:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0px var(--ink); background: var(--yellow); }
-        .btn-confirm:active { transform: translate(4px, 4px); box-shadow: 0px 0px 0px var(--ink); }
-        
-        .loading-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--paper-white); border-radius: 10px; flex-direction: column; align-items: center; justify-content: center; z-index: 10; border: 3px solid var(--ink); }
 
+        /* 1. ATURAN KHUSUS QRIS STATIS & GAMBAR QR BIASA (UTUH, TIDAK TERZOOM/TERPOTONG) */
+        .qris-placeholder.mode-gambar-normal {
+            width: auto; max-width: 260px; height: 240px; padding: 12px; overflow: visible;
+        }
+        .qris-placeholder.mode-gambar-normal img {
+            max-width: 100%; max-height: 100%; width: auto; height: auto; 
+            object-fit: contain; border-radius: 12px; transform: none !important; position: static !important;
+        }
+
+        /* 2. ATURAN KHUSUS IFRAME WEB DOKU DINAMIS (DI-CROP PAS DI KOTAK QR) */
+        .qris-placeholder.mode-iframe-doku {
+            width: 250px !important; height: 250px !important; padding: 0px !important; overflow: hidden !important;
+        }
+        .qris-placeholder.mode-iframe-doku iframe { 
+            position: absolute; left: 0; top: 0;
+            width: 480px !important; height: 1000px !important; border: none; background: #fff; 
+            transform: scale(1.10) translate(-20%, -550px);
+            transform-origin: top center; pointer-events: none;
+        }
+
+        .btn-confirm { 
+            background: linear-gradient(135deg, #34d399, #10b981); color: #ffffff; border: none; 
+            padding: 13px 25px; border-radius: 50px; font-weight: 700; font-size: 1.02rem; 
+            cursor: pointer; transition: 0.2s ease; width: 100%; margin-top: 10px; 
+            box-shadow: 0 8px 18px rgba(16, 185, 129, 0.25); font-family: 'Fredoka', sans-serif;
+        }
+        .btn-confirm:hover { transform: translateY(-2px); box-shadow: 0 12px 22px rgba(16, 185, 129, 0.35); }
+        .btn-confirm:active { transform: translateY(1px); }
+
+        .btn-retry {
+            margin-top: 10px; background: #eff6ff; color: #2563eb; border: 1.5px solid #bfdbfe;
+            padding: 6px 14px; border-radius: 50px; font-weight: 600; font-size: 0.82rem; cursor: pointer;
+            font-family: 'Fredoka', sans-serif;
+        }
+
+        /* --- KOTAK INPUT VOUCHER CLEAN --- */
+        #voucher-input {
+            background: #ffffff; border: 2px solid #cbd5e1; border-radius: 16px; padding: 15px; 
+            font-size: 1.8rem; font-weight: 700; color: var(--brand-dark); text-align: center; 
+            margin-bottom: 14px; letter-spacing: 2px; text-transform: uppercase; 
+            width: 100%; max-width: 400px; height: 65px; display: flex; align-items: center; 
+            justify-content: center; box-shadow: inset 0 2px 5px rgba(0,0,0,0.02); cursor: pointer;
+            transition: 0.2s;
+        }
+        #voucher-input:hover { border-color: var(--brand-purple); background: #faf8ff; }
+
+        /* --- LOADING OVERLAY (SEMBUNYI SECARA DEFAULT, MENUTUP PENUH SAAT SUKSES) --- */
+        .loading-overlay { 
+            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(255, 255, 255, 0.97); border-radius: 24px; 
+            flex-direction: column; align-items: center; justify-content: center; z-index: 30; 
+        }
+
+        /* --- VIRTUAL KEYBOARD VOUCHER (DI LUAR WRAPPER AGAR TIDAK LONCAT SAAT DIGESER) --- */
+        #virtual-keyboard-voucher { 
+            position: fixed; background: rgba(255, 255, 255, 0.97); padding: 16px; border-radius: 24px; 
+            box-shadow: 0 20px 50px rgba(30, 41, 59, 0.25); z-index: 9999999; border: 2px solid #e9d5ff; 
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            width: 560px; max-width: 95vw; text-align: center; display: none; 
+            flex-direction: column; gap: 6px; box-sizing: border-box;
+        }
+        .numpad-header { 
+            color: #6d28d9; font-family: 'Fredoka', sans-serif; font-size: 1rem; font-weight: 700; margin-bottom: 10px; 
+            cursor: grab; background: #f5f2fc; border-radius: 12px; padding: 10px; border: 1px solid #ddd6fe;
+            user-select: none; touch-action: none;
+        }
+        .numpad-header:active { cursor: grabbing; }
+
+        .kb-row { display: flex; justify-content: center; gap: 6px; width: 100%; }
+        .kb-key {
+            background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 10px; 
+            padding: 14px 0; font-weight: 700; color: var(--brand-dark); cursor: pointer; text-transform: uppercase;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.03); flex: 1; max-width: 50px; font-family: 'Fredoka', sans-serif;
+            font-size: 1.2rem; transition: 0.15s;
+        }
+        .kb-key:active { 
+            transform: translateY(2px); box-shadow: none; 
+            background: var(--brand-purple-soft); border-color: var(--brand-purple); color: #6d28d9; 
+        }
+        .kb-action { 
+            max-width: 75px; background: #fee2e2; color: #ef4444; border-color: #fca5a5; 
+        }
+        .kb-close-btn { 
+            width: 100%; padding: 12px; margin-top: 6px; background: #f1f5f9; color: #475569; 
+            border: 1.5px solid #cbd5e1; border-radius: 12px; font-weight: 700; font-family: 'Fredoka', sans-serif; 
+            cursor: pointer; transition: 0.15s; font-size: 1rem;
+        }
+        .kb-close-btn:hover { background: #e2e8f0; }
+
+        @keyframes pulsePetunjuk { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+        
         /* RESPONSIVE */
         @media (max-width: 768px) {
             .nav-bar { top: 15px; left: 15px; right: 15px; }
-            .header-title { font-size: 2.2rem; margin-top: 60px; }
-            .payment-wrapper { flex-direction: column; padding: 20px; box-shadow: 6px 6px 0px var(--ink); gap: 20px;}
-            .metode-card { padding: 15px; }
+            .header-title { font-size: 2.1rem; margin-top: 55px; }
+            .payment-wrapper { flex-direction: column; padding: 20px; gap: 18px; }
+            .metode-card { padding: 14px; }
             html, body { overflow-y: auto; }
-            .main-container { position: relative; height: auto; min-height: 100vh; padding-bottom: 40px;}
+            .main-container { position: relative; height: auto; min-height: 100vh; padding-bottom: 40px; }
         }
     </style>
     <script src="/socket.io/socket.io.js"></script>
@@ -107,7 +207,7 @@
 
     <div class="main-container">
         <h1 class="header-title">Pilih Pembayaran</h1>
-        <p class="sub-judul">Selesaikan pembayaran untuk memulai sesi <strong id="lbl-mode" style="color: var(--ink); background: var(--yellow); padding: 2px 8px; border: 2px solid var(--ink); border-radius: 8px;">Photobooth</strong>.</p>
+        <p class="sub-judul">Selesaikan pembayaran untuk memulai sesi <strong id="lbl-mode" style="color: #0f766e; background: var(--brand-teal-soft); padding: 4px 14px; border: 1.5px solid #99f6e4; border-radius: 50px;">Photobooth</strong></p>
 
         <div class="payment-wrapper">
             <!-- KOLOM KIRI (PILIH METODE) -->
@@ -116,15 +216,15 @@
                     <div class="metode-icon">📱</div>
                     <div class="metode-text">
                         <h3>QRIS / E-Wallet</h3>
-                        <p>Bayar instan via M-Banking, Gopay, Dana, dll.</p>
+                        <p>Bayar instan via M-Banking, GoPay, OVO, Dana, ShopeePay, dll.</p>
                     </div>
                 </div>
                 
-                <div class="metode-card" id="card-cash" onclick="pilihMetode('cash')">
-                    <div class="metode-icon">💵</div>
+                <div class="metode-card" id="card-voucher" onclick="pilihMetode('voucher')">
+                    <div class="metode-icon">🎟️</div>
                     <div class="metode-text">
-                        <h3>Uang Tunai (Cash)</h3>
-                        <p>Bayar langsung ke kasir atau asisten booth.</p>
+                        <h3>Tukar Voucher</h3>
+                        <p>Masukkan kode voucher untuk akses photobooth.</p>
                     </div>
                 </div>
             </div>
@@ -134,47 +234,82 @@
                 
                 <!-- TAMPILAN QRIS -->
                 <div id="view-qris" style="display: flex; flex-direction: column; align-items: center; width: 100%;">
-                    <h3 style="margin-top: 0; margin-bottom: 5px; color: var(--ink); font-weight: 700;">Scan QRIS di Bawah</h3>
-                    <h2 id="qris-price-display" style="display: none; margin-top: 0; margin-bottom: 15px; color: var(--ink); font-weight: 700; background: var(--yellow); padding: 5px 15px; border-radius: 10px; border: 2px solid var(--ink);"></h2>
+                    <h3 style="margin-top: 0; margin-bottom: 6px; color: var(--brand-dark); font-weight: 700;">Scan QRIS di Bawah</h3>
+                    <div id="qris-price-display" style="display: none; margin-top: 0; margin-bottom: 12px; color: #be185d; font-size: 1.35rem; font-weight: 700; background: var(--brand-pink-soft); padding: 5px 20px; border-radius: 50px; border: 1.5px solid #fbcfe8;"></div>
 
-                    <div class="qris-placeholder">
+                    <div class="qris-placeholder mode-gambar-normal" id="qris-box-holder">
                         <img id="img-qris-display" src="" alt="Loading QRIS..." style="display: none;">
-                        <div id="qris-loading-text" style="font-size: 1rem; color: var(--ink); font-weight: 600;">Memuat QRIS...</div>
+                        <iframe id="iframe-qris-display" src="" style="display: none;"></iframe>
+                        <div id="qris-loading-text" style="font-size: 0.95rem; color: var(--brand-muted); font-weight: 600; padding: 10px;">⏳ Menyiapkan QRIS...</div>
                     </div>
                     
-                    <p style="font-size: 0.9rem; color: var(--ink); margin: 0 0 10px 0; font-weight: 500;">Tunjukkan bukti transfer ke asisten.</p>
+                    <p id="qris-helper-text" style="font-size: 0.85rem; color: var(--brand-muted); margin: 0 0 10px 0; font-weight: 500;">Arahkan kamera QR M-Banking / E-Wallet Anda.</p>
                     
-                    <button class="btn-confirm" onclick="prosesPembayaran('qris')">(Asisten) Konfirmasi Bayar</button>
+                    <!-- TOMBOL ASISTEN (HANYA MUNCUL & BERFUNGSI SAAT QRIS STATIS) -->
+                    <button id="btn-main-qris" class="btn-confirm" onclick="prosesPembayaran('qris')" style="display: none;">(Asisten) Konfirmasi Bayar ›</button>
+                    
+                    <!-- LABEL MENUNGGU (HANYA MUNCUL SAAT QRIS DINAMIS & TIDAK BISA DIKLIK) -->
+                    <div id="status-qris-tunggu" style="margin-top: 10px; background: #e2e8f0; color: #475569; padding: 10px 25px; border-radius: 50px; font-weight: 600; font-size: 0.95rem; display: none; align-items: center; gap: 8px;">
+                        <span style="animation: pulsePetunjuk 1.5s infinite;">⏳</span> Menunggu Pembayaran (Otomatis)
+                    </div>
                 </div>
                 
-                <!-- TAMPILAN CASH -->
-                <div id="view-cash" style="display: none; flex-direction: column; align-items: center; width: 100%;">
-                    <div style="font-size: 4rem; margin-bottom: 5px;">👋</div>
-                    <h3 style="margin-top: 0; color: var(--ink); font-weight: 700;">Silakan Panggil Asisten</h3>
-                    <p style="font-size: 0.9rem; color: var(--ink); margin-bottom: 20px; font-weight: 500;">Serahkan uang tunai ke kasir. Asisten akan membuka sesi kamera Anda dari sistem.</p>
+                <!-- TAMPILAN VOUCHER -->
+                <div id="view-voucher" style="display: none; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%;">
+                    <h3 style="margin-top: 0; margin-bottom: 5px; color: var(--brand-dark); font-weight: 700; font-size: 1.4rem;">Masukkan Kode Voucher</h3>
+                    <p style="font-size: 0.95rem; color: var(--brand-muted); margin-bottom: 25px; font-weight: 500;">Ketuk kolom di bawah untuk memunculkan keyboard.</p>
                     
-                    <button class="btn-confirm" onclick="prosesPembayaran('cash')" style="background: var(--blue);">Buka Kamera Sekarang ›</button>
+                    <div id="voucher-input" onclick="tampilkanKeyboardVoucher()">
+                        <span style="color: #94a3b8; font-size: 1rem; font-weight: 500; letter-spacing: 0; text-transform: none;">Ketuk untuk mengetik kode...</span>
+                    </div>
+                    
+                    <p style="font-size: 0.85rem; color: var(--brand-muted); margin-top: 5px; margin-bottom: 20px;">Kode akan otomatis divalidasi oleh sistem.</p>
+                    
+                    <button class="btn-confirm" id="btn-tukar-voucher" onclick="prosesVoucher()" style="background: linear-gradient(135deg, #c084fc, #9333ea); box-shadow: 0 8px 18px rgba(147, 51, 234, 0.25); max-width: 400px; font-size: 1.1rem; padding: 15px;">🎟️ Tukar & Buka Kamera ›</button>
                 </div>
 
-                <!-- LOADING OVERLAY -->
+                <!-- LOADING OVERLAY (BERADA DI DALAM .col-proses DAN SEMBUNYI SAAT AWAL) -->
                 <div class="loading-overlay" id="loading-overlay">
-                    <div style="font-size: 3rem; margin-bottom: 10px;">✨</div>
-                    <h3 style="margin: 0; color: var(--ink); font-size: 1.5rem; font-weight: 700;">Pembayaran Berhasil!</h3>
-                    <p style="color: var(--ink); font-size: 1rem; margin-top: 5px; font-weight: 500;">Membuka mesin kamera...</p>
+                    <div style="font-size: 3.5rem; margin-bottom: 10px;">✨</div>
+                    <h3 id="teks-sukses-judul" style="margin: 0; color: #10b981; font-size: 1.6rem; font-weight: 700;">Pembayaran Berhasil!</h3>
+                    <p id="teks-sukses-desc" style="color: var(--brand-muted); font-size: 1rem; margin-top: 6px; font-weight: 500;">Membuka mesin kamera...</p>
                 </div>
 
-            </div>
+            </div> <!-- PENUTUP .col-proses -->
+        </div> <!-- PENUTUP .payment-wrapper -->
+    </div> <!-- PENUTUP .main-container -->
+
+   <!-- VIRTUAL KEYBOARD VOUCHER (DENGAN TOMBOL STRIP '-') -->
+    <div id="virtual-keyboard-voucher">
+        <div class="numpad-header" id="keyboard-drag-handle">☰ Tahan & Geser Keyboard</div>
+        <div class="kb-row">
+            <button class="kb-key" onclick="ketikVoucher('1')">1</button><button class="kb-key" onclick="ketikVoucher('2')">2</button><button class="kb-key" onclick="ketikVoucher('3')">3</button><button class="kb-key" onclick="ketikVoucher('4')">4</button><button class="kb-key" onclick="ketikVoucher('5')">5</button><button class="kb-key" onclick="ketikVoucher('6')">6</button><button class="kb-key" onclick="ketikVoucher('7')">7</button><button class="kb-key" onclick="ketikVoucher('8')">8</button><button class="kb-key" onclick="ketikVoucher('9')">9</button><button class="kb-key" onclick="ketikVoucher('0')">0</button>
         </div>
+        <div class="kb-row">
+            <button class="kb-key" onclick="ketikVoucher('Q')">Q</button><button class="kb-key" onclick="ketikVoucher('W')">W</button><button class="kb-key" onclick="ketikVoucher('E')">E</button><button class="kb-key" onclick="ketikVoucher('R')">R</button><button class="kb-key" onclick="ketikVoucher('T')">T</button><button class="kb-key" onclick="ketikVoucher('Y')">Y</button><button class="kb-key" onclick="ketikVoucher('U')">U</button><button class="kb-key" onclick="ketikVoucher('I')">I</button><button class="kb-key" onclick="ketikVoucher('O')">O</button><button class="kb-key" onclick="ketikVoucher('P')">P</button>
+        </div>
+        <div class="kb-row">
+            <button class="kb-key" onclick="ketikVoucher('A')">A</button><button class="kb-key" onclick="ketikVoucher('S')">S</button><button class="kb-key" onclick="ketikVoucher('D')">D</button><button class="kb-key" onclick="ketikVoucher('F')">F</button><button class="kb-key" onclick="ketikVoucher('G')">G</button><button class="kb-key" onclick="ketikVoucher('H')">H</button><button class="kb-key" onclick="ketikVoucher('J')">J</button><button class="kb-key" onclick="ketikVoucher('K')">K</button><button class="kb-key" onclick="ketikVoucher('L')">L</button><button class="kb-key" style="background:#fef3c7; border-color:#fcd34d; color:#b45309; font-size:1.4rem;" onclick="ketikVoucher('-')">-</button>
+        </div>
+        <div class="kb-row">
+            <button class="kb-key" onclick="ketikVoucher('Z')">Z</button><button class="kb-key" onclick="ketikVoucher('X')">X</button><button class="kb-key" onclick="ketikVoucher('C')">C</button><button class="kb-key" onclick="ketikVoucher('V')">V</button><button class="kb-key" onclick="ketikVoucher('B')">B</button><button class="kb-key" onclick="ketikVoucher('N')">N</button><button class="kb-key" onclick="ketikVoucher('M')">M</button><button class="kb-key" style="background:#fef3c7; border-color:#fcd34d; color:#b45309;" onclick="ketikVoucher('_')">_</button><button class="kb-key kb-action" onclick="hapusVoucher()">⌫</button>
+        </div>
+        <button class="kb-close-btn" onclick="tutupKeyboardVoucher()">Selesai Mengetik / Tutup ✕</button>
     </div>
 
     <script>
-        // Gunakan parameter timestamp (?t=Date.now) untuk menembus cache lama
         fetch(`/api/settings?t=${Date.now()}`).then(res => res.json()).then(data => {
             if (data.global && data.global.theme) document.body.className = data.global.theme;
         }).catch(e => console.error("Gagal memuat tema:", e));
         
         let eventMode = '';
+        let autoCheckInterval = null;
+        let currentOrderId = null;
 
+        // Baca kode diskon dari URL jika ada
+        const urlParams = new URLSearchParams(window.location.search);
+        const kodeDiskon = urlParams.get('discount');
+        
         window.onload = async function() {
             try {
                 const res = await fetch(`/api/current-event?t=${Date.now()}`);
@@ -189,159 +324,311 @@
                     document.getElementById('lbl-mode').innerText = modeTeks;
                 } else {
                     window.location.href = '/event-manager.html';
+                    return;
                 }
-            } catch (err) { alert("Gagal memuat data event."); }
+            } catch (err) { console.error("Gagal memuat data event."); }
             
-            let autoCheckInterval = null;
-            let currentOrderId = null;
-
             const socket = io();
             socket.on('payment-success', (data) => {
                 if (data.orderId === currentOrderId) {
                     console.log("⚡ Pembayaran masuk seketika dari Webhook!", data);
                     if (autoCheckInterval) clearInterval(autoCheckInterval);
-                    const btnConfirm = document.querySelector('#view-qris .btn-confirm');
-                    btnConfirm.innerText = "✅ Pembayaran Berhasil!";
-                    btnConfirm.style.background = "var(--green)";
                     prosesPembayaran('qris');
                 }
             });
 
-            // FETCH PENGATURAN QRIS & GAMBAR
+            await muatQrisPembayaran();
+        };
+
+        async function muatQrisPembayaran() {
+            const imgDisplay = document.getElementById('img-qris-display');
+            const iframeDisplay = document.getElementById('iframe-qris-display');
+            const loadingText = document.getElementById('qris-loading-text');
+            const priceDisplay = document.getElementById('qris-price-display');
+            const btnConfirm = document.getElementById('btn-main-qris');
+            const statusOtomatis = document.getElementById('status-qris-tunggu');
+            const qrHolder = document.getElementById('qris-box-holder');
+
+            imgDisplay.style.display = 'none';
+            iframeDisplay.style.display = 'none';
+            loadingText.style.display = 'block';
+            loadingText.innerHTML = '⏳ Menyiapkan QRIS...';
+
+            // Reset ke mode gambar normal secara default
+            qrHolder.className = 'qris-placeholder mode-gambar-normal';
+
             try {
-                // 1. Tarik pengaturan global (untuk membaca Harga Statis)
                 const resGlobal = await fetch(`/api/settings?t=${Date.now()}`);
                 const globalSettings = await resGlobal.json();
 
-                // 2. Tarik pengaturan QRIS (untuk cek tipe Statis/Dinamis)
                 const resSettings = await fetch(`/api/settings/qris?t=${Date.now()}`);
                 if (!resSettings.ok) throw new Error("Backend API QRIS belum berjalan (404)");
                 
                 const qrisSettings = await resSettings.json();
                 
-                const imgDisplay = document.getElementById('img-qris-display');
-                const loadingText = document.getElementById('qris-loading-text');
-                const priceDisplay = document.getElementById('qris-price-display');
-                
-                // --- KUNCI PERBAIKAN: Tentukan Harga Sesi Sesuai Tipe QRIS ---
-                let sessionPrice = 35000;
-                if (qrisSettings.type === 'static') {
-                    // Jika mode statis, ambil harga dari input baru yang kita buat di dashboard
-                    sessionPrice = globalSettings.global?.qrisPriceStatic || 35000;
-                } else {
-                    // Jika mode dinamis, ambil dari harga dinamis
-                    sessionPrice = qrisSettings.dynamicPrice || 35000;
-                }
+                let sessionPrice = (qrisSettings.type === 'static') 
+                    ? (globalSettings.global?.qrisPriceStatic || 35000) 
+                    : (qrisSettings.dynamicPrice || 35000);
 
+                // ==========================================
+                // MODE 1: QRIS STATIS (GAMBAR UTUH & TOMBOL ASISTEN AKTIF)
+                // ==========================================
                 if (qrisSettings.type === 'static') {
-                    // Tarik URL anti-cache dari API get-qris agar gambarnya update
+                    qrHolder.className = 'qris-placeholder mode-gambar-normal';
                     try {
                         const resImg = await fetch(`/api/get-qris?t=${Date.now()}`);
                         const dataImg = await resImg.json();
-                        if(dataImg.success) {
-                            imgDisplay.src = dataImg.url; 
-                        } else {
-                            imgDisplay.src = qrisSettings.staticImageUrl + `?t=${Date.now()}`;
-                        }
+                        imgDisplay.src = dataImg.success ? dataImg.url : (qrisSettings.staticImageUrl + `?t=${Date.now()}`);
                     } catch(e) {
                         imgDisplay.src = qrisSettings.staticImageUrl + `?t=${Date.now()}`;
                     }
 
                     imgDisplay.style.display = 'block';
                     loadingText.style.display = 'none';
-                    
-                    // Tampilkan Harga Statis
                     priceDisplay.innerText = `Rp ${sessionPrice.toLocaleString('id-ID')}`;
                     priceDisplay.style.display = 'block';
+                    
+                    // Tampilkan tombol konfirmasi asisten & sembunyikan label otomatis
+                    statusOtomatis.style.display = 'none';
+                    btnConfirm.style.display = 'block';
+                    btnConfirm.disabled = false;
+                    btnConfirm.style.cursor = "pointer";
+                    btnConfirm.innerText = "(Asisten) Konfirmasi Bayar ›";
+                    btnConfirm.style.background = "linear-gradient(135deg, #60a5fa, #3b82f6)";
+                    btnConfirm.style.boxShadow = "0 8px 18px rgba(59, 130, 246, 0.25)";
+                    btnConfirm.style.color = "#ffffff";
                 } 
+                // ==========================================
+                // MODE 2: QRIS DINAMIS (OTOMATIS & TOMBOL ASISTEN MATI)
+                // ==========================================
                 else if (qrisSettings.type === 'dynamic') {
-                    // Langsung tampilkan harga dari Dashboard terlebih dahulu
+                    // Sembunyikan tombol asisten, tampilkan label menunggu otomatis
+                    btnConfirm.style.display = 'none';
+                    statusOtomatis.style.display = 'flex';
+                    statusOtomatis.innerHTML = `<span style="animation: pulsePetunjuk 1.5s infinite;">⏳</span> Menunggu Pembayaran (Otomatis)`;
+
                     priceDisplay.innerText = `Rp ${sessionPrice.toLocaleString('id-ID')}`;
                     priceDisplay.style.display = 'block';
 
-// ... (sisa kode di bawahnya biarkan sama) ...
-                    const resDynamic = await fetch(`/api/payment/qris-dynamic?t=${Date.now()}`);
-                    
-                    // Baca balasan dari backend terlebih dahulu, apapun statusnya
+                    const resDynamic = await fetch(`/api/payment/qris-dynamic?t=${Date.now()}&discount=${kodeDiskon || ''}`);
                     const dataDynamic = await resDynamic.json().catch(() => ({ success: false, message: "Server tidak merespon" }));
                     
-                    // Jika gagal, lempar pesan error ASLI dari backend/Midtrans ke layar
                     if (!resDynamic.ok || !dataDynamic.success) {
                         throw new Error(dataDynamic.message || "API Generate QRIS gagal diakses");
                     }
                     
-                    // Jika sukses (QR berhasil dibuat)
-                    if (dataDynamic.success) {
+                    const finalAmount = dataDynamic.amount || sessionPrice;
+                    priceDisplay.innerText = `Rp ${finalAmount.toLocaleString('id-ID')}`;
+                    currentOrderId = dataDynamic.orderId;
+
+                    // Hanya gunakan mode-iframe-doku jika DOKU mengirim checkoutUrl (bukan gambar QR murni)
+                    if (dataDynamic.checkoutUrl && dataDynamic.isRawQris === false) {
+                        qrHolder.className = 'qris-placeholder mode-iframe-doku';
+                        iframeDisplay.src = dataDynamic.checkoutUrl;
+                        iframeDisplay.style.display = 'block';
+                        loadingText.style.display = 'none';
+                    } else {
+                        qrHolder.className = 'qris-placeholder mode-gambar-normal';
                         imgDisplay.src = dataDynamic.qrImage;
                         imgDisplay.style.display = 'block';
                         loadingText.style.display = 'none';
-                        
-                        // Perbarui harga dengan nilai aktual dari Midtrans API jika diperlukan
-                        const finalAmount = dataDynamic.amount || sessionPrice;
-                        priceDisplay.innerText = `Rp ${finalAmount.toLocaleString('id-ID')}`;
-
-                        currentOrderId = dataDynamic.orderId;
-
-                        document.querySelector('#view-qris .btn-confirm').innerText = "⏳ Menunggu Pembayaran (Otomatis)...";
-                        document.querySelector('#view-qris .btn-confirm').style.background = "var(--bg-color)";
-                        document.querySelector('#view-qris .btn-confirm').style.pointerEvents = "none"; 
-                        
-                        autoCheckInterval = setInterval(checkUniversalStatus, 3000);
-
-                    } else {
-                        loadingText.innerText = "❌ Gagal Generate QR";
                     }
+                    
+                    if (autoCheckInterval) clearInterval(autoCheckInterval);
+                    autoCheckInterval = setInterval(checkUniversalStatus, 3000);
                 }
             } catch (err) {
                 console.error("Error Fetch QRIS:", err);
-                document.getElementById('qris-loading-text').innerHTML = `<span style='color:red;'>❌ Gagal Koneksi</span><br><br><span style='font-size:0.8rem;'>${err.message}</span>`;
+                loadingText.innerHTML = `
+                    <span style="color:#ef4444; font-weight:700;">❌ Gagal Memuat QRIS</span><br>
+                    <span style="font-size:0.78rem; color:#64748b; display:block; margin-top:6px;">${err.message}</span>
+                    <button class="btn-retry" onclick="muatQrisPembayaran()">🔄 Coba Lagi</button>
+                `;
             }
+        }
 
-            // --- PERBAIKAN: GANTI NAMA & LOGIKA MENJADI UNIVERSAL CHECKER ---
-            async function checkUniversalStatus() {
-                if (!currentOrderId) return;
-                try {
-                    const res = await fetch(`/api/payment/check-status/${currentOrderId}?t=${Date.now()}`);
-                    const data = await res.json();
-                    
-                    if (data.success && data.status === 'settlement') {
-                        clearInterval(autoCheckInterval); 
-                        document.querySelector('#view-qris .btn-confirm').innerText = "✅ Pembayaran Berhasil!";
-                        document.querySelector('#view-qris .btn-confirm').style.background = "var(--green)";
-                        prosesPembayaran('qris');
-                    }
-                    else if (data.success && (data.status === 'expire' || data.status === 'cancel')) {
-                        clearInterval(autoCheckInterval);
-                        alert("⚠️ Waktu pembayaran QRIS telah habis atau dibatalkan.");
-                        window.location.href = '/idle.html'; 
-                    }
-                } catch (e) {
-                    console.log("Polling error:", e);
+        async function checkUniversalStatus() {
+            if (!currentOrderId) return;
+            try {
+                const res = await fetch(`/api/payment/check-status/${currentOrderId}?t=${Date.now()}`);
+                const data = await res.json();
+                const st = (data.status || '').toString().toLowerCase();
+                
+                if (data.success && (st === 'settlement' || st === 'capture' || st === 'paid' || st === 'success')) {
+                    clearInterval(autoCheckInterval); 
+                    prosesPembayaran('qris');
                 }
+                else if (data.success && (st === 'expire' || st === 'cancel' || st === 'expired')) {
+                    clearInterval(autoCheckInterval);
+                    alert("⚠️ Waktu pembayaran QRIS telah habis atau dibatalkan.");
+                    window.location.href = '/idle.html'; 
+                }
+            } catch (e) {
+                console.log("Polling error:", e);
             }
-        };
+        }
         
         function pilihMetode(metode) {
             document.getElementById('card-qris').classList.remove('active');
-            document.getElementById('card-cash').classList.remove('active');
+            document.getElementById('card-voucher').classList.remove('active');
             document.getElementById('view-qris').style.display = 'none';
-            document.getElementById('view-cash').style.display = 'none';
+            document.getElementById('view-voucher').style.display = 'none';
+            tutupKeyboardVoucher();
 
             if (metode === 'qris') {
                 document.getElementById('card-qris').classList.add('active');
                 document.getElementById('view-qris').style.display = 'flex';
             } else {
-                document.getElementById('card-cash').classList.add('active');
-                document.getElementById('view-cash').style.display = 'flex';
+                document.getElementById('card-voucher').classList.add('active');
+                document.getElementById('view-voucher').style.display = 'flex';
             }
         }
 
         function prosesPembayaran(metode) {
             if (!eventMode) return alert("Error: Mode event tidak terdeteksi!");
+            if (autoCheckInterval) clearInterval(autoCheckInterval);
+            tutupKeyboardVoucher();
+            document.getElementById('teks-sukses-judul').innerText = "Pembayaran Berhasil!";
+            document.getElementById('teks-sukses-desc').innerText = "Membuka mesin kamera...";
             document.getElementById('loading-overlay').style.display = 'flex';
             setTimeout(() => {
                 window.location.href = `/${eventMode}.html`;
             }, 1500);
+        }
+
+        // Pintasan Keyboard Asisten: Tekan tombol 'Y' jika ingin bypass buka kamera saat darurat
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'y' || e.key === 'Y') {
+                prosesPembayaran('cash');
+            }
+        });
+
+        // =========================================================
+        // ⌨️ LOGIKA KEYBOARD VOUCHER FLOATING & DRAG ANTI-LONCAT
+        // =========================================================
+        let inputVoucherBuffer = "";
+        const voucherKeyboard = document.getElementById('virtual-keyboard-voucher');
+        const keyboardHandle = document.getElementById('keyboard-drag-handle');
+        
+        function renderTeksInputVoucher() {
+            const box = document.getElementById('voucher-input');
+            if (inputVoucherBuffer.length === 0) {
+                box.innerHTML = `<span style="color: #94a3b8; font-size: 1rem; font-weight: 500; letter-spacing: 0; text-transform: none;">Ketuk untuk mengetik kode...</span>`;
+            } else {
+                box.innerText = inputVoucherBuffer;
+            }
+        }
+
+       function tampilkanKeyboardVoucher() {
+            voucherKeyboard.style.display = 'flex';
+            const inputBox = document.getElementById('voucher-input');
+            const rect = inputBox.getBoundingClientRect();
+            const kbWidth = voucherKeyboard.offsetWidth || 560;
+            const kbHeight = voucherKeyboard.offsetHeight || 290;
+
+            // Posisikan horizontal tepat di tengah kotak input (atau tengah layar jika mepet)
+            let targetLeft = Math.round(rect.left + (rect.width / 2) - (kbWidth / 2));
+            targetLeft = Math.max(15, Math.min(window.innerWidth - kbWidth - 15, targetLeft));
+
+            // Posisikan vertikal 15px DI BAWAH kotak input agar kolom voucher sama sekali tidak tertutup!
+            let targetTop = Math.round(rect.bottom + 15);
+            // Jika layar kurang tinggi sehingga bagian bawah keyboard terpotong, taruh di sisi kiri layar
+            if (targetTop + kbHeight > window.innerHeight - 10) {
+                targetTop = Math.max(15, window.innerHeight - kbHeight - 15);
+                targetLeft = Math.max(20, Math.round(rect.left - kbWidth - 20)); // Geser ke sebelah kiri kolom voucher
+            }
+
+            voucherKeyboard.style.left = targetLeft + 'px';
+            voucherKeyboard.style.top = targetTop + 'px';
+        }
+        function tutupKeyboardVoucher() {
+            voucherKeyboard.style.display = 'none';
+        }
+
+        function ketikVoucher(huruf) {
+            if (inputVoucherBuffer.length < 20) { // Diperbesar hingga 20 karakter
+                inputVoucherBuffer += huruf;
+                renderTeksInputVoucher();
+            }
+        }
+
+        function hapusVoucher() {
+            inputVoucherBuffer = inputVoucherBuffer.slice(0, -1);
+            renderTeksInputVoucher();
+        }
+
+        // Fungsi Drag Keyboard (Menggunakan Piksel Murni)
+        let isDraggingKB = false, startXKB = 0, startYKB = 0, initialLeftKB = 0, initialTopKB = 0;
+        if (keyboardHandle) {
+            keyboardHandle.addEventListener('mousedown', startDragKB);
+            keyboardHandle.addEventListener('touchstart', startDragKB, {passive: false});
+        }
+        function startDragKB(e) {
+            isDraggingKB = true;
+            if (e.type === 'touchstart') { 
+                startXKB = e.touches[0].clientX; 
+                startYKB = e.touches[0].clientY; 
+            } else { 
+                startXKB = e.clientX; 
+                startYKB = e.clientY; 
+            }
+            initialLeftKB = voucherKeyboard.offsetLeft;
+            initialTopKB = voucherKeyboard.offsetTop;
+
+            document.addEventListener('mousemove', dragKB); 
+            document.addEventListener('touchmove', dragKB, {passive: false});
+            document.addEventListener('mouseup', endDragKB); 
+            document.addEventListener('touchend', endDragKB);
+        }
+        function dragKB(e) {
+            if (!isDraggingKB) return; 
+            e.preventDefault();
+            let currentX = (e.type === 'touchmove') ? e.touches[0].clientX : e.clientX;
+            let currentY = (e.type === 'touchmove') ? e.touches[0].clientY : e.clientY;
+
+            voucherKeyboard.style.left = (initialLeftKB + (currentX - startXKB)) + 'px';
+            voucherKeyboard.style.top = (initialTopKB + (currentY - startYKB)) + 'px';
+        }
+        function endDragKB() {
+            isDraggingKB = false;
+            document.removeEventListener('mousemove', dragKB); 
+            document.removeEventListener('touchmove', dragKB);
+            document.removeEventListener('mouseup', endDragKB); 
+            document.removeEventListener('touchend', endDragKB);
+        }
+
+        async function prosesVoucher() {
+            if (inputVoucherBuffer.length === 0) return alert("Masukkan kode voucher terlebih dahulu!");
+            
+            const btnTukar = document.getElementById('btn-tukar-voucher');
+            btnTukar.innerText = "⏳ Memvalidasi..."; 
+            btnTukar.disabled = true;
+            tutupKeyboardVoucher();
+
+            try {
+                const res = await fetch('/api/validate-voucher', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code: inputVoucherBuffer, expectedType: 'voucher' })
+});
+const data = await res.json();
+if (!data.success) {
+    alert("❌ " + data.message);
+    btnTukar.innerText = "🎟️ Tukar & Buka Kamera ›";
+    btnTukar.disabled = false;
+    return;
+}
+// Jika sukses, jalankan animasi buka kamera
+document.getElementById('teks-sukses-judul').innerText = "Voucher Berhasil Diklaim!";
+document.getElementById('teks-sukses-desc').innerText = "Membuka mesin kamera...";
+document.getElementById('loading-overlay').style.display = 'flex';
+setTimeout(() => { window.location.href = `/${eventMode}.html`; }, 1500);
+
+            } catch (err) {
+                alert("Gagal memvalidasi voucher.");
+                btnTukar.innerText = "🎟️ Tukar & Buka Kamera ›"; 
+                btnTukar.disabled = false;
+            }
         }
     </script>
 </body>

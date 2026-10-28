@@ -52,22 +52,165 @@
             font-size: 0.75rem; text-transform: uppercase; color: var(--ink); opacity: 0.5; font-weight: 700; margin: 25px 25px 10px 25px; letter-spacing: 1px; 
         }
 
-        /* === PENYESUAIAN KHUSUS DARK ELEGANCE === */
-        /* Kode di bawah ini hanya aktif jika body memiliki class 'theme-dark' */
+        /* ========================================================= */
+        /* 🌸 TEMA OPSI 2: SOFT DUSTY PINK PASTEL (GAYA COLLAGE UI)  */
+        /* ========================================================= */
+        body.theme-dark {
+            --bg-color: #fdf8f9;
+            --paper-white: #ffffff;
+            --ink: #1e293b;
+            --dot-color: #f2dce2;
+            --pink: #fceef2;
+            --blue: #f5d0dc;
+            --yellow: #fdf2f8;
+            --green: #dcfce7;
+            --doodle-border: 2px solid #f5d0dc;
+            --doodle-radius: 26px;
+            background-color: #fdf8f9 !important;
+            background-image: radial-gradient(#f2dce2 1.5px, transparent 1.5px) !important;
+            background-size: 35px 35px !important;
+            color: #1e293b !important;
+        }
+
+        /* Sidebar Pastel Blush */
         .theme-dark .sidebar {
-            background-color: #1e293b; /* Warna gelap navy elegan */
-            border-right: 2px solid #334155;
+            background-color: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-right: 2px solid #f5d0dc;
+            box-shadow: 10px 0 30px rgba(219, 112, 147, 0.08);
         }
-        .theme-dark .sidebar-header { border-bottom-color: #334155; }
-        .theme-dark .nav-item { color: #cbd5e1; opacity: 1; }
-        .theme-dark .nav-item:hover { background-color: #334155; color: #ffffff; }
-        .theme-dark .nav-item.active { 
-            background-color: #38bdf8; /* Biru terang neon khas dark mode */
-            color: #0f172a; /* Teks gelap navy agar kontras dan mudah dibaca */
-            box-shadow: 4px 4px 0px #0284c7;
+        .theme-dark .sidebar-header {
+            border-bottom: 2px dashed #f5d0dc;
         }
-        .theme-dark .badge-admin { background: #38bdf8; color: #0f172a; }
-        .theme-dark .nav-label { color: #94a3b8; }
+        .theme-dark .sidebar-header h1 {
+            color: #9e4261;
+        }
+        .theme-dark .badge-admin {
+            background: linear-gradient(135deg, #ec9ab5, #db7093);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(219, 112, 147, 0.25);
+        }
+        .theme-dark .nav-label {
+            color: #c2597c;
+            opacity: 0.85;
+        }
+        .theme-dark .nav-item {
+            color: #475569;
+            border-radius: 16px;
+            opacity: 0.85;
+            transition: all 0.25s ease;
+        }
+        .theme-dark .nav-item:hover {
+            background-color: #fdf8f9;
+            color: #9e4261;
+            opacity: 1;
+            transform: translateX(5px);
+        }
+        .theme-dark .nav-item.active {
+            background: #fceef2;
+            color: #9e4261;
+            border: 2px solid #f5d0dc;
+            box-shadow: 0 8px 20px rgba(219, 112, 147, 0.15);
+            transform: translateX(8px);
+        }
+
+        /* Kartu & Header Pastel (Tanpa Garis Hitam Kasar) */
+        .theme-dark .top-bar h2 {
+            font-family: 'Fredoka', sans-serif;
+            font-size: 2.3rem;
+            color: #1e293b;
+        }
+        .theme-dark .card {
+            background: #ffffff;
+            border: 2px solid #f5d0dc !important;
+            border-radius: 26px;
+            box-shadow: 0 12px 30px rgba(219, 112, 147, 0.1) !important;
+        }
+        .theme-dark .card-header {
+            border-bottom: 2px dashed #f5d0dc !important;
+            color: #9e4261;
+        }
+
+        /* Input, Select, Textarea Pastel */
+        .theme-dark .form-group input,
+        .theme-dark .form-group select,
+        .theme-dark .form-group textarea {
+            border: 2px solid #f5d0dc !important;
+            border-radius: 14px;
+            background: #ffffff;
+            color: #1e293b;
+            box-shadow: 0 2px 6px rgba(219, 112, 147, 0.04);
+        }
+        .theme-dark .form-group input:focus,
+        .theme-dark .form-group select:focus,
+        .theme-dark .form-group textarea:focus {
+            border-color: #db7093 !important;
+            box-shadow: 0 0 0 4px rgba(219, 112, 147, 0.15) !important;
+            background: #fdf8f9;
+        }
+
+        /* Tombol Utama Gradasi Dusty Pink */
+        .theme-dark .btn-primary {
+            background: linear-gradient(135deg, #ec9ab5, #db7093) !important;
+            color: #ffffff !important;
+            border: none !important;
+            box-shadow: 0 6px 15px rgba(219, 112, 147, 0.28) !important;
+        }
+        .theme-dark .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 22px rgba(219, 112, 147, 0.38) !important;
+        }
+
+        /* Tabel, Guide Box, & Tombol Back */
+        .theme-dark .report-table {
+            border: 2px solid #f5d0dc;
+            border-radius: 16px;
+            box-shadow: 0 8px 20px rgba(219, 112, 147, 0.06);
+        }
+        .theme-dark .report-table th,
+        .theme-dark .report-table td {
+            border: 1px solid #f8edf0;
+        }
+        .theme-dark .report-table th {
+            background: #fceef2;
+            color: #9e4261;
+        }
+        .theme-dark .guide-box {
+            background: #fdf8f9 !important;
+            border: 2px dashed #eeb4c7 !important;
+            border-radius: 16px;
+            color: #475569;
+        }
+        .theme-dark .layout-box {
+            background: #fdf8f9;
+            border: 2px dashed #eeb4c7;
+        }
+        .theme-dark .mode-btn {
+            border: 2px solid #f5d0dc;
+            border-radius: 18px;
+        }
+        .theme-dark .mode-btn.active {
+            background: #fceef2 !important;
+            color: #9e4261 !important;
+            border-color: #db7093 !important;
+            box-shadow: 0 8px 20px rgba(219, 112, 147, 0.15);
+        }
+        .theme-dark .btn-floating-back {
+            background: #ffffff;
+            color: #9e4261;
+            border: 2px solid #f5d0dc;
+            box-shadow: 0 8px 20px rgba(219, 112, 147, 0.2);
+        }
+        .theme-dark .btn-floating-back:hover {
+            background: #fceef2;
+            border-color: #db7093;
+            color: #9e4261;
+            box-shadow: 0 12px 25px rgba(219, 112, 147, 0.3);
+        }
+        .theme-dark .modal-content {
+            border: 2px solid #f5d0dc;
+            box-shadow: 0 20px 50px rgba(219, 112, 147, 0.22);
+        }
         /* === EDITOR TEMPLATE (SEJAJAR KIRI KANAN) === */
         .editor-row { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; align-items: start; margin-bottom: 20px; }
         @media (max-width: 900px) { .editor-row { grid-template-columns: 1fr; } }
@@ -241,6 +384,7 @@
             <a class="nav-item" onclick="bukaTab('tab-gdrive', this)"><span>☁️</span> Setelan G-Drive</a>
             <a class="nav-item" onclick="bukaTab('tab-whatsapp', this)"><span>🤖</span> Bot WhatsApp</a>
             <a class="nav-item" onclick="bukaTab('tab-qris', this)"><span>💳</span> QRIS Toko</a>
+            <a class="nav-item" onclick="bukaTab('tab-voucher', this)"><span>🎟️</span> Voucher & Diskon</a>
         </nav>
 
         <div class="nav-label">Manajemen Data</div>
@@ -542,33 +686,39 @@
                         </label>
                         <div style="display: flex; align-items: center; background: #fff; border: 2px solid var(--ink); border-radius: 10px; overflow: hidden;">
                             <button type="button" onclick="stepExposure('sys-canonTv', -1)" style="padding: 10px 18px; font-size: 1.2rem; font-weight: bold; background: var(--pink); border:none; border-right: 2px solid var(--ink); cursor: pointer;">-</button>
-                            <select id="sys-canonTv" style="flex: 1; border: none; outline: none; font-weight: bold; text-align: center; text-align-last: center; appearance: none; background: transparent; padding: 10px; font-size: 1rem;" onchange="tembakKameraSilent()">
+                          <select id="sys-canonTv" style="flex: 1; border: none; outline: none; font-weight: bold; text-align: center; text-align-last: center; appearance: none; background: transparent; padding: 10px; font-size: 1rem;" onchange="tembakKameraSilent()">
                                 <option value="auto">Auto</option>
-                                <option value="40">1/15</option>
-                                <option value="43">1/20</option>
-                                <option value="45">1/25</option>
-                                <option value="48">1/30</option>
-                                <option value="4b">1/40</option>
-                                <option value="4d">1/50</option>
-                                <option value="50">1/60</option>
-                                <option value="53">1/80</option>
-                                <option value="55">1/100</option>
-                                <option value="58">1/125</option>
-                                <option value="5b">1/160</option>
-                                <option value="5d">1/200</option>
-                                <option value="60">1/250</option>
-                                <option value="63">1/320</option>
-                                <option value="65">1/400</option>
-                                <option value="68">1/500</option>
-                                <option value="6b">1/640</option>
-                                <option value="6d">1/800</option>
-                                <option value="70">1/1000</option>
-                                <option value="73">1/1250</option>
-                                <option value="75">1/1600</option>
-                                <option value="78">1/2000</option>
-                                <option value="7b">1/2500</option>
-                                <option value="7d">1/3200</option>
-                                <option value="80">1/4000</option>
+                                <option value="48">1/4</option>
+                                <option value="4b">1/5</option>
+                                <option value="4d">1/6</option>
+                                <option value="50">1/8</option>
+                                <option value="53">1/10</option>
+                                <option value="55">1/13</option>
+                                <option value="58">1/15</option>
+                                <option value="5b">1/20</option>
+                                <option value="5d">1/25</option>
+                                <option value="60">1/30</option>
+                                <option value="63">1/40</option>
+                                <option value="65">1/50</option>
+                                <option value="68">1/60</option>
+                                <option value="6b">1/80</option>
+                                <option value="6d">1/100</option>
+                                <option value="70">1/125</option>
+                                <option value="73">1/160</option>
+                                <option value="75">1/200</option>
+                                <option value="78">1/250</option>
+                                <option value="7b">1/320</option>
+                                <option value="7d">1/400</option>
+                                <option value="80">1/500</option>
+                                <option value="83">1/640</option>
+                                <option value="85">1/800</option>
+                                <option value="88">1/1000</option>
+                                <option value="8b">1/1250</option>
+                                <option value="8d">1/1600</option>
+                                <option value="90">1/2000</option>
+                                <option value="93">1/2500</option>
+                                <option value="95">1/3200</option>
+                                <option value="98">1/4000</option>
                             </select>
                             <button type="button" onclick="stepExposure('sys-canonTv', 1)" style="padding: 10px 18px; font-size: 1.2rem; font-weight: bold; background: var(--green); border:none; border-left: 2px solid var(--ink); cursor: pointer;">+</button>
                         </div>
@@ -617,7 +767,7 @@
         <div id="tab-tema" class="tab-panel">
             <div class="top-bar">
                 <h2>Tema & Tampilan 🎨</h2>
-                <p class="tab-desc">Sesuaikan desain User Interface (UI) photobooth yang dilihat oleh pelanggan.</p>
+                <p class="tab-desc">Sesuaikan desain User Interface (UI) serta pilih gaya tampilan layar utama (Touch to Start).</p>
             </div>
             <div class="grid-3">
                 <div class="card theme-card" id="card-theme-pop-art" style="text-align: center;">
@@ -627,9 +777,9 @@
                 </div>
 
                 <div class="card theme-card" id="card-theme-dark" style="text-align: center;">
-                    <div style="background: #171717; height: 100px; border-radius: 10px; margin-bottom: 15px; display:flex; align-items:center; justify-content:center; color: white; font-weight: bold;">Dark Elegance</div>
-                    <h3 style="margin-bottom: 10px;">Dark Elegance</h3>
-                    <button class="btn-primary btn-theme" id="btn-theme-dark" onclick="ubahTema('theme-dark')" style="background: var(--ink); color: white;">Pilih Tema</button>
+                    <div style="background: #fdf8f9; background-image: radial-gradient(#f2dce2 1.5px, transparent 1.5px); background-size: 18px 18px; height: 100px; border-radius: 16px; border: 2px solid #f5d0dc; margin-bottom: 15px; display:flex; align-items:center; justify-content:center; color: #9e4261; font-weight: 700; box-shadow: inset 0 4px 10px rgba(219, 112, 147, 0.1);">🌸 Blush Pastel</div>
+                    <h3 style="margin-bottom: 10px; color: #9e4261;">Blush Pink Pastel</h3>
+                    <button class="btn-primary btn-theme" id="btn-theme-dark" onclick="ubahTema('theme-dark')" style="background: linear-gradient(135deg, #ec9ab5, #db7093); color: white; border: none;">Pilih Tema</button>
                 </div>
 
                 <div class="card theme-card" id="card-theme-minimalist" style="text-align: center;">
@@ -638,9 +788,50 @@
                     <button class="btn-primary btn-theme" id="btn-theme-minimalist" onclick="ubahTema('theme-minimalist')" style="background: var(--ink); color: white;">Pilih Tema</button>
                 </div>
             </div>
-            
+
+            <!-- PILIHAN 3 GAYA BAWAAN IDLE SCREEN (TOUCH TO START) -->
             <div class="card" style="margin-top: 30px;">
-                <div class="card-header">📺 Custom Layar Utama (Touch to Start)</div>
+                <div class="card-header">✨ Pilih Gaya Bawaan Layar Utama (Idle Screen)</div>
+                <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 18px;">Pilih salah satu dari 3 desain interaktif bawaan di bawah ini jika Anda tidak menggunakan gambar/video custom.</p>
+                
+                <div class="grid-3" style="margin-bottom: 0;">
+                    <!-- OPSI 1: CLEAN FLOATING MINIMALIST -->
+                    <div class="card idle-preset-card" id="card-idle-style-1" style="text-align: center; padding: 18px;">
+                        <div style="background: radial-gradient(circle at 20% 20%, #fdf2f4, #eefaf9); height: 95px; border-radius: 14px; border: 2px solid #e2e8f0; margin-bottom: 12px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;">
+                            <span style="font-size: 1.5rem;">📸</span>
+                            <span style="font-size: 0.8rem; font-weight: 700; color: #42464d;">Clean Floating (Tanpa Box)</span>
+                        </div>
+                        <h4 style="margin-bottom: 6px;">1. Clean Floating</h4>
+                        <p style="font-size: 0.78rem; color: #64748b; margin-bottom: 12px;">Tanpa kotak pembungkus, ornamen pastel bebas terlihat & logo minimalis.</p>
+                        <button type="button" class="btn-primary btn-idle-preset" id="btn-idle-style-1" onclick="ubahIdlePreset('style-1')">Gunakan Gaya 1</button>
+                    </div>
+
+                    <!-- OPSI 2: AURORA GLASSMORPHISM -->
+                    <div class="card idle-preset-card" id="card-idle-style-2" style="text-align: center; padding: 18px;">
+                        <div style="background: linear-gradient(135deg, #fce7f3, #e0e7ff, #ccfbf1); height: 95px; border-radius: 14px; border: 2px solid #ffffff; margin-bottom: 12px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; box-shadow: inset 0 0 15px rgba(255,255,255,0.8);">
+                            <span style="font-size: 1.5rem;">🫧</span>
+                            <span style="font-size: 0.8rem; font-weight: 700; color: #42464d;">Aurora Glassmorphism</span>
+                        </div>
+                        <h4 style="margin-bottom: 6px;">2. Glassmorphism</h4>
+                        <p style="font-size: 0.78rem; color: #64748b; margin-bottom: 12px;">Efek kaca buram elegan dengan bola-bola gradien & cincin lensa mengambang.</p>
+                        <button type="button" class="btn-primary btn-idle-preset" id="btn-idle-style-2" onclick="ubahIdlePreset('style-2')">Gunakan Gaya 2</button>
+                    </div>
+
+                    <!-- OPSI 3: MINIMALIST DOODLE CHARACTERS -->
+                    <div class="card idle-preset-card" id="card-idle-style-3" style="text-align: center; padding: 18px;">
+                        <div style="background: #fffdf9; height: 95px; border-radius: 14px; border: 2px dashed #42464d; margin-bottom: 12px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;">
+                            <span style="font-size: 1.5rem;">🎨</span>
+                            <span style="font-size: 0.8rem; font-weight: 700; color: #42464d;">Doodle Characters</span>
+                        </div>
+                        <h4 style="margin-bottom: 6px;">3. Doodle Art</h4>
+                        <p style="font-size: 0.78rem; color: #64748b; margin-bottom: 12px;">Gaya sketsa minimalis dengan karakter doodle menggemaskan di bagian bawah.</p>
+                        <button type="button" class="btn-primary btn-idle-preset" id="btn-idle-style-3" onclick="ubahIdlePreset('style-3')">Gunakan Gaya 3</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card" style="margin-top: 25px;">
+                <div class="card-header">📺 Upload Custom Layar Utama (Gambar / Video Sendiri)</div>
                 <div class="guide-box" style="background: var(--pink); border-color: var(--ink);">
                     <h4>⚠️ Panduan Resolusi & Format (Wajib!):</h4>
                     <ul style="font-size: 0.85rem;">
@@ -651,7 +842,7 @@
 
                 <div style="background: var(--bg-color); padding: 15px; border: 2px dashed var(--ink); border-radius: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                     <p style="font-weight: bold; font-size: 0.95rem; margin: 0; color: var(--ink);">Status Saat Ini: <span id="status-idle-screen" style="color: #666; font-weight: normal;">Bawaan Tema (Default)</span></p>
-                    <button type="button" onclick="resetIdleScreen()" class="btn-primary" style="background: #ef4444; color: white; width: auto; padding: 6px 15px; font-size: 0.85rem; border-radius: 10px;">🗑️ Hapus & Gunakan Bawaan</button>
+                    <button type="button" onclick="resetIdleScreen()" class="btn-primary" style="background: #ef4444; color: white; width: auto; padding: 6px 15px; font-size: 0.85rem; border-radius: 10px;">🗑️ Hapus Custom & Gunakan Bawaan</button>
                 </div>
 
                 <form id="formIdleScreen">
@@ -659,7 +850,7 @@
                         <label>Upload File Layar Utama (JPG / PNG / MP4)</label>
                         <input type="file" id="fileIdleScreen" accept="image/jpeg, image/png, video/mp4" required>
                     </div>
-                    <button type="submit" class="btn-primary" style="background: var(--blue); color: var(--ink);">📤 Unggah & Terapkan Layar</button>
+                    <button type="submit" class="btn-primary" style="background: var(--blue); color: var(--ink);">📤 Unggah & Terapkan Layar Custom</button>
                 </form>
             </div>
         </div>
@@ -1054,6 +1245,109 @@
             </div>
         </div>
         <!-- END TAB QRIS BARU -->
+         <!-- TAB BARU: VOUCHER & DISKON MASSAL -->
+        <div id="tab-voucher" class="tab-panel">
+            <div class="top-bar">
+                <h2>Voucher & Diskon Massal 🎟️</h2>
+                <p class="tab-desc">Kelola popup diskon di layar awal, cetak kode voucher gratis maupun kupon potongan harga secara massal (CSV).</p>
+            </div>
+
+            <!-- SAKLAR ON/OFF POPUP DISKON DI LAYAR IDLE -->
+            <div class="card" style="margin-bottom: 25px; border: 3px solid var(--ink); background: var(--yellow);">
+                <div class="card-header" style="border-bottom-color: var(--ink);">
+                    <span>⚙️ Status Popup Diskon (Layar Touch to Start)</span>
+                </div>
+                <p style="font-size: 0.9rem; margin-bottom: 15px; font-weight: 500;">
+                    Jika diaktifkan (ON), pengunjung pada mode berbayar akan ditanya <b>"Punya Kode Diskon?"</b> terlebih dahulu sebelum masuk ke halaman pembayaran QRIS. Jika dimatikan (OFF), pengunjung langsung masuk ke halaman pembayaran.
+                </p>
+                <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                    <select id="sys-discountEnabled" style="flex: 1; min-width: 240px; font-weight: bold; font-size: 1.05rem; padding: 12px; border: 2px solid var(--ink); border-radius: 12px; background: #fff;">
+                        <option value="false">🔴 OFF (Langsung ke Layar Pembayaran)</option>
+                        <option value="true">🟢 ON (Tampilkan Popup Input Diskon di Awal)</option>
+                    </select>
+                    <button type="button" class="btn-primary" style="width: auto; padding: 12px 28px; background: var(--ink); color: white;" onclick="simpanPengaturan()">💾 Simpan Status Diskon</button>
+                </div>
+            </div>
+
+            <!-- GENERATOR MASSAL: VOUCHER (KIRI) & DISKON (KANAN) -->
+            <div class="grid-2">
+                <!-- KARTU 1: GENERATE VOUCHER GRATIS 100% -->
+                <div class="card" style="border: 3px solid var(--ink); background: var(--paper-white);">
+                    <div class="card-header" style="border-bottom-color: var(--ink);">
+                        <span>🎟️ Generate Voucher Sesi (Gratis 100%)</span>
+                        <span style="background: var(--pink); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; border: 2px solid var(--ink);">Tiket Masuk</span>
+                    </div>
+                    <p style="font-size: 0.85rem; color: #555; margin-bottom: 15px;">
+                        Digunakan di halaman Pembayaran (Tab <b>Tukar Voucher</b>). Tamu yang memasukkan kode ini langsung masuk ke kamera tanpa membayar QRIS.
+                    </p>
+                    <div class="form-group">
+                        <label>Nama Awalan (Prefix) Voucher:</label>
+                        <input type="text" id="vch-prefix" placeholder="Contoh: VIP- atau WEDDING-" value="VIP-" style="text-transform: uppercase; font-weight: bold;">
+                    </div>
+                    <div class="form-group">
+                        <label>Jumlah Voucher yang Ingin Dibuat:</label>
+                        <input type="number" id="vch-count" placeholder="Contoh: 100" value="50" min="1" max="5000" style="font-weight: bold;">
+                    </div>
+                    <button type="button" class="btn-primary" style="background: var(--blue); color: var(--ink);" onclick="generateBulkCodes('voucher')">
+                        ⚡ Generate & Download CSV Voucher
+                    </button>
+                </div>
+
+                <!-- KARTU 2: GENERATE KUPON DISKON POTONGAN HARGA -->
+                <div class="card" style="border: 3px solid var(--ink); background: var(--paper-white);">
+                    <div class="card-header" style="border-bottom-color: var(--ink);">
+                        <span>🏷️ Generate Kupon Diskon (Potongan Rp)</span>
+                        <span style="background: var(--green); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; border: 2px solid var(--ink);">Potong Harga QRIS</span>
+                    </div>
+                    <p style="font-size: 0.85rem; color: #555; margin-bottom: 15px;">
+                        Digunakan saat popup diskon menyala setelah layar <i>Touch to Start</i>. Memotong nominal tagihan QRIS Dinamis sesuai angka rupiah di bawah.
+                    </p>
+                    <div class="form-group">
+                        <label>Nama Awalan (Prefix) Diskon:</label>
+                        <input type="text" id="dsc-prefix" placeholder="Contoh: PROMO- atauHEMAT-" value="PROMO-" style="text-transform: uppercase; font-weight: bold;">
+                    </div>
+                    <div style="display: flex; gap: 12px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label>Jumlah Kupon:</label>
+                            <input type="number" id="dsc-count" placeholder="50" value="50" min="1" max="5000" style="font-weight: bold;">
+                        </div>
+                        <div class="form-group" style="flex: 1.4;">
+                            <label>Nominal Potongan (Rp):</label>
+                            <input type="number" id="dsc-amount" placeholder="Contoh: 10000" value="10000" min="500" style="font-weight: bold; color: #16a34a;">
+                        </div>
+                    </div>
+                    <button type="button" class="btn-primary" style="background: var(--green); color: var(--ink);" onclick="generateBulkCodes('discount')">
+                        ⚡ Generate & Download CSV Diskon
+                    </button>
+                </div>
+            </div>
+
+            <!-- DAFTAR & RINGKASAN STOK VOUCHER / DISKON AKTIF -->
+            <div class="card">
+                <div class="card-header">
+                    <span>📋 Stok Kode Aktif di Sistem (<span id="total-vouchers-count">0</span> Kode Tersedia)</span>
+                    <div style="display: flex; gap: 8px;">
+                        <button type="button" onclick="downloadActiveCodesCSV()" style="background: var(--yellow); border: 2px solid var(--ink); padding: 6px 14px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 0.8rem;">📥 Export Semua yang Belum Terpakai (CSV)</button>
+                        <button type="button" onclick="hapusSemuaVoucher()" style="background: #ef4444; color: white; border: 2px solid var(--ink); padding: 6px 14px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 0.8rem;">🗑️ Hapus Semua</button>
+                    </div>
+                </div>
+                <div style="max-height: 320px; overflow-y: auto;">
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th>Kode</th>
+                                <th>Tipe</th>
+                                <th>Nilai Potongan</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-vouchers-body">
+                            <tr><td colspan="4" style="text-align: center;">Memuat daftar voucher...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
 
         <!-- TAB ANALITIK -->
         <div id="tab-analytic" class="tab-panel">
@@ -1202,7 +1496,7 @@
         function togglePinInput() {
     document.getElementById('pin-input-container').style.display = document.getElementById('sys-usePin').checked ? 'block' : 'none';
 }
-        // MENGUBAH TEMA
+      // MENGUBAH TEMA
         async function ubahTema(namaTema) {
             const btn = document.getElementById(`btn-${namaTema}`);
             btn.innerText = "⏳ Menyimpan...";
@@ -1226,8 +1520,8 @@
 
         function perbaruiTombolTema(temaAktif) {
             document.querySelectorAll('.theme-card').forEach(card => {
-                card.style.border = 'var(--doodle-border)';
-                card.style.opacity = '0.6';
+                card.style.border = (temaAktif === 'theme-dark') ? '2px solid #f5d0dc' : 'var(--doodle-border)';
+                card.style.opacity = '0.65';
             });
             document.querySelectorAll('.btn-theme').forEach(btn => {
                 btn.innerText = 'Pilih Tema';
@@ -1238,12 +1532,53 @@
             const cardAktif = document.getElementById(`card-${temaAktif}`);
             const btnAktif = document.getElementById(`btn-${temaAktif}`);
             if (cardAktif && btnAktif) {
-                cardAktif.style.border = '4px solid var(--blue)';
+                cardAktif.style.border = (temaAktif === 'theme-dark') ? '3px solid #db7093' : '4px solid var(--blue)';
                 cardAktif.style.opacity = '1';
                 btnAktif.innerText = '✅ Sedang Digunakan';
                 btnAktif.disabled = true;
-                btnAktif.style.background = 'var(--blue)';
-                btnAktif.style.color = 'var(--ink)';
+                btnAktif.style.background = (temaAktif === 'theme-dark') ? '#fceef2' : 'var(--blue)';
+                btnAktif.style.color = (temaAktif === 'theme-dark') ? '#9e4261' : 'var(--ink)';
+            }
+        }
+        async function ubahIdlePreset(namaPreset) {
+            try {
+                const res = await fetch('/api/settings?t=' + Date.now());
+                const data = await res.json();
+                if (!data.global) data.global = {};
+                data.global.idlePreset = namaPreset;
+                // Matikan customIdleScreen agar preset bawaan langsung aktif terlihat
+                data.global.customIdleScreen = null;
+
+                await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const statusIdle = document.getElementById('status-idle-screen');
+                if (statusIdle) statusIdle.innerHTML = `Bawaan Tema (${namaPreset.toUpperCase()})`;
+                perbaruiTombolIdlePreset(namaPreset);
+                alert(`✅ Gaya Idle Screen berhasil diubah ke ${namaPreset.toUpperCase()}!`);
+            } catch (e) {
+                alert("❌ Gagal mengubah gaya Idle Screen.");
+            }
+        }
+
+        function perbaruiTombolIdlePreset(presetAktif = 'style-1') {
+            document.querySelectorAll('.idle-preset-card').forEach(c => {
+                c.style.opacity = '0.65';
+                c.style.border = '2px solid #e2e8f0';
+            });
+            document.querySelectorAll('.btn-idle-preset').forEach((b, i) => {
+                b.innerText = `Gunakan Gaya ${i + 1}`;
+                b.disabled = false;
+            });
+            const card = document.getElementById(`card-idle-${presetAktif}`);
+            const btn = document.getElementById(`btn-idle-${presetAktif}`);
+            if (card && btn) {
+                card.style.opacity = '1';
+                card.style.border = '3px solid #76cbc4';
+                btn.innerText = '✅ Sedang Aktif';
+                btn.disabled = true;
             }
         }
 
@@ -1257,6 +1592,7 @@
             element.classList.add('active');
             tutupSidebarMobile();
             if(id === 'tab-analytic') loadAnalyticData();
+            if(id === 'tab-voucher') loadVouchersData();
         }
         // === FUNGSI PERINGATAN MODE POTRET ===
         function cekPeringatanPotret(nilai, isManualChange = false) {
@@ -1321,50 +1657,34 @@
             tembakKameraSilent(); // Eksekusi diam-diam
         }
 
-        function tembakKameraSilent() {
+        async function tembakKameraSilent(showAlert = false) {
             const iso = document.getElementById('sys-canonIso').value;
             const tv = document.getElementById('sys-canonTv').value;
             const av = document.getElementById('sys-canonAv').value;
             
-            fetch('/api/camera-exposure', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ iso, tv, av })
-            }).catch(e => console.error(e));
+            try {
+                const res = await fetch('/api/camera-exposure', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ iso, tv, av })
+                });
+                const data = await res.json();
+                if (showAlert) {
+                    if (data.success && !data.debug) {
+                        alert("✅ Setelan Exposure berhasil diterapkan ke Kamera Canon!");
+                    } else if (data.success && data.debug) {
+                        alert(`⚠️ Sebagian setelan ditolak kamera (${data.debug}).\nPastikan putaran mode di atas bodi kamera berada di posisi M (Manual).`);
+                    } else {
+                        alert("❌ " + (data.message || "Kamera belum terhubung."));
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+            }
         }
-        // --- FUNGSI MENGUBAH LABEL PAYMENT GATEWAY SECARA DINAMIS ---
-function updateLabelGateway() {
-    const gateway = document.getElementById('sys-paymentGateway').value;
-    const label1 = document.getElementById('label-key-1');
-    const label2 = document.getElementById('label-key-2');
-    const wrap3 = document.getElementById('wrapper-key-3');
-    const label3 = document.getElementById('label-key-3');
-
-    // Reset kolom ketiga agar tersembunyi
-    wrap3.style.display = 'none';
-
-    if (gateway === 'midtrans' || gateway === 'gobiz') {
-        label1.innerText = 'Server Key:';
-        label2.innerText = 'Client Key:';
-    } else if (gateway === 'xendit') {
-        label1.innerText = 'Secret API Key:';
-        label2.innerText = 'Public API Key:';
-    } else if (gateway === 'tripay') {
-        label1.innerText = 'API Key:';
-        label2.innerText = 'Merchant Code:';
-        wrap3.style.display = 'block'; // Tampilkan kolom ketiga khusus Tripay
-        label3.innerText = 'Private Key:';
-    } else if (gateway === 'duitku') {
-        label1.innerText = 'API Key:';
-        label2.innerText = 'Merchant Code:';
-    } else if (gateway === 'doku') {
-        label1.innerText = 'Secret Key:';
-        label2.innerText = 'Client ID:';
-    }
-}
 
         async function simpanDanTerapkanExposure() {
-            tembakKameraSilent();
+            await tembakKameraSilent(true);
             await simpanPengaturan(); 
         }
 
@@ -1378,13 +1698,27 @@ function updateLabelGateway() {
                     let isoDitemukan = false, tvDitemukan = false, avDitemukan = false;
                     
                     const setSelect = (id, valHex) => {
-                        if (!valHex || valHex === "auto" || valHex === "0") return false;
+                        if (!valHex || valHex === "auto" || valHex === "0") {
+                            document.getElementById(id).value = "auto";
+                            return true;
+                        }
                         const sel = document.getElementById(id);
-                        for(let i = 0; i < sel.options.length; i++) {
-                            if(sel.options[i].value.toLowerCase() === valHex.toLowerCase()) {
-                                sel.selectedIndex = i;
-                                return true;
+                        const targetInt = parseInt(valHex, 16);
+                        let bestIdx = -1;
+                        let minDiff = 999;
+
+                        for (let i = 0; i < sel.options.length; i++) {
+                            const optVal = sel.options[i].value;
+                            if (optVal === "auto") continue;
+                            const diff = Math.abs(parseInt(optVal, 16) - targetInt);
+                            if (diff < minDiff && diff <= 2) { // Toleransi beda tipis kode Hex Canon
+                                minDiff = diff;
+                                bestIdx = i;
                             }
+                        }
+                        if (bestIdx !== -1) {
+                            sel.selectedIndex = bestIdx;
+                            return true;
                         }
                         return false;
                     };
@@ -1470,6 +1804,9 @@ document.getElementById('sys-brightness').value = data.global?.liveViewBrightnes
                 if (document.getElementById('sys-qrisPriceStatic')) {
                     document.getElementById('sys-qrisPriceStatic').value = data.global?.qrisPriceStatic || "35000";
                 }
+                if (document.getElementById('sys-discountEnabled')) {
+    document.getElementById('sys-discountEnabled').value = data.global?.discountEnabled ? "true" : "false";
+}
 
                 document.getElementById('wa-message-text').value = data.waMessage || "Halo dari Lacasaphoto! 📸\n\nTerima kasih sudah berfoto ria bersama kami. Berikut link foto kamu:\n\n🔗 {link}";
 
@@ -1491,11 +1828,13 @@ if (data.global?.customIdleScreen) {
                     document.getElementById('status-idle-screen').innerHTML = `<b style="color: var(--blue);">Terdapat Custom Layar</b>`;
                 }
                 
-                if (data.global && data.global.theme) perbaruiTombolTema(data.global.theme);
+               if (data.global && data.global.theme) perbaruiTombolTema(data.global.theme);
                 else perbaruiTombolTema('theme-pop-art');
+
+                // ✅ WAJIB DI DALAM KURUNG TRY muatPengaturan() AGAR VARIABEL 'data' TERBACA:
+                perbaruiTombolIdlePreset(data.global?.idlePreset || 'style-1');
             } catch (e) { console.error("Error Muat Pengaturan: ", e); }
         }
-
        // PERBAIKAN PERMANEN LOGIC SIMPAN (ANTI-CRASH & ANTI-HILANG SAAT RESTART)
         async function simpanPengaturan() {
             try {
@@ -1569,7 +1908,10 @@ if (document.getElementById('sys-printerA4')) localStorage.setItem('backup_print
                         canonIso: getVal('sys-canonIso', currentData.global?.canonIso || 'auto'),
 canonTv: getVal('sys-canonTv', currentData.global?.canonTv || 'auto'),
 canonAv: getVal('sys-canonAv', currentData.global?.canonAv || 'auto'),
-                        cloudflareToken: getVal('input-cf-token', currentData.global?.cloudflareToken || '') 
+discountEnabled: getVal('sys-discountEnabled', currentData.global?.discountEnabled ? 'true' : 'false') === "true",
+idlePreset: currentData.global?.idlePreset || 'style-1',
+                        cloudflareToken: getVal('input-cf-token', currentData.global?.cloudflareToken || '')
+                         
                         
                     },
                     waMessage: getVal('wa-message-text', currentData.waMessage || '')
@@ -2373,8 +2715,13 @@ window.updateLabelGateway = function() {
         if(label1) label1.innerText = 'API Key:';
         if(label2) label2.innerText = 'Merchant Code:';
     } else if (gateway === 'doku') {
-        if(label1) label1.innerText = 'Secret Key:';
-        if(label2) label2.innerText = 'Client ID:';
+        if(label1) label1.innerText = 'Secret Key DOKU (SK-...):';
+        if(label2) label2.innerText = 'Client ID DOKU (BRN-...):';
+        if(wrap3) wrap3.style.display = 'block';
+        if(label3) label3.innerText = 'Mode Environment (Ketik: prod / sandbox):';
+        document.getElementById('gatewayKey1').placeholder = 'Contoh: SK-xxxxxx...';
+        document.getElementById('gatewayKey2').placeholder = 'Contoh: BRN-xxxx-xxxxxx...';
+        document.getElementById('gatewayKey3').placeholder = 'Kosongkan untuk Production (Live), atau ketik: sandbox';
     } else if (gateway === 'neetpay') {
         if(label1) label1.innerText = 'X-API-KEY NeetPay:';
         if(label2) label2.innerText = 'Kosongkan kolom ini:'; // NeetPay hanya butuh 1 kunci utama
@@ -2802,6 +3149,97 @@ async function buatProfilPrinterBaru(selectId, btnElement) {
 // Panggil saat dashboard selesai render
 document.addEventListener('DOMContentLoaded', loadQrisSettings);
 
+// === LOGIKA GENERATE VOUCHER & DISKON MASSAL ===
+        let cachedVouchersList = [];
+
+        async function loadVouchersData() {
+            const tbody = document.getElementById('table-vouchers-body');
+            const counter = document.getElementById('total-vouchers-count');
+            if (!tbody) return;
+            try {
+                const res = await fetch('/api/vouchers?t=' + Date.now());
+                const data = await res.json();
+                cachedVouchersList = data.vouchers || [];
+                const availableCount = cachedVouchersList.filter(v => !v.isUsed).length;
+                if (counter) counter.innerText = availableCount;
+
+                if (cachedVouchersList.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Belum ada kode voucher atau diskon yang dibuat.</td></tr>';
+                    return;
+                }
+
+                // Tampilkan maksimal 150 terbaru di tabel agar ringan
+                tbody.innerHTML = cachedVouchersList.slice(0, 150).map(v => `
+                    <tr>
+                        <td style="font-family: monospace; font-weight: bold; font-size: 1rem;">${v.code}</td>
+                        <td><span style="background:${v.type === 'voucher' ? 'var(--pink)' : 'var(--green)'}; padding:3px 10px; border-radius:8px; font-weight:bold; font-size:0.8rem;">${v.type === 'voucher' ? '🎟️ VOUCHER GRATIS' : '🏷️ DISKON'}</span></td>
+                        <td>${v.type === 'voucher' ? 'Gratis 100%' : 'Potongan Rp ' + Number(v.amount || 0).toLocaleString('id-ID')}</td>
+                        <td>${v.isUsed ? '<span style="color:#ef4444; font-weight:bold;">❌ Sudah Dipakai</span>' : '<span style="color:#10b981; font-weight:bold;">✅ Tersedia</span>'}</td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Gagal memuat data voucher dari server.</td></tr>';
+            }
+        }
+
+        function downloadFileCSV(filename, rows) {
+            const csvContent = "data:text/csv;charset=utf-8," + rows.join("\n");
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", filename);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        }
+
+        async function generateBulkCodes(type) {
+            const prefix = (type === 'voucher' ? document.getElementById('vch-prefix').value : document.getElementById('dsc-prefix').value).trim().toUpperCase();
+            const count = parseInt(type === 'voucher' ? document.getElementById('vch-count').value : document.getElementById('dsc-count').value) || 0;
+            const amount = type === 'discount' ? (parseInt(document.getElementById('dsc-amount').value) || 0) : 0;
+
+            if (count <= 0 || count > 5000) return alert("⚠️ Masukkan jumlah antara 1 sampai 5000!");
+            if (type === 'discount' && amount <= 0) return alert("⚠️ Masukkan nominal potongan rupiah yang valid!");
+
+            try {
+                const res = await fetch('/api/vouchers/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type, prefix, count, amount })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    const csvRows = ["KODE,TIPE,POTONGAN_RP,STATUS"];
+                    data.generated.forEach(item => {
+                        csvRows.push(`${item.code},${item.type.toUpperCase()},${item.type === 'voucher' ? 'GRATIS_100%' : item.amount},AKTIF`);
+                    });
+                    downloadFileCSV(`Lacasabooth_${type.toUpperCase()}_${count}x_${Date.now()}.csv`, csvRows);
+                    alert(`✅ Berhasil membuat ${count} kode ${type === 'voucher' ? 'Voucher' : 'Diskon'} & mengunduh file CSV!`);
+                    loadVouchersData();
+                } else {
+                    alert("❌ Gagal: " + data.message);
+                }
+            } catch (e) {
+                alert("❌ Gagal menghubungi server.");
+            }
+        }
+
+        function downloadActiveCodesCSV() {
+            const activeList = cachedVouchersList.filter(v => !v.isUsed);
+            if (activeList.length === 0) return alert("⚠️ Tidak ada kode aktif yang bisa diekspor.");
+            const csvRows = ["KODE,TIPE,POTONGAN_RP,STATUS"];
+            activeList.forEach(item => {
+                csvRows.push(`${item.code},${item.type.toUpperCase()},${item.type === 'voucher' ? 'GRATIS_100%' : item.amount},TERSEDIA`);
+            });
+            downloadFileCSV(`Stok_Voucher_Aktif_${Date.now()}.csv`, csvRows);
+        }
+
+        async function hapusSemuaVoucher() {
+            if (!(await customConfirm("Yakin ingin menghapus SEMUA daftar kode voucher & diskon dari sistem?", "Hapus Semua Voucher", "🗑️"))) return;
+            await fetch('/api/vouchers/clear', { method: 'POST' });
+            alert("✅ Semua data voucher & diskon telah dibersihkan.");
+            loadVouchersData();
+        }
         muatPengaturan(); gantiModeTemplate('collage'); fetchTemplateData();
     </script>
     <!-- MESIN FIREBASE SAAS & PENGUNCI VISUAL -->

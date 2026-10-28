@@ -3,16 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lacasabooth.id - Touch to Start</title>
-    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Panggil Tema Terpusat -->
+    <title>Lacasabooth.id - Tap to Start</title>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/assets/theme.css">
     
     <style>
-        /* ========================================================= */
-        /* 🎨 TEMA CLEAN AESTHETIC BRAND (PINK, TOSCA, LAVENDER)     */
-        /* ========================================================= */
         :root {
             --brand-pink: #f7a8b8;
             --brand-pink-soft: #fdf2f4;
@@ -26,35 +21,170 @@
 
         html, body {
             margin: 0; padding: 0; width: 100vw; height: 100vh;
-            overflow: hidden; 
-            background-color: #fafbfc; 
-            color: var(--brand-dark);
-            font-family: 'Fredoka', sans-serif; 
-            user-select: none;
+            overflow: hidden; background-color: #fafbfc; color: var(--brand-dark);
+            font-family: 'Fredoka', sans-serif; user-select: none;
             display: flex; align-items: center; justify-content: center;
+        }
+
+        .idle-preset-layer {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            display: none; align-items: center; justify-content: center;
+            cursor: pointer; overflow: hidden;
+        }
+
+        /* ========================================================= */
+        /* 🌟 OPSI 1: CLEAN FLOATING MINIMALIST (TANPA BOX TENGAH)   */
+        /* ========================================================= */
+        #preset-style-1 {
+            background-color: #fafbfc;
             background-image: 
-                radial-gradient(circle at 12% 18%, rgba(247, 168, 184, 0.16) 0%, transparent 38%),
-                radial-gradient(circle at 88% 82%, rgba(118, 203, 196, 0.18) 0%, transparent 40%),
-                radial-gradient(circle at 82% 18%, rgba(185, 165, 226, 0.15) 0%, transparent 32%),
+                radial-gradient(circle at 12% 18%, rgba(247, 168, 184, 0.18) 0%, transparent 38%),
+                radial-gradient(circle at 88% 82%, rgba(118, 203, 196, 0.2) 0%, transparent 40%),
+                radial-gradient(circle at 82% 18%, rgba(185, 165, 226, 0.16) 0%, transparent 32%),
                 radial-gradient(#cbd5e1 1.5px, transparent 1.5px);
             background-size: 100% 100%, 100% 100%, 100% 100%, 36px 36px;
         }
 
-        /* --- ORNAMEN PASTEL MENGAMBANG --- */
         .doodle-asset { position: absolute; pointer-events: none; z-index: 1; filter: drop-shadow(0 10px 20px rgba(66, 70, 77, 0.06)); }
-        .doodle-flags { top: 0; left: 0; width: 240px; opacity: 0.9; }
-        .doodle-smile { top: 8%; right: 14%; width: 115px; animation: float 4.5s infinite ease-in-out; }
+        .doodle-flags { top: 0; left: 0; width: 250px; }
+        .doodle-smile { top: 9%; right: 12%; width: 120px; animation: float 4.5s infinite ease-in-out; }
         .doodle-smile-text {
-            position: absolute; top: 11.5%; right: 16.2%;
+            position: absolute; top: 12.5%; right: 14.2%;
             font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 1.35rem; color: var(--brand-dark);
             transform: rotate(4deg); pointer-events: none; animation: float 4.5s infinite ease-in-out; z-index: 2;
         }
-        .doodle-cloud { top: 32%; right: 7%; width: 125px; animation: float 6s infinite ease-in-out 1s; opacity: 0.9; }
-        .doodle-star { top: 52%; right: 22%; width: 32px; animation: pop 2.2s infinite alternate; }
-        .doodle-strip { bottom: 6%; left: 7%; width: 145px; transform: rotate(-8deg); animation: float 5s infinite ease-in-out reverse; }
-        .doodle-polaroid { bottom: 6%; right: 8%; width: 165px; transform: rotate(5deg); animation: float 5s infinite ease-in-out 0.5s; }
-        .doodle-heart-1 { top: 16%; left: 26%; width: 28px; animation: pop 2.5s infinite alternate; }
-        
+        .doodle-cloud { top: 34%; right: 6%; width: 130px; animation: float 6s infinite ease-in-out 1s; }
+        .doodle-star { top: 54%; right: 20%; width: 34px; animation: pop 2.2s infinite alternate; }
+        .doodle-strip { bottom: 6%; left: 7%; width: 150px; transform: rotate(-8deg); animation: float 5s infinite ease-in-out reverse; }
+        .doodle-polaroid { bottom: 6%; right: 8%; width: 170px; transform: rotate(5deg); animation: float 5s infinite ease-in-out 0.5s; }
+        .doodle-heart-1 { top: 18%; left: 22%; width: 30px; animation: pop 2.5s infinite alternate; }
+        .doodle-sparkle-left { top: 45%; left: 12%; width: 36px; animation: pop 3s infinite alternate; }
+
+        .s1-center {
+            z-index: 10; display: flex; flex-direction: column; align-items: center;
+            text-align: center; pointer-events: none;
+        }
+        .s1-min-logo {
+            width: 86px; height: 86px; margin-bottom: 14px;
+            filter: drop-shadow(0 12px 24px rgba(118, 203, 196, 0.3));
+            animation: float 4s infinite ease-in-out;
+        }
+        .brand-title { 
+            font-size: 5.4rem; font-weight: 700; color: var(--brand-dark); 
+            margin: 0; line-height: 1.02; letter-spacing: -1.5px;
+            text-shadow: 0 8px 30px rgba(255,255,255,0.9);
+        }
+        .brand-title .c-teal { color: var(--brand-teal); }
+        .brand-title .c-purple { color: var(--brand-purple); }
+        .brand-title .c-pink { color: var(--brand-pink); }
+        .brand-title .c-dot { font-size: 4.2rem; color: var(--brand-dark); }
+
+        .s1-tagline {
+            font-size: 1.35rem; color: var(--brand-muted); font-weight: 600;
+            margin: 12px 0 32px 0; letter-spacing: 0.3px;
+        }
+        .btn-tap-start {
+            background: linear-gradient(135deg, var(--brand-pink) 0%, var(--brand-purple) 50%, var(--brand-teal) 100%);
+            color: #ffffff; border: 3px solid #ffffff; border-radius: 50px;
+            padding: 16px 56px; font-size: 1.75rem; font-weight: 700;
+            display: inline-flex; align-items: center; gap: 14px;
+            box-shadow: 0 16px 35px rgba(185, 165, 226, 0.45);
+            animation: pulseBtn 1.6s infinite alternate ease-in-out;
+        }
+
+        /* ========================================================= */
+        /* 🫧 OPSI 2: AURORA GLASSMORPHISM (DYNAMIC ORBS & RINGS)    */
+        /* ========================================================= */
+        #preset-style-2 {
+            background: linear-gradient(135deg, #fdf2f4 0%, #f5f2fc 50%, #eefaf9 100%);
+        }
+        .glass-orb {
+            position: absolute; border-radius: 50%; filter: blur(45px); opacity: 0.75;
+            pointer-events: none; z-index: 1;
+        }
+        .orb-1 { width: 380px; height: 380px; background: var(--brand-pink); top: -80px; left: -60px; animation: driftOrb 9s infinite alternate ease-in-out; }
+        .orb-2 { width: 420px; height: 420px; background: var(--brand-teal); bottom: -100px; right: -60px; animation: driftOrb 11s infinite alternate-reverse ease-in-out; }
+        .orb-3 { width: 320px; height: 320px; background: var(--brand-purple); top: 15%; right: 12%; animation: driftOrb 8s infinite alternate ease-in-out 1s; }
+        .orb-4 { width: 260px; height: 260px; background: #fde68a; bottom: 12%; left: 15%; opacity: 0.5; animation: driftOrb 10s infinite alternate ease-in-out; }
+
+        @keyframes driftOrb {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(40px, -35px) scale(1.12); }
+        }
+
+        .glass-floating-badge {
+            position: absolute; z-index: 2; pointer-events: none;
+            background: rgba(255, 255, 255, 0.45); backdrop-filter: blur(12px);
+            border: 1.5px solid rgba(255, 255, 255, 0.8); border-radius: 24px;
+            padding: 12px 20px; font-weight: 700; color: var(--brand-dark);
+            box-shadow: 0 12px 30px rgba(66, 70, 77, 0.06);
+            display: flex; align-items: center; gap: 10px; font-size: 0.95rem;
+        }
+        .g-badge-1 { top: 12%; left: 10%; animation: float 5s infinite ease-in-out; }
+        .g-badge-2 { top: 16%; right: 10%; animation: float 6s infinite ease-in-out 0.8s; }
+        .g-badge-3 { bottom: 14%; left: 12%; animation: float 5.5s infinite ease-in-out 0.4s; }
+        .g-badge-4 { bottom: 16%; right: 11%; animation: float 4.8s infinite ease-in-out 1.2s; }
+
+        .glass-card-main {
+            z-index: 10; pointer-events: none;
+            background: rgba(255, 255, 255, 0.48);
+            backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+            border: 2px solid rgba(255, 255, 255, 0.85);
+            border-radius: 44px; padding: 48px 70px;
+            box-shadow: 0 30px 70px rgba(66, 70, 77, 0.1), inset 0 2px 15px rgba(255, 255, 255, 0.9);
+            display: flex; flex-direction: column; align-items: center; text-align: center;
+        }
+        .glass-lens-ring {
+            width: 96px; height: 96px; border-radius: 50%;
+            background: rgba(255,255,255,0.7); border: 2px solid #ffffff;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 12px 30px rgba(118, 203, 196, 0.25); margin-bottom: 16px;
+        }
+
+        /* ========================================================= */
+        /* 🎨 OPSI 3: MINIMALIST DOODLE ART & BOTTOM CHARACTERS      */
+        /* ========================================================= */
+        #preset-style-3 {
+            background-color: #fffdf9;
+            background-image: radial-gradient(#e2e8f0 1.5px, transparent 1.5px);
+            background-size: 32px 32px;
+        }
+        .s3-center {
+            z-index: 10; display: flex; flex-direction: column; align-items: center;
+            text-align: center; pointer-events: none; margin-bottom: 110px;
+        }
+        .s3-badge-top {
+            background: #ffffff; border: 2.5px solid var(--brand-dark);
+            border-radius: 50px; padding: 6px 20px; font-weight: 700; font-size: 0.9rem;
+            box-shadow: 4px 4px 0px var(--brand-teal); margin-bottom: 14px;
+            transform: rotate(-2deg);
+        }
+        .s3-btn-start {
+            background: var(--brand-pink); color: var(--brand-dark);
+            border: 3px solid var(--brand-dark); border-radius: 50px;
+            padding: 15px 52px; font-size: 1.7rem; font-weight: 700;
+            box-shadow: 6px 6px 0px var(--brand-dark);
+            display: inline-flex; align-items: center; gap: 12px;
+            animation: pulseBtn 1.5s infinite alternate ease-in-out;
+        }
+        .doodle-bottom-stage {
+            position: absolute; bottom: -8px; left: 0; width: 100vw; height: 220px;
+            display: flex; justify-content: space-around; align-items: flex-end;
+            padding: 0 4vw; box-sizing: border-box; pointer-events: none; z-index: 5;
+        }
+        .doodle-char {
+            width: 145px; height: auto; transform-origin: bottom center;
+            animation: charBounce 3.2s infinite ease-in-out;
+        }
+        .doodle-char:nth-child(2) { animation-delay: 0.4s; width: 155px; }
+        .doodle-char:nth-child(3) { animation-delay: 0.9s; width: 165px; }
+        .doodle-char:nth-child(4) { animation-delay: 0.2s; width: 155px; }
+        .doodle-char:nth-child(5) { animation-delay: 0.7s; width: 145px; }
+
+        @keyframes charBounce {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-10px) rotate(2deg); }
+        }
         @keyframes float {
             0%, 100% { transform: translateY(0px) rotate(0deg); }
             50% { transform: translateY(-12px) rotate(2deg); }
@@ -63,87 +193,11 @@
             0% { transform: scale(0.92); opacity: 0.75; }
             100% { transform: scale(1.08); opacity: 1; }
         }
-
-        /* --- KONTEN UTAMA (TENGAH - CLEAN GLASS CARD) --- */
-        .main-content {
-            z-index: 10; display: flex; flex-direction: column;
-            align-items: center; text-align: center; gap: 12px;
-            cursor: pointer; position: relative; width: 100%; height: 100vh;
-            justify-content: center; padding: 20px; box-sizing: border-box;
-        }
-
-        .center-hero-card {
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-            border: 2px solid #ffffff;
-            border-radius: 40px;
-            padding: 42px 60px;
-            box-shadow: 0 24px 60px rgba(66, 70, 77, 0.08), 0 0 0 2px rgba(247, 168, 184, 0.22);
-            display: flex; flex-direction: column; align-items: center;
-            max-width: 720px; width: 92%;
-            transition: transform 0.3s ease;
-        }
-        .center-hero-card:hover { transform: translateY(-4px); }
-
-        .brand-logo-icon {
-            width: 110px; height: 110px; margin-bottom: 8px;
-            background: #ffffff; border-radius: 28px; padding: 12px;
-            box-shadow: 0 12px 28px rgba(118, 203, 196, 0.22);
-            border: 2px solid #f1f5f9;
-        }
-
-        /* Judul Brand Persis Warna Logo lacasabooth.id */
-        .brand-title { 
-            font-size: 4.8rem; font-weight: 700; color: var(--brand-dark); 
-            margin: 0; line-height: 1.05; letter-spacing: -1px; 
-        }
-        .brand-title .c-teal { color: var(--brand-teal); }
-        .brand-title .c-purple { color: var(--brand-purple); }
-        .brand-title .c-pink { color: var(--brand-pink); }
-        .brand-title .c-dot { font-size: 3.8rem; color: var(--brand-dark); }
-
-        .subtitle { 
-            font-family: 'Fredoka', sans-serif; font-size: 1.25rem; color: var(--brand-muted); 
-            margin: 8px 0 18px 0; line-height: 1.4; font-weight: 500; max-width: 520px;
-        }
-
-        /* --- PILLS KETERANGAN FITUR PHOTOBOOTH --- */
-        .feature-pills {
-            display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
-            margin-bottom: 28px;
-        }
-        .pill-item {
-            padding: 7px 16px; border-radius: 50px; font-size: 0.88rem; font-weight: 600;
-            display: inline-flex; align-items: center; gap: 6px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
-        }
-        .pill-pink { background: var(--brand-pink-soft); color: #be185d; border: 1.5px solid #fbcfe8; }
-        .pill-teal { background: var(--brand-teal-soft); color: #0f766e; border: 1.5px solid #99f6e4; }
-        .pill-purple { background: var(--brand-purple-soft); color: #6d28d9; border: 1.5px solid #ddd6fe; }
-
-        /* --- TOMBOL TAP TO START (GRADASI BRAND) --- */
-        .btn-start {
-            position: relative;
-            background: linear-gradient(135deg, var(--brand-pink) 0%, var(--brand-purple) 50%, var(--brand-teal) 100%);
-            color: #ffffff;
-            border: 3px solid #ffffff; border-radius: 50px;
-            padding: 16px 52px; font-size: 1.65rem; font-family: 'Fredoka', sans-serif; font-weight: 700;
-            display: flex; align-items: center; gap: 14px; cursor: pointer;
-            box-shadow: 0 14px 30px rgba(185, 165, 226, 0.45);
-            animation: pulseBtn 1.6s infinite alternate ease-in-out; 
-            pointer-events: none; z-index: 1; letter-spacing: 0.3px;
-        }
-
-        .touch-hint {
-            margin-top: 14px; font-size: 0.85rem; color: #94a3b8; font-weight: 600;
-            letter-spacing: 0.5px; text-transform: uppercase;
-        }
-
         @keyframes pulseBtn {
-            0% { transform: scale(1); box-shadow: 0 12px 25px rgba(185, 165, 226, 0.38); }
-            100% { transform: scale(1.04); box-shadow: 0 18px 36px rgba(118, 203, 196, 0.5); }
+            0% { transform: scale(1); }
+            100% { transform: scale(1.04); }
         }
-        
+
         /* --- TOMBOL ADMIN (CLEAN PILL) --- */
         .btn-admin {
             position: absolute; top: 22px; right: 25px; z-index: 50;
@@ -154,13 +208,12 @@
         }
         .btn-admin:hover { background: var(--brand-pink-soft); border-color: var(--brand-pink); color: #be185d; transform: translateY(-2px); }
 
-        /* Lapisan Layar Custom */
         #custom-ui-layer {
             position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
             z-index: 20; display: none; cursor: pointer;
         }
 
-        /* --- UI NUMPAD PIN (CLEAN PASTEL) --- */
+        /* --- UI NUMPAD PIN & MODAL DISKON --- */
         .pin-dot { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid #cbd5e1; background: #f8fafc; transition: 0.2s; }
         .pin-dot.filled { background: var(--brand-teal); border-color: var(--brand-teal); transform: scale(1.1); }
         .pin-dot.error { border-color: #ef4444; background: #ef4444; animation: shakePin 0.3s; }
@@ -175,33 +228,51 @@
         .btn-numpad.special { font-size: 0.95rem; background: #f1f5f9; color: #475569; }
         @keyframes shakePin { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
 
-        /* ====================================================
-           RESPONSIVE MOBILE & PORTRAIT
-           ==================================================== */
+        #discountModal {
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(30, 41, 59, 0.7); z-index: 9999999; justify-content: center;
+            align-items: center; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+        }
+        .discount-box {
+            background: #ffffff; padding: 30px; border-radius: 32px; border: 2px solid #e9d5ff;
+            box-shadow: 0 20px 40px rgba(147, 51, 234, 0.15); text-align: center; width: 90%; max-width: 580px;
+        }
+        .input-display {
+            background: #f8fafc; border: 2px solid #cbd5e1; border-radius: 16px; padding: 15px;
+            font-size: 1.8rem; font-weight: 700; color: var(--brand-dark); text-align: center;
+            margin-bottom: 20px; letter-spacing: 2px; text-transform: uppercase; height: 65px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .kb-row { display: flex; justify-content: center; gap: 8px; margin-bottom: 8px; }
+        .kb-key {
+            background: #ffffff; border: 2px solid #e2e8f0; border-radius: 12px; padding: 12px 0;
+            font-weight: 700; color: var(--brand-dark); cursor: pointer; text-transform: uppercase;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.03); width: 45px; font-family: 'Fredoka', sans-serif;
+            font-size: 1.1rem; transition: 0.15s;
+        }
+        .kb-key:active { transform: translateY(2px); box-shadow: none; background: var(--brand-purple-soft); border-color: var(--brand-purple); color: #6d28d9; }
+        .kb-action { width: auto; padding: 12px 20px; background: #f1f5f9; color: #475569; }
+
         @media (max-width: 768px), (orientation: portrait) {
-            .center-hero-card { padding: 32px 24px; border-radius: 32px; }
-            .brand-title { font-size: 3.3rem; }
-            .brand-title .c-dot { font-size: 2.6rem; }
-            .subtitle { font-size: 1.05rem; margin: 6px 0 16px 0; }
-            .btn-start { padding: 14px 38px; font-size: 1.35rem; }
-            .doodle-polaroid, .doodle-strip, .doodle-cloud { display: none; }
-            .doodle-flags { width: 150px; }
-            .doodle-smile { width: 85px; top: 5%; right: 5%; }
-            .doodle-smile-text { font-size: 1rem; top: 7.5%; right: 7%; }
+            .brand-title { font-size: 3.5rem; }
+            .brand-title .c-dot { font-size: 2.8rem; }
+            .glass-card-main { padding: 36px 28px; width: 88%; }
+            .doodle-polaroid, .doodle-strip, .doodle-cloud, .g-badge-3, .g-badge-4 { display: none; }
+            .doodle-char:nth-child(1), .doodle-char:nth-child(5) { display: none; }
         }
     </style>
 </head>
 <body>
 
-    <!-- TOMBOL ADMIN (Selalu Berada Paling Atas) -->
     <button class="btn-admin" onclick="keluarKeAdmin(event)">⚙️ Admin</button>
 
-    <!-- LAPISAN 1: CUSTOM IDLE SCREEN (Muncul jika klien upload file) -->
+    <!-- LAPISAN CUSTOM (JIKA KLIEN UPLOAD GAMBAR/VIDEO) -->
     <div id="custom-ui-layer" onclick="mulaiSesi()"></div>
 
-    <!-- LAPISAN 2: TEMA BAWAAN CLEAN AESTHETIC -->
-    <div id="default-ui-layer" style="width: 100%; height: 100%; position: absolute; top: 0; left: 0; display: none;">  
-        <!-- ORNAMEN KIRI ATAS (BENDERA PASTEL LOGO) -->
+    <!-- ========================================================= -->
+    <!-- 🌟 OPSI BAWAAN 1: CLEAN FLOATING (TANPA BOX, MINIMALIST)  -->
+    <!-- ========================================================= -->
+    <div id="preset-style-1" class="idle-preset-layer" onclick="mulaiSesi()">
         <svg class="doodle-asset doodle-flags" viewBox="0 0 250 150">
             <path d="M0 20 Q125 70 250 10" fill="none" stroke="#cbd5e1" stroke-width="3"/>
             <polygon points="20,25 45,75 70,30" fill="#76cbc4" stroke="#ffffff" stroke-width="3" stroke-linejoin="round"/>
@@ -209,26 +280,25 @@
             <polygon points="160,32 185,80 210,25" fill="#b9a5e2" stroke="#ffffff" stroke-width="3" stroke-linejoin="round"/>
         </svg>
 
-        <!-- ORNAMEN KANAN ATAS (SMILE BUBBLE) -->
         <svg class="doodle-asset doodle-smile" viewBox="0 0 150 100">
             <path d="M10 50 Q10 10 75 10 Q140 10 140 50 Q140 90 75 90 Q40 90 20 110 L25 80 Q10 70 10 50 Z" fill="#ffffff" stroke="#f7a8b8" stroke-width="3.5" stroke-linejoin="round"/>
         </svg>
-        <div class="doodle-smile-text">Say Cheese! ✨</div>
+        <div class="doodle-smile-text">Smile! ✨</div>
 
-        <!-- ORNAMEN KANAN TENGAH (AWAN PASTEL) -->
         <svg class="doodle-asset doodle-cloud" viewBox="0 0 150 100">
             <path d="M40 70 A25 25 0 0 1 40 20 A35 35 0 0 1 100 15 A30 30 0 0 1 120 70 Z" fill="#eefaf9" stroke="#76cbc4" stroke-width="3.5" stroke-linejoin="round"/>
         </svg>
 
-        <!-- ORNAMEN BINTANG & HATI -->
         <svg class="doodle-asset doodle-star" viewBox="0 0 50 50">
             <polygon points="25,5 31,18 45,20 35,30 38,45 25,37 12,45 15,30 5,20 19,18" fill="#fde68a" stroke="#f59e0b" stroke-width="2.5" stroke-linejoin="round"/>
         </svg>
         <svg class="doodle-asset doodle-heart-1" viewBox="0 0 50 50">
             <path d="M25 45 C10 35 5 20 12 10 C18 2 25 10 25 10 C25 10 32 2 38 10 C45 20 40 35 25 45 Z" fill="#fdf2f4" stroke="#f7a8b8" stroke-width="3.5"/>
         </svg>
+        <svg class="doodle-asset doodle-sparkle-left" viewBox="0 0 50 50">
+            <path d="M25 2 L30 20 L48 25 L30 30 L25 48 L20 30 L2 25 L20 20 Z" fill="#f5f2fc" stroke="#b9a5e2" stroke-width="2.5" stroke-linejoin="round"/>
+        </svg>
 
-        <!-- ORNAMEN KIRI BAWAH (PHOTOSTRIP PASTEL) -->
         <svg class="doodle-asset doodle-strip" viewBox="0 0 120 280">
             <rect x="10" y="10" width="100" height="260" fill="#ffffff" stroke="#e2e8f0" stroke-width="3.5" rx="12"/>
             <rect x="20" y="30" width="80" height="65" fill="#fdf2f4" stroke="#f7a8b8" stroke-width="2" rx="6"/>
@@ -236,7 +306,6 @@
             <rect x="20" y="186" width="80" height="65" fill="#f5f2fc" stroke="#b9a5e2" stroke-width="2" rx="6"/>
         </svg>
 
-        <!-- ORNAMEN KANAN BAWAH (INSTANT PRINTER CAMERA) -->
         <svg class="doodle-asset doodle-polaroid" viewBox="0 0 160 180">
             <rect x="20" y="20" width="120" height="100" fill="#ffffff" stroke="#76cbc4" stroke-width="3.5" rx="20"/>
             <rect x="20" y="92" width="120" height="18" fill="#eefaf9"/>
@@ -247,58 +316,136 @@
             <path d="M45 118 L115 118 L122 156 L38 156 Z" fill="#fdf2f4" stroke="#f7a8b8" stroke-width="2" stroke-linejoin="round"/>
         </svg>
 
-        <!-- AREA KLIK UTAMA -->
-        <div class="main-content" onclick="mulaiSesi()">
-            <div class="center-hero-card">
-                
-                <!-- IKON LOGO RUMAH KAMERA LACASABOOTH.ID -->
-                <svg class="brand-logo-icon" viewBox="0 0 120 120">
-                    <!-- Atap Kiri Pink & Kanan Tosca + Cerobong Ungu -->
-                    <rect x="82" y="20" width="12" height="22" rx="3" fill="#b9a5e2"/>
-                    <path d="M16 48 L60 16" stroke="#f7a8b8" stroke-width="11" stroke-linecap="round"/>
-                    <path d="M60 16 L104 48" stroke="#76cbc4" stroke-width="11" stroke-linecap="round"/>
-                    <!-- Lampu Flash Atas -->
-                    <rect x="52" y="38" width="16" height="7" rx="3.5" fill="#42464d"/>
-                    <!-- Huruf L Pink -->
-                    <path d="M30 48 L30 92 Q30 102 40 102 L58 102" fill="none" stroke="#f7a8b8" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
-                    <!-- Badan Kamera / Huruf B Tosca -->
-                    <rect x="52" y="50" width="42" height="52" rx="20" fill="#76cbc4"/>
-                    <!-- Lensa Kamera -->
-                    <circle cx="62" cy="76" r="19" fill="#ffffff"/>
-                    <circle cx="62" cy="76" r="11" fill="#42464d"/>
-                    <circle cx="65" cy="73" r="3" fill="#ffffff"/>
+        <!-- KONTEN TENGAH TANPA KOTAK PEMBUNGKUS -->
+        <div class="s1-center">
+            <!-- LOGO KAMERA MINIMALIS MODERN -->
+            <svg class="s1-min-logo" viewBox="0 0 100 100">
+                <rect x="14" y="26" width="72" height="54" rx="18" fill="#ffffff" stroke="#42464d" stroke-width="4.5"/>
+                <path d="M34 26 L40 16 H60 L66 26" fill="#f7a8b8" stroke="#42464d" stroke-width="4.5" stroke-linejoin="round"/>
+                <circle cx="50" cy="53" r="16" fill="#76cbc4" stroke="#42464d" stroke-width="4.5"/>
+                <circle cx="50" cy="53" r="6" fill="#42464d"/>
+                <circle cx="71" cy="39" r="4" fill="#b9a5e2"/>
+            </svg>
+
+            <h1 class="brand-title">
+                lacasa<span class="c-teal">boo</span><span class="c-purple">t</span><span class="c-pink">h</span><span class="c-dot">.id</span>
+            </h1>
+
+            <p class="s1-tagline">Capture the moment, create the memory ✨</p>
+
+            <div class="btn-tap-start">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <circle cx="12" cy="12" r="3"></circle>
                 </svg>
-
-                <!-- TULISAN BRAND SESUAI WARNA LOGO -->
-                <h1 class="brand-title">
-                    lacasa<span class="c-teal">boo</span><span class="c-purple">t</span><span class="c-pink">h</span><span class="c-dot">.id</span>
-                </h1>
-
-                <!-- TEKS KETERANGAN PHOTOBOOTH -->
-                <p class="subtitle">
-                    Interactive Self-Photo & Instant Photobooth Experience.<br>
-                    Bergaya bebas, pilih bingkai favoritmu, dan bawa pulang kenangannya!
-                </p>
-
-                <!-- BADGE FITUR PHOTOBOOTH -->
-                <div class="feature-pills">
-                    <div class="pill-item pill-pink">🖨️ Cetak Foto Instan</div>
-                    <div class="pill-item pill-teal">🎬 Live Photo & Animasi GIF</div>
-                    <div class="pill-item pill-purple">📲 Softcopy QR & WhatsApp</div>
-                </div>
-
-                <!-- TOMBOL MULAI -->
-                <div class="btn-start">
-                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="8" width="18" height="12" rx="3" ry="3"></rect>
-                        <path d="M16 8v-2a2 2 0 0 0 -2-2h-4a2 2 0 0 0 -2 2v2"></path>
-                        <circle cx="12" cy="14" r="3"></circle>
-                    </svg>
-                    Sentuh Layar untuk Mulai
-                </div>
-
-                <div class="touch-hint">✨ Tap Anywhere on Screen to Start Photobooth ✨</div>
+                Tap to Start
             </div>
+        </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- 🫧 OPSI BAWAAN 2: AURORA GLASSMORPHISM                    -->
+    <!-- ========================================================= -->
+    <div id="preset-style-2" class="idle-preset-layer" onclick="mulaiSesi()">
+        <div class="glass-orb orb-1"></div>
+        <div class="glass-orb orb-2"></div>
+        <div class="glass-orb orb-3"></div>
+        <div class="glass-orb orb-4"></div>
+
+        <!-- Elemen Dinamis Kaca Mengambang -->
+        <div class="glass-floating-badge g-badge-1"><span>🖨️</span> Instant Print</div>
+        <div class="glass-floating-badge g-badge-2"><span>🎬</span> Live Photo & GIF</div>
+        <div class="glass-floating-badge g-badge-3"><span>✨</span> Aesthetic Filters</div>
+        <div class="glass-floating-badge g-badge-4"><span>📲</span> QR Softcopy</div>
+
+        <div class="glass-card-main">
+            <div class="glass-lens-ring">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#42464d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path>
+                    <circle cx="12" cy="13" r="3.5" fill="#76cbc4"></circle>
+                </svg>
+            </div>
+            <h1 class="brand-title" style="font-size: 4.8rem;">
+                lacasa<span class="c-teal">boo</span><span class="c-purple">t</span><span class="c-pink">h</span><span class="c-dot">.id</span>
+            </h1>
+            <p class="s1-tagline" style="margin: 10px 0 28px 0;">Self-Photo & Instant Photobooth Studio</p>
+            <div class="btn-tap-start">
+                <span>✨</span> Tap to Start
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- 🎨 OPSI BAWAAN 3: MINIMALIST DOODLE CHARACTERS            -->
+    <!-- ========================================================= -->
+    <div id="preset-style-3" class="idle-preset-layer" onclick="mulaiSesi()">
+        <div class="s3-center">
+            <div class="s3-badge-top">✨ READY FOR YOUR CLOSE-UP? ✨</div>
+            <h1 class="brand-title" style="font-size: 5.2rem;">
+                lacasa<span class="c-teal">boo</span><span class="c-purple">t</span><span class="c-pink">h</span><span class="c-dot">.id</span>
+            </h1>
+            <p class="s1-tagline" style="font-family: 'Caveat', cursive; font-size: 2.1rem; color: var(--brand-dark); margin: 6px 0 26px 0;">
+                Strike a pose & grab your prints!
+            </p>
+            <div class="s3-btn-start">
+                📸 Tap to Start
+            </div>
+        </div>
+
+        <!-- DERETAN KARAKTER DOODLE LUCU DI BAGIAN BAWAH -->
+        <div class="doodle-bottom-stage" id="doodle-char-stage">
+            <!-- Karakter 1: Kelinci Doodle Ceria -->
+            <svg class="doodle-char" viewBox="0 0 140 160">
+                <path d="M45 65 C35 15 55 15 55 60" fill="#ffffff" stroke="#42464d" stroke-width="4" stroke-linecap="round"/>
+                <path d="M85 60 C85 15 105 15 95 65" fill="#ffffff" stroke="#42464d" stroke-width="4" stroke-linecap="round"/>
+                <circle cx="70" cy="105" r="45" fill="#ffffff" stroke="#42464d" stroke-width="4"/>
+                <circle cx="55" cy="95" r="4.5" fill="#42464d"/>
+                <circle cx="85" cy="95" r="4.5" fill="#42464d"/>
+                <ellipse cx="45" cy="106" rx="7" ry="4" fill="#f7a8b8"/>
+                <ellipse cx="95" cy="106" rx="7" ry="4" fill="#f7a8b8"/>
+                <path d="M64 106 Q70 114 76 106" fill="none" stroke="#42464d" stroke-width="3.5" stroke-linecap="round"/>
+            </svg>
+
+            <!-- Karakter 2: Kamera Maskot Tersenyum -->
+            <svg class="doodle-char" viewBox="0 0 150 150">
+                <rect x="20" y="45" width="110" height="85" rx="22" fill="#eefaf9" stroke="#42464d" stroke-width="4"/>
+                <rect x="50" y="30" width="50" height="16" rx="6" fill="#f7a8b8" stroke="#42464d" stroke-width="4"/>
+                <circle cx="75" cy="85" r="24" fill="#ffffff" stroke="#42464d" stroke-width="4"/>
+                <circle cx="67" cy="82" r="4" fill="#42464d"/>
+                <circle cx="83" cy="82" r="4" fill="#42464d"/>
+                <path d="M68 92 Q75 99 82 92" fill="none" stroke="#42464d" stroke-width="3.5" stroke-linecap="round"/>
+            </svg>
+
+            <!-- Karakter 3: Kucing Doodle Pegang Peace Sign -->
+            <svg class="doodle-char" viewBox="0 0 150 160">
+                <path d="M30 150 L30 70 L50 40 L70 60 L80 60 L100 40 L120 70 L120 150 Z" fill="#fdf2f4" stroke="#42464d" stroke-width="4" stroke-linejoin="round"/>
+                <circle cx="58" cy="92" r="4.5" fill="#42464d"/>
+                <circle cx="92" cy="92" r="4.5" fill="#42464d"/>
+                <path d="M70 100 L75 106 L80 100" fill="none" stroke="#42464d" stroke-width="3.5" stroke-linecap="round"/>
+                <line x1="20" y1="95" x2="38" y2="98" stroke="#42464d" stroke-width="3" stroke-linecap="round"/>
+                <line x1="112" y1="98" x2="130" y2="95" stroke="#42464d" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+
+            <!-- Karakter 4: Bintang / Blob Ungu Menggemaskan -->
+            <svg class="doodle-char" viewBox="0 0 140 150">
+                <path d="M25 145 Q20 55 70 55 Q120 55 115 145 Z" fill="#f5f2fc" stroke="#42464d" stroke-width="4"/>
+                <circle cx="56" cy="95" r="4.5" fill="#42464d"/>
+                <circle cx="84" cy="95" r="4.5" fill="#42464d"/>
+                <circle cx="46" cy="104" r="6" fill="#f7a8b8"/>
+                <circle cx="94" cy="104" r="6" fill="#f7a8b8"/>
+                <path d="M62 105 Q70 115 78 105" fill="none" stroke="#42464d" stroke-width="3.5" stroke-linecap="round"/>
+            </svg>
+
+            <!-- Karakter 5: Beruang Doodle Pegang Photostrip -->
+            <svg class="doodle-char" viewBox="0 0 140 150">
+                <circle cx="40" cy="55" r="16" fill="#fde68a" stroke="#42464d" stroke-width="4"/>
+                <circle cx="100" cy="55" r="16" fill="#fde68a" stroke="#42464d" stroke-width="4"/>
+                <circle cx="70" cy="100" r="44" fill="#fef3c7" stroke="#42464d" stroke-width="4"/>
+                <circle cx="56" cy="90" r="4.5" fill="#42464d"/>
+                <circle cx="84" cy="90" r="4.5" fill="#42464d"/>
+                <ellipse cx="70" cy="103" rx="12" ry="9" fill="#ffffff" stroke="#42464d" stroke-width="3"/>
+                <circle cx="70" cy="100" r="3.5" fill="#42464d"/>
+            </svg>
         </div>
     </div>
 
@@ -306,57 +453,60 @@
         let eventMode = '';
         let eventPayment = '';
         let requirePin = false;
-let currentPin = "1234";
-let inputPinBuffer = "";
+        let currentPin = "1234";
+        let inputPinBuffer = "";
+        let isDiscountEnabled = false;
 
         window.onload = async function() {
             const customLayer = document.getElementById('custom-ui-layer');
-            const defaultLayer = document.getElementById('default-ui-layer');
+            const preset1 = document.getElementById('preset-style-1');
+            const preset2 = document.getElementById('preset-style-2');
+            const preset3 = document.getElementById('preset-style-3');
+
+            // Acak urutan karakter doodle di bagian bawah setiap kali halaman dimuat
+            const stage = document.getElementById('doodle-char-stage');
+            if (stage) {
+                const chars = Array.from(stage.children);
+                chars.sort(() => Math.random() - 0.5).forEach(ch => stage.appendChild(ch));
+            }
 
             try {
-                // 1. Ambil Pengaturan Global
-                const resSettings = await fetch('/api/settings');
+                const resSettings = await fetch('/api/settings?t=' + Date.now());
                 const dataSettings = await resSettings.json();
                 
-                let isCustomLoaded = false; // Penanda apakah layar custom berhasil ditampilkan
+                let isCustomLoaded = false;
+                let selectedPreset = 'style-1';
 
                 if (dataSettings.global) {
-                    // Terapkan Tema CSS
                     if (dataSettings.global.theme) {
                         document.body.className = dataSettings.global.theme;
                     }
                     requirePin = dataSettings.global.usePin === true;
-    currentPin = dataSettings.global.adminPin || "1234";
-                    // Eksekusi Logika Hibrida (Custom Idle Screen)
+                    currentPin = dataSettings.global.adminPin || "1234";
+                    isDiscountEnabled = dataSettings.global.discountEnabled === true;
+                    selectedPreset = dataSettings.global.idlePreset || 'style-1';
+
                     if (dataSettings.global.customIdleScreen) {
                         const fileUrl = dataSettings.global.customIdleScreen;
-
-                        // Tampilkan layer custom
                         customLayer.style.display = 'block';
-                        isCustomLoaded = true; // Tandai bahwa layar custom aktif
+                        isCustomLoaded = true;
 
-                        // Render Video MP4 atau Gambar JPG/PNG
                         if (fileUrl.toLowerCase().endsWith('.mp4')) {
-                            customLayer.innerHTML = `
-                                <video autoplay loop muted playsinline style="width:100%; height:100%; object-fit:cover; pointer-events: none;">
-                                    <source src="${fileUrl}" type="video/mp4">
-                                </video>
-                            `;
+                            customLayer.innerHTML = `<video autoplay loop muted playsinline style="width:100%; height:100%; object-fit:cover; pointer-events: none;"><source src="${fileUrl}" type="video/mp4"></video>`;
                         } else {
-                            customLayer.innerHTML = `
-                                <img src="${fileUrl}" style="width:100%; height:100%; object-fit:cover; pointer-events: none;">
-                            `;
+                            customLayer.innerHTML = `<img src="${fileUrl}" style="width:100%; height:100%; object-fit:cover; pointer-events: none;">`;
                         }
                     }
                 }
 
-                // JIKA TIDAK ADA CUSTOM LAYAR (Atau baru saja dihapus), MUNCULKAN BAWAAN TEMA
+                // Tampilkan salah satu dari 3 Opsi Bawaan jika tidak ada Custom Idle Screen
                 if (!isCustomLoaded) {
-                    defaultLayer.style.display = 'block';
+                    if (selectedPreset === 'style-2') preset2.style.display = 'flex';
+                    else if (selectedPreset === 'style-3') preset3.style.display = 'flex';
+                    else preset1.style.display = 'flex';
                 }
 
-                // 2. Ambil Status Event (Logika Routing Asli)
-                const resEvent = await fetch('/api/current-event');
+                const resEvent = await fetch('/api/current-event?t=' + Date.now());
                 const dataEvent = await resEvent.json();
                 
                 if (dataEvent.success) {
@@ -367,11 +517,11 @@ let inputPinBuffer = "";
                 }
             } catch (err) {
                 console.error("Gagal memuat API:", err);
-                
-                // JIKA TERJADI ERROR KONEKSI/SERVER, PASTIKAN LAYAR TIDAK BLANK (MUNCULKAN BAWAAN)
-                defaultLayer.style.display = 'block';
+                preset1.style.display = 'flex';
             }
         };
+
+        let inputDiskonBuffer = "";
 
         function mulaiSesi() {
             if (!eventMode) {
@@ -379,122 +529,187 @@ let inputPinBuffer = "";
                 return;
             }
             if (eventPayment === 'with_payment') {
-                window.location.href = '/payment.html'; 
+                if (isDiscountEnabled) {
+                    inputDiskonBuffer = "";
+                    document.getElementById('discount-input').innerText = "";
+                    document.getElementById('discountModal').style.display = 'flex';
+                } else {
+                    window.location.href = '/payment.html';
+                }
             } else {
                 window.location.href = `/${eventMode}.html`;
             }
         }
 
-        function keluarKeAdmin(e) {
-    e.stopPropagation(); 
-    
-    // Jika PIN diaktifkan dari dashboard
-    if (requirePin) {
-        bukaPinModal();
-        return;
-    }
-
-    // JIKA TIDAK PAKAI PIN, Jalankan popup konfirmasi biasa (kode asli kamu)
-    tampilkanPopupBiasa(e);
-}
-
-function tampilkanPopupBiasa(e) {
-    const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(30, 41, 59, 0.65); z-index:999999; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(6px);';
-    
-    const box = document.createElement('div');
-    box.style.cssText = 'background:#ffffff; padding:32px 38px; border-radius:30px; border:2px solid #e2e8f0; box-shadow:0 20px 45px rgba(66, 70, 77, 0.18); text-align:center; animation: pop 0.25s ease; color: #42464d; max-width: 360px; width: 90%;';
-    box.innerHTML = `
-        <h2 style="font-family:'Fredoka', sans-serif; font-size:1.8rem; margin:0 0 8px 0; font-weight: 700; color:#42464d;">Admin Panel ⚙️</h2>
-        <p style="margin-bottom: 24px; font-weight: 500; color: #64748b; font-size: 0.95rem;">Tinggalkan layar utama dan buka pengaturan Event Manager?</p>
-        <div style="display:flex; gap:12px; justify-content:center;">
-            <button id="btn-batal" style="flex:1; background:#f1f5f9; color:#475569; border:none; padding:12px 20px; border-radius:50px; font-weight:600; cursor:pointer; font-family:'Fredoka', sans-serif; font-size: 0.95rem;">Batal</button>
-            <button id="btn-yakin" style="flex:1; background:linear-gradient(135deg, #f7a8b8, #76cbc4); color:#ffffff; border:none; padding:12px 20px; border-radius:50px; font-weight:600; cursor:pointer; font-family:'Fredoka', sans-serif; font-size: 0.95rem; box-shadow: 0 6px 15px rgba(118, 203, 196, 0.35);">Masuk ›</button>
-        </div>
-    `;
-    
-    overlay.appendChild(box);
-    document.body.appendChild(overlay);
-    
-    document.getElementById('btn-batal').onclick = (ev) => { ev.stopPropagation(); overlay.remove(); };
-    document.getElementById('btn-yakin').onclick = (ev) => { ev.stopPropagation(); overlay.remove(); window.location.href = '/event-manager.html'; };
-}
-// --- LOGIKA NUMPAD PIN ---
-function bukaPinModal() {
-    inputPinBuffer = "";
-    updatePinDots();
-    document.getElementById('pin-error-text').style.visibility = 'hidden';
-    document.getElementById('pin-modal-overlay').style.display = 'flex';
-}
-
-function tutupPinModal(e) {
-    if(e) e.stopPropagation();
-    document.getElementById('pin-modal-overlay').style.display = 'none';
-}
-
-function tekanNumpad(val, e) {
-    if(e) e.stopPropagation();
-    document.getElementById('pin-error-text').style.visibility = 'hidden';
-    const dots = document.querySelectorAll('.pin-dot');
-    dots.forEach(d => d.classList.remove('error'));
-
-    if (val === 'del') {
-        inputPinBuffer = inputPinBuffer.slice(0, -1);
-    } else if (inputPinBuffer.length < 4) {
-        inputPinBuffer += val;
-    }
-
-    updatePinDots();
-
-    // Jika sudah 4 angka, validasi
-    if (inputPinBuffer.length === 4) {
-        setTimeout(() => {
-            if (inputPinBuffer === currentPin) {
-                // PIN Benar, arahkan ke Event Manager
-                window.location.href = '/event-manager.html';
-            } else {
-                // PIN Salah, tampilkan error & getarkan titik
-                document.getElementById('pin-error-text').style.visibility = 'visible';
-                dots.forEach(d => d.classList.add('error'));
-                inputPinBuffer = "";
-                setTimeout(updatePinDots, 400); // Bersihkan titik setelah animasi bergetar selesai
+        function ketikDiskon(huruf) {
+            if (inputDiskonBuffer.length < 20) {
+                inputDiskonBuffer += huruf;
+                document.getElementById('discount-input').innerText = inputDiskonBuffer;
             }
-        }, 150); // Jeda singkat agar titik ke-4 terlihat penuh sebelum diproses
-    }
-}
+        }
+        function hapusDiskon() {
+            inputDiskonBuffer = inputDiskonBuffer.slice(0, -1);
+            document.getElementById('discount-input').innerText = inputDiskonBuffer;
+        }
 
-function updatePinDots() {
-    const dots = document.querySelectorAll('.pin-dot');
-    dots.forEach((dot, index) => {
-        if (index < inputPinBuffer.length) dot.classList.add('filled');
-        else dot.classList.remove('filled');
-    });
-}
+        function lanjutTanpaDiskon() {
+            document.getElementById('discountModal').style.display = 'none';
+            window.location.href = '/payment.html'; 
+        }
+
+        async function gunakanDiskon() {
+            if (inputDiskonBuffer.length === 0) return alert("⚠️ Silakan masukkan kode diskon terlebih dahulu!");
+            try {
+                const res = await fetch('/api/validate-voucher', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: inputDiskonBuffer, expectedType: 'discount' })
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    return alert("❌ " + data.message);
+                }
+                document.getElementById('discountModal').style.display = 'none';
+                window.location.href = `/payment.html?discount=${encodeURIComponent(inputDiskonBuffer)}`;
+            } catch (e) {
+                alert("❌ Gagal memeriksa kode diskon.");
+            }
+        }
+
+        function keluarKeAdmin(e) {
+            e.stopPropagation(); 
+            if (requirePin) {
+                bukaPinModal();
+                return;
+            }
+            tampilkanPopupBiasa(e);
+        }
+
+        function tampilkanPopupBiasa(e) {
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(30, 41, 59, 0.65); z-index:999999; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(6px);';
+            
+            const box = document.createElement('div');
+            box.style.cssText = 'background:#ffffff; padding:32px 38px; border-radius:30px; border:2px solid #e2e8f0; box-shadow:0 20px 45px rgba(66, 70, 77, 0.18); text-align:center; animation: pop 0.25s ease; color: #42464d; max-width: 360px; width: 90%;';
+            box.innerHTML = `
+                <h2 style="font-family:'Fredoka', sans-serif; font-size:1.8rem; margin:0 0 8px 0; font-weight: 700; color:#42464d;">Admin Panel ⚙️</h2>
+                <p style="margin-bottom: 24px; font-weight: 500; color: #64748b; font-size: 0.95rem;">Tinggalkan layar utama dan buka pengaturan Event Manager?</p>
+                <div style="display:flex; gap:12px; justify-content:center;">
+                    <button id="btn-batal" style="flex:1; background:#f1f5f9; color:#475569; border:none; padding:12px 20px; border-radius:50px; font-weight:600; cursor:pointer; font-family:'Fredoka', sans-serif; font-size: 0.95rem;">Batal</button>
+                    <button id="btn-yakin" style="flex:1; background:linear-gradient(135deg, #f7a8b8, #76cbc4); color:#ffffff; border:none; padding:12px 20px; border-radius:50px; font-weight:600; cursor:pointer; font-family:'Fredoka', sans-serif; font-size: 0.95rem; box-shadow: 0 6px 15px rgba(118, 203, 196, 0.35);">Masuk ›</button>
+                </div>
+            `;
+            
+            overlay.appendChild(box);
+            document.body.appendChild(overlay);
+            
+            document.getElementById('btn-batal').onclick = (ev) => { ev.stopPropagation(); overlay.remove(); };
+            document.getElementById('btn-yakin').onclick = (ev) => { ev.stopPropagation(); overlay.remove(); window.location.href = '/event-manager.html'; };
+        }
+
+        function bukaPinModal() {
+            inputPinBuffer = "";
+            updatePinDots();
+            document.getElementById('pin-error-text').style.visibility = 'hidden';
+            document.getElementById('pin-modal-overlay').style.display = 'flex';
+        }
+
+        function tutupPinModal(e) {
+            if(e) e.stopPropagation();
+            document.getElementById('pin-modal-overlay').style.display = 'none';
+        }
+
+        function tekanNumpad(val, e) {
+            if(e) e.stopPropagation();
+            document.getElementById('pin-error-text').style.visibility = 'hidden';
+            const dots = document.querySelectorAll('.pin-dot');
+            dots.forEach(d => d.classList.remove('error'));
+
+            if (val === 'del') {
+                inputPinBuffer = inputPinBuffer.slice(0, -1);
+            } else if (inputPinBuffer.length < 4) {
+                inputPinBuffer += val;
+            }
+
+            updatePinDots();
+
+            if (inputPinBuffer.length === 4) {
+                setTimeout(() => {
+                    if (inputPinBuffer === currentPin) {
+                        window.location.href = '/event-manager.html';
+                    } else {
+                        document.getElementById('pin-error-text').style.visibility = 'visible';
+                        dots.forEach(d => d.classList.add('error'));
+                        inputPinBuffer = "";
+                        setTimeout(updatePinDots, 400);
+                    }
+                }, 150);
+            }
+        }
+
+        function updatePinDots() {
+            const dots = document.querySelectorAll('.pin-dot');
+            dots.forEach((dot, index) => {
+                if (index < inputPinBuffer.length) dot.classList.add('filled');
+                else dot.classList.remove('filled');
+            });
+        }
     </script>
-    <!-- MODAL PIN NUMPAD (CLEAN PASTEL) -->
-<div id="pin-modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(30, 41, 59, 0.65); z-index: 999999; justify-content: center; align-items: center; backdrop-filter: blur(6px);">
-    <div style="background: rgba(255, 255, 255, 0.96); padding: 30px; border-radius: 32px; border: 2px solid #e2e8f0; box-shadow: 0 24px 50px rgba(66, 70, 77, 0.22); text-align: center; width: 320px;">
-        <h2 style="font-family: 'Fredoka', sans-serif; font-size: 1.7rem; color: #42464d; margin: 0 0 6px 0;">PIN Admin 🔒</h2>
-        <p style="margin: 0 0 18px 0; font-size: 0.85rem; color: #64748b; font-weight: 500;">Masukkan 4 digit kode keamanan</p>
-        <div id="pin-dots" style="display: flex; justify-content: center; gap: 14px; margin-bottom: 22px;">
-            <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
+
+    <!-- MODAL PIN NUMPAD -->
+    <div id="pin-modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(30, 41, 59, 0.65); z-index: 999999; justify-content: center; align-items: center; backdrop-filter: blur(6px);">
+        <div style="background: rgba(255, 255, 255, 0.96); padding: 30px; border-radius: 32px; border: 2px solid #e2e8f0; box-shadow: 0 24px 50px rgba(66, 70, 77, 0.22); text-align: center; width: 320px;">
+            <h2 style="font-family: 'Fredoka', sans-serif; font-size: 1.7rem; color: #42464d; margin: 0 0 6px 0;">PIN Admin 🔒</h2>
+            <p style="margin: 0 0 18px 0; font-size: 0.85rem; color: #64748b; font-weight: 500;">Masukkan 4 digit kode keamanan</p>
+            <div id="pin-dots" style="display: flex; justify-content: center; gap: 14px; margin-bottom: 22px;">
+                <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px;">
+                <button class="btn-numpad" onclick="tekanNumpad('1', event)">1</button>
+                <button class="btn-numpad" onclick="tekanNumpad('2', event)">2</button>
+                <button class="btn-numpad" onclick="tekanNumpad('3', event)">3</button>
+                <button class="btn-numpad" onclick="tekanNumpad('4', event)">4</button>
+                <button class="btn-numpad" onclick="tekanNumpad('5', event)">5</button>
+                <button class="btn-numpad" onclick="tekanNumpad('6', event)">6</button>
+                <button class="btn-numpad" onclick="tekanNumpad('7', event)">7</button>
+                <button class="btn-numpad" onclick="tekanNumpad('8', event)">8</button>
+                <button class="btn-numpad" onclick="tekanNumpad('9', event)">9</button>
+                <button class="btn-numpad special" onclick="tutupPinModal(event)">Batal</button>
+                <button class="btn-numpad" onclick="tekanNumpad('0', event)">0</button>
+                <button class="btn-numpad special" style="background: #fee2e2; color: #ef4444; border-color: #fecaca;" onclick="tekanNumpad('del', event)">⌫</button>
+            </div>
+            <p id="pin-error-text" style="color: #ef4444; font-weight: 600; font-size: 0.9rem; padding: 4px 10px; margin: 0; visibility: hidden; background: #fee2e2; border-radius: 50px;">PIN Salah, coba lagi!</p>
         </div>
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px;">
-            <button class="btn-numpad" onclick="tekanNumpad('1', event)">1</button>
-            <button class="btn-numpad" onclick="tekanNumpad('2', event)">2</button>
-            <button class="btn-numpad" onclick="tekanNumpad('3', event)">3</button>
-            <button class="btn-numpad" onclick="tekanNumpad('4', event)">4</button>
-            <button class="btn-numpad" onclick="tekanNumpad('5', event)">5</button>
-            <button class="btn-numpad" onclick="tekanNumpad('6', event)">6</button>
-            <button class="btn-numpad" onclick="tekanNumpad('7', event)">7</button>
-            <button class="btn-numpad" onclick="tekanNumpad('8', event)">8</button>
-            <button class="btn-numpad" onclick="tekanNumpad('9', event)">9</button>
-            <button class="btn-numpad special" onclick="tutupPinModal(event)">Batal</button>
-            <button class="btn-numpad" onclick="tekanNumpad('0', event)">0</button>
-            <button class="btn-numpad special" style="background: #fee2e2; color: #ef4444; border-color: #fecaca;" onclick="tekanNumpad('del', event)">⌫</button>
-        </div>
-        <p id="pin-error-text" style="color: #ef4444; font-weight: 600; font-size: 0.9rem; padding: 4px 10px; margin: 0; visibility: hidden; background: #fee2e2; border-radius: 50px;">PIN Salah, coba lagi!</p>
     </div>
-</div>
+
+    <!-- MODAL INPUT DISKON SEBELUM PAYMENT -->
+    <div id="discountModal">
+        <div class="discount-box">
+            <h2 style="font-family: 'Fredoka', sans-serif; font-size: 1.8rem; color: var(--brand-dark); margin: 0 0 5px 0;">Punya Kode Diskon? 🎟️</h2>
+            <p style="color: var(--brand-muted); font-size: 0.95rem; margin-bottom: 20px;">Masukkan kode promo jika ada, atau lewati jika tidak punya.</p>
+            
+            <div id="discount-input" class="input-display"></div>
+            
+            <div id="virtual-keyboard">
+                <div class="kb-row">
+                    <button class="kb-key" onclick="ketikDiskon('1')">1</button><button class="kb-key" onclick="ketikDiskon('2')">2</button><button class="kb-key" onclick="ketikDiskon('3')">3</button><button class="kb-key" onclick="ketikDiskon('4')">4</button><button class="kb-key" onclick="ketikDiskon('5')">5</button><button class="kb-key" onclick="ketikDiskon('6')">6</button><button class="kb-key" onclick="ketikDiskon('7')">7</button><button class="kb-key" onclick="ketikDiskon('8')">8</button><button class="kb-key" onclick="ketikDiskon('9')">9</button><button class="kb-key" onclick="ketikDiskon('0')">0</button>
+                </div>
+                <div class="kb-row">
+                    <button class="kb-key" onclick="ketikDiskon('Q')">Q</button><button class="kb-key" onclick="ketikDiskon('W')">W</button><button class="kb-key" onclick="ketikDiskon('E')">E</button><button class="kb-key" onclick="ketikDiskon('R')">R</button><button class="kb-key" onclick="ketikDiskon('T')">T</button><button class="kb-key" onclick="ketikDiskon('Y')">Y</button><button class="kb-key" onclick="ketikDiskon('U')">U</button><button class="kb-key" onclick="ketikDiskon('I')">I</button><button class="kb-key" onclick="ketikDiskon('O')">O</button><button class="kb-key" onclick="ketikDiskon('P')">P</button>
+                </div>
+                <div class="kb-row">
+                    <button class="kb-key" onclick="ketikDiskon('A')">A</button><button class="kb-key" onclick="ketikDiskon('S')">S</button><button class="kb-key" onclick="ketikDiskon('D')">D</button><button class="kb-key" onclick="ketikDiskon('F')">F</button><button class="kb-key" onclick="ketikDiskon('G')">G</button><button class="kb-key" onclick="ketikDiskon('H')">H</button><button class="kb-key" onclick="ketikDiskon('J')">J</button><button class="kb-key" onclick="ketikDiskon('K')">K</button><button class="kb-key" onclick="ketikDiskon('L')">L</button><button class="kb-key" style="background: #fef3c7; border-color: #fcd34d; color: #b45309; font-size: 1.4rem;" onclick="ketikDiskon('-')">-</button>
+                </div>
+                <div class="kb-row">
+                    <button class="kb-key" onclick="ketikDiskon('Z')">Z</button><button class="kb-key" onclick="ketikDiskon('X')">X</button><button class="kb-key" onclick="ketikDiskon('C')">C</button><button class="kb-key" onclick="ketikDiskon('V')">V</button><button class="kb-key" onclick="ketikDiskon('B')">B</button><button class="kb-key" onclick="ketikDiskon('N')">N</button><button class="kb-key" onclick="ketikDiskon('M')">M</button><button class="kb-key" style="background: #fef3c7; border-color: #fcd34d; color: #b45309;" onclick="ketikDiskon('_')">_</button><button class="kb-key kb-action" onclick="hapusDiskon()" style="background: #fee2e2; color: #ef4444; border-color: #fca5a5;">⌫ DEL</button>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 12px; justify-content: center; margin-top: 25px;">
+                <button onclick="lanjutTanpaDiskon()" class="btn-primary" style="flex: 1; background: #f1f5f9; color: #475569; border: none; padding: 14px; border-radius: 50px; font-weight: 600; font-size: 1rem; cursor: pointer;">Lewati (Tidak Punya)</button>
+                <button onclick="gunakanDiskon()" class="btn-primary" style="flex: 1; background: linear-gradient(135deg, #76cbc4, #3b82f6); color: white; border: none; padding: 14px; border-radius: 50px; font-weight: 600; font-size: 1rem; cursor: pointer; box-shadow: 0 8px 15px rgba(118, 203, 196, 0.3);">Gunakan Kode ›</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

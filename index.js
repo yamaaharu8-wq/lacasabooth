@@ -442,9 +442,9 @@ function hubungkanKamera() {
                         }
                     };
                     // Terapkan perlahan agar prosesor kamera tidak nge-hang
-                    setTimeout(() => setExp(0x00000002, dbSet.global.canonIso), 100);
-                    setTimeout(() => setExp(0x00000006, dbSet.global.canonTv), 300);
-                    setTimeout(() => setExp(0x00000007, dbSet.global.canonAv), 500);
+                    setTimeout(() => setExp(0x00000402, dbSet.global.canonIso), 150);
+                    setTimeout(() => setExp(0x00000406, dbSet.global.canonTv), 350);
+                    setTimeout(() => setExp(0x00000405, dbSet.global.canonAv), 550);
                 }
             }
         } catch(e) { console.log("Gagal menerapkan exposure bawaan:", e.message); }
@@ -1299,30 +1299,43 @@ expressApp.get('/api/get-qris', (req, res) => {
 });
 
 // =======================================================
-// 7. 📸 KONTROL KAMERA (API JEPRET & LIVE VIEW)
+// [FIXED 100%] API KONTROL SEGITIGA EXPOSURE CANON EDSDK
 // =======================================================
-// =======================================================
-// [BARU] API KONTROL SEGITIGA EXPOSURE KAMERA (ANTI-ERR:64)
-// =======================================================
-expressApp.post('/api/camera-exposure', (req, res) => {
-    if (!activeCamera) return res.json({ success: false, message: "Kamera belum terhubung" });
+const kEdsPropID_ISOSpeed = 0x00000402; // ISO Speed Resmi Canon
+const kEdsPropID_Av       = 0x00000405; // Aperture (Av) Resmi Canon
+const kEdsPropID_Tv       = 0x00000406; // ✅ Shutter Speed (Tv) Resmi Canon adalah 0x00000406!
+
+expressApp.post('/api/camera-exposure', async (req, res) => {
+    if (!activeCamera) return res.json({ success: false, message: "Kamera belum terhubung via USB" });
     const { iso, tv, av } = req.body;
     let debugLog = [];
+
     try {
-        const setProp = (propId, valHex, name) => {
-            if (valHex && valHex !== "auto") {
-                let buf = Buffer.alloc(4);
-                buf.writeUInt32LE(parseInt(valHex, 16), 0);
-                let err = EdsSetPropertyData(activeCamera, propId, 0, 4, buf);
-                if (err !== 0) debugLog.push(`${name} Err:${err.toString(16)}`);
+        const setPropAsync = async (propId, valHex, name) => {
+            if (valHex === undefined || valHex === null || valHex === "") return;
+            // Untuk Tv dan Av, abaikan jika dropdown masih tertulis "auto"
+            if (valHex === "auto" && propId !== kEdsPropID_ISOSpeed) return;
+
+            let parsedVal = (valHex === "auto") ? 0x00 : parseInt(valHex, 16);
+            if (isNaN(parsedVal)) return;
+
+            let buf = Buffer.alloc(4);
+            buf.writeUInt32LE(parsedVal, 0);
+            let err = EdsSetPropertyData(activeCamera, propId, 0, 4, buf);
+            if (err !== 0) {
+                debugLog.push(`${name} Err:0x${err.toString(16)}`);
             }
+            // Beri jeda 60ms agar prosesor kamera Canon selesai memproses 1 perintah sebelum perintah berikutnya masuk
+            await new Promise(r => setTimeout(r, 60));
         };
-        setProp(0x00000002, iso, "ISO");
-        setProp(0x00000006, tv, "Tv");
-        setProp(0x00000007, av, "Av");
+
+        await setPropAsync(kEdsPropID_ISOSpeed, iso, "ISO");
+        await setPropAsync(kEdsPropID_Tv, tv, "Tv");
+        await setPropAsync(kEdsPropID_Av, av, "Av");
+
         res.json({ success: true, debug: debugLog.join(' | ') });
     } catch (err) {
-        res.json({ success: false, message: "Gagal menyetel kamera" });
+        res.json({ success: false, message: "Gagal menyetel kamera: " + err.message });
     }
 });
 
@@ -1331,28 +1344,28 @@ expressApp.get('/api/sync-camera', (req, res) => {
     try {
         let debugLog = [];
         const getProp = (propId, name) => {
-            // Berikan keranjang memori 4-byte yang pasti
             let buf = Buffer.alloc(4);
             let err = EdsGetPropertyData(activeCamera, propId, 0, 4, buf);
             if (err === 0) {
-                return buf.readUInt32LE(0).toString(16).toLowerCase();
+                let val = buf.readUInt32LE(0);
+                if (val === 0 || val === 0xffffffff) return "auto";
+                return val.toString(16).toLowerCase();
             }
-            debugLog.push(`${name} Err:${err.toString(16)}`);
+            debugLog.push(`${name} Err:0x${err.toString(16)}`);
             return "auto";
         };
         
         res.json({ 
             success: true, 
-            iso: getProp(0x00000002, "ISO"), 
-            tv: getProp(0x00000006, "Tv"), 
-            av: getProp(0x00000007, "Av"),
+            iso: getProp(kEdsPropID_ISOSpeed, "ISO"), 
+            tv: getProp(kEdsPropID_Tv, "Tv"), 
+            av: getProp(kEdsPropID_Av, "Av"),
             debug: debugLog.join(' | ')
         });
     } catch (err) {
         res.json({ success: false, message: "Gagal membaca mesin dari kamera" });
     }
 });
-
 expressApp.post('/toggle-liveview', (req, res) => {
     const { state } = req.body;
     if (state) startLiveView();
@@ -2538,7 +2551,7 @@ expressApp.get('/api/settings/qris', (req, res) => {
     res.json({ ...qrisSettings, cloudflareToken: currentToken });
 });
 
-expressApp.post('/api/settings/qris', express.json(), (req, res) => {
+expressApp.post('/api/settings/qris', (req, res) => {
    // 1. [PERBAIKAN] Tambahkan 'dynamicExtraPrice' ke dalam daftar tangkapan data
     const { type, gateway, dynamicPrice, dynamicExtraPrice, key1, key2, key3, cloudflareToken } = req.body;
     
@@ -2556,7 +2569,7 @@ expressApp.post('/api/settings/qris', express.json(), (req, res) => {
     
     // Tulis pengaturan QRIS ke file permanen qris_data.json
     fs.writeFileSync(qrisDataPath, JSON.stringify(qrisSettings, null, 2));
-    // ... (sisa kode Cloudflare biarkan seperti semula)
+    
     // Masukkan Cloudflare Token ke settings.json agar dibaca oleh fungsi startCloudflareTunnel
     if (cloudflareToken !== undefined) {
         try {
@@ -2583,14 +2596,120 @@ expressApp.post('/api/settings/qris', express.json(), (req, res) => {
     
     res.json({ success: true, message: 'Pengaturan QRIS disimpan & Tunnel aktif!', data: qrisSettings });
 });
+// =======================================================
+// 🎟️ SISTEM DATABASE VOUCHER & DISKON MASSAL
+// =======================================================
+const vouchersPath = path.join(userDataPath, 'vouchers.json');
+if (!fs.existsSync(vouchersPath)) {
+    fs.writeFileSync(vouchersPath, JSON.stringify([], null, 2));
+}
+
+function readVouchers() {
+    try { return JSON.parse(fs.readFileSync(vouchersPath, 'utf8')); } catch (e) { return []; }
+}
+function saveVouchers(list) {
+    fs.writeFileSync(vouchersPath, JSON.stringify(list, null, 2));
+}
+
+// 1. Ambil daftar semua voucher/diskon
+expressApp.get('/api/vouchers', (req, res) => {
+    res.json({ success: true, vouchers: readVouchers() });
+});
+
+// 2. Generate Massal (Bulk Generate)
+expressApp.post('/api/vouchers/generate', (req, res) => {
+    try {
+        const { type, prefix = '', count = 10, amount = 0 } = req.body;
+        let list = readVouchers();
+        let existingCodes = new Set(list.map(v => v.code));
+        let generated = [];
+
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Tanpa huruf O/0/I/1 yang membingungkan saat dicetak
+        const makeRandom = (len = 5) => {
+            let s = '';
+            for (let i = 0; i < len; i++) s += chars.charAt(Math.floor(Math.random() * chars.length));
+            return s;
+        };
+
+        for (let i = 0; i < count; i++) {
+            let code = '';
+            do {
+                code = `${prefix}${makeRandom(5)}`.toUpperCase();
+            } while (existingCodes.has(code));
+
+            existingCodes.add(code);
+            const item = {
+                code,
+                type: type === 'discount' ? 'discount' : 'voucher',
+                amount: type === 'discount' ? parseInt(amount) : 0,
+                isUsed: false,
+                createdAt: new Date().toISOString()
+            };
+            list.unshift(item);
+            generated.push(item);
+        }
+
+        saveVouchers(list);
+        res.json({ success: true, generated });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+// 3. Validasi Voucher / Diskon dari Layar Klien
+expressApp.post('/api/validate-voucher', (req, res) => {
+    const { code, expectedType } = req.body;
+    if (!code) return res.json({ success: false, message: "Kode kosong!" });
+
+    let list = readVouchers();
+    const cleanInput = code.trim().toUpperCase().replace(/[-_\s]/g, '');
+    const idx = list.findIndex(v => v.code.toUpperCase().replace(/[-_\s]/g, '') === cleanInput);
+
+    if (idx === -1) return res.json({ success: false, message: "Kode tidak ditemukan!" });
+    if (list[idx].isUsed) return res.json({ success: false, message: "Kode ini sudah pernah digunakan!" });
+    if (expectedType && list[idx].type !== expectedType) {
+        return res.json({ success: false, message: `Kode ini adalah kode ${list[idx].type}, bukan ${expectedType}!` });
+    }
+
+    // Jika ini voucher gratis (langsung klaim), tandai terpakai sekarang
+    if (list[idx].type === 'voucher') {
+        list[idx].isUsed = true;
+        list[idx].usedAt = new Date().toISOString();
+        saveVouchers(list);
+    }
+
+    res.json({ success: true, voucher: list[idx] });
+});
+
+// 4. Hapus Semua Voucher
+expressApp.post('/api/vouchers/clear', (req, res) => {
+    saveVouchers([]);
+    res.json({ success: true });
+});
 // --- 3. API Generate QRIS Multi-Gateway (Mesin Otak Super) ---
 expressApp.all('/api/payment/qris-dynamic', async (req, res) => {
     try {
         let reqAmount = (req.method === 'POST' && req.body && req.body.amount) ? parseInt(req.body.amount) :
                         (req.query && req.query.amount) ? parseInt(req.query.amount) : null;
         
-        const amount = reqAmount ? reqAmount : qrisSettings.dynamicPrice;
+        // 1. Ambil harga awal (HANYA DIDEKLARASIKAN 1 KALI DI SINI)
+        let amount = reqAmount ? reqAmount : parseInt(qrisSettings.dynamicPrice || 35000);
         if (!amount || amount <= 0) throw new Error("Harga belum diatur di Dashboard.");
+
+        // 2. Potong harga jika ada kode diskon yang valid dari URL (?discount=KODE)
+        const discountCode = (req.query && req.query.discount) ? req.query.discount.trim().toUpperCase().replace(/[-_\s]/g, '') : "";
+        if (discountCode) {
+            let vList = readVouchers();
+            const dIdx = vList.findIndex(v => v.code.toUpperCase().replace(/[-_\s]/g, '') === discountCode && v.type === 'discount' && !v.isUsed);
+            if (dIdx !== -1) {
+                const potongan = parseInt(vList[dIdx].amount) || 0;
+                amount = Math.max(1000, amount - potongan); // Minimal tagihan QRIS Rp 1.000
+                vList[dIdx].isUsed = true;
+                vList[dIdx].usedAt = new Date().toISOString();
+                saveVouchers(vList);
+                console.log(`🏷️ [DISKON] Kode ${vList[dIdx].code} berhasil dipakai! Potongan Rp ${potongan}, Sisa Tagihan: Rp ${amount}`);
+            }
+        }
 
         const gateway = qrisSettings.gateway || 'midtrans';
         const key1 = qrisSettings.key1 ? qrisSettings.key1.trim() : "";
@@ -2599,15 +2718,13 @@ expressApp.all('/api/payment/qris-dynamic', async (req, res) => {
 
         const orderPrefix = reqAmount ? 'EXTRAPRINT-' : 'PHOTOBOOTH-';
         const orderId = orderPrefix + Date.now();
-        let qrString = ""; // Variabel penampung data QR dari semua penyedia
-
+        let qrString = ""; 
+        let checkoutUrlFallback = null;
+        
         // 🧠 1. OTAK MIDTRANS & GOBIZ
         if (gateway === 'midtrans' || gateway === 'gobiz') {
             if (!key1) throw new Error("Server Key Midtrans belum diisi!");
-            
-            // Deteksi otomatis: Jika ada awalan SB-, berarti mode Sandbox (isProduction = false)
             const isProd = !key1.includes('SB-'); 
-            
             const coreApi = new midtransClient.CoreApi({ isProduction: isProd, serverKey: key1, clientKey: key2 });
             const chargeRes = await coreApi.charge({ payment_type: "gopay", transaction_details: { gross_amount: amount, order_id: orderId } });
             if (chargeRes.status_code !== '201') throw new Error(`Midtrans: ${chargeRes.status_message}`);
@@ -2651,7 +2768,6 @@ expressApp.all('/api/payment/qris-dynamic', async (req, res) => {
         // 🧠 4. OTAK DUITKU
         else if (gateway === 'duitku') {
             if (!key1 || !key2) throw new Error("API Key dan Merchant Code Duitku belum diisi!");
-            // Rumus MD5 Duitku = merchantCode + orderId + amount + apiKey
             const signatureDuitku = crypto.createHash('md5').update(key2 + orderId + amount + key1).digest('hex');
             const dkRes = await fetch('https://api-prod.duitku.com/api/merchant/v2/inquiry', {
                 method: 'POST',
@@ -2659,7 +2775,7 @@ expressApp.all('/api/payment/qris-dynamic', async (req, res) => {
                 body: JSON.stringify({
                     merchantCode: key2, paymentAmount: amount, merchantOrderId: orderId,
                     productDetails: 'Photobooth', email: 'guest@lacasabooth.id',
-                    paymentMethod: 'Q1', // Kode Q1 adalah QRIS di Duitku
+                    paymentMethod: 'Q1', 
                     signature: signatureDuitku
                 })
             });
@@ -2668,28 +2784,45 @@ expressApp.all('/api/payment/qris-dynamic', async (req, res) => {
             qrString = dkData.qrString; 
         } 
         
-     // 🧠 5. OTAK DOKU (STANDAR ASPI v1.1.1 + FALLBACK JOKUL & RENDER LOKAL)
+        // 🧠 5. OTAK DOKU (JOKUL CHECKOUT QRIS LOCKED + AUTO EXTRACT QR)
         else if (gateway === 'doku') {
             if (!key1 || !key2) throw new Error("Secret Key dan Client ID DOKU belum diisi!");
             
-            const isProd = !key2.startsWith('SB-'); 
-            const cleanClientId = key2.replace('SB-', ''); 
-            const dokuBaseUrl = isProd ? 'https://api.doku.com' : 'https://api-sandbox.doku.com';
+            const isSandbox = key2.startsWith('SB-') || key1.startsWith('SB-') || key3.toLowerCase() === 'sandbox';
+            const cleanClientId = key2.replace('SB-', '').trim(); 
+            const cleanSecretKey = key1.trim();
+            const dokuBaseUrl = isSandbox ? 'https://api-sandbox.doku.com' : 'https://api.doku.com';
 
-            const targetPath = '/qr/generate/v1.1.1'; 
+            const targetPath = '/checkout/v1/payment'; 
             const timestamp = new Date().toISOString().slice(0, 19) + 'Z';
             const requestId = crypto.randomUUID ? crypto.randomUUID() : 'qr-' + Date.now();
 
             const bodyPayload = {
                 order: {
+                    amount: parseInt(amount),
                     invoice_number: orderId,
-                    amount: parseInt(amount)
+                    currency: "IDR",
+                    callback_url: "https://lacasaphoto.id",
+                    line_items: [
+                        { name: "Sesi Photobooth", price: parseInt(amount), quantity: 1 }
+                    ]
+                },
+                payment: {
+                    payment_due_date: 15,
+                    payment_method_types: ["QRIS"]
+                },
+                customer: {
+                    id: "GUEST-" + orderId,
+                    name: "Guest Photobooth",
+                    email: "guest@lacasaphoto.id",
+                    phone: "6281234567890"
                 }
             };
 
-            const digest = crypto.createHash('sha256').update(JSON.stringify(bodyPayload)).digest('base64');
+            const jsonBody = JSON.stringify(bodyPayload);
+            const digest = crypto.createHash('sha256').update(jsonBody).digest('base64');
             const sigComponent = `Client-Id:${cleanClientId}\nRequest-Id:${requestId}\nRequest-Timestamp:${timestamp}\nRequest-Target:${targetPath}\nDigest:${digest}`;
-            const signatureDoku = 'HMACSHA256=' + crypto.createHmac('sha256', key1).update(sigComponent).digest('base64');
+            const signatureDoku = 'HMACSHA256=' + crypto.createHmac('sha256', cleanSecretKey).update(sigComponent).digest('base64');
 
             const dokuRes = await fetch(dokuBaseUrl + targetPath, {
                 method: 'POST',
@@ -2700,29 +2833,47 @@ expressApp.all('/api/payment/qris-dynamic', async (req, res) => {
                     'Signature': signatureDoku, 
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(bodyPayload)
+                body: jsonBody
             });
 
             const dokuData = await dokuRes.json().catch(() => ({}));
 
-            // Tangkap semua kemungkinan letak string QR dari DOKU
-            const extractedQr = dokuData?.response?.qr_content || dokuData?.qr_content || dokuData?.qr_code || dokuData?.generate_qr_code;
-
-            if (dokuRes.ok && extractedQr) {
-                // Simpan ke qrString agar dirender menjadi Base64 oleh library 'qrcode' lokal di bawah!
-                qrString = extractedQr;
-            } else {
+            if (!dokuRes.ok) {
                 let errMsg = dokuData?.error?.message || dokuData?.response?.message || dokuData?.message || JSON.stringify(dokuData);
                 throw new Error(`DOKU: ${errMsg}`);
             }
+
+            let extractedQr = dokuData?.response?.qr_content || dokuData?.response?.payment?.qr_content || dokuData?.qr_content || dokuData?.qr_code;
+            const checkoutUrl = dokuData?.response?.payment?.url;
+
+            if (!extractedQr && checkoutUrl) {
+                try {
+                    const pageRes = await fetch(checkoutUrl);
+                    const pageHtml = await pageRes.text();
+                    const qrisMatch = pageHtml.match(/000201[0-9A-Za-z.\-_/@\s]{50,500}6304[0-9A-Fa-f]{4}/);
+                    if (qrisMatch && qrisMatch[0]) {
+                        extractedQr = qrisMatch[0].trim();
+                        console.log("✅ [DOKU] Berhasil mengekstrak String QRIS Murni (EMVCo)!");
+                    }
+                } catch (scrapeErr) {
+                    console.log("ℹ️ [DOKU] Menggunakan URL Checkout QRIS langsung.");
+                }
+            }
+
+            checkoutUrlFallback = checkoutUrl || null;
+            qrString = extractedQr || checkoutUrl;
+
+            if (!qrString) {
+                throw new Error("DOKU: Gagal mendapatkan data QRIS dari respons server.");
+            }
         }
+        
         // 🧠 6. OTAK NEETPAY (Non-Custodial)
         else if (gateway === 'neetpay') {
             if (!key1) throw new Error("API Key NeetPay belum diisi!");
             const npRes = await fetch('https://api.neetpay.web.id/v1/transactions', {
                 method: 'POST',
                 headers: { 
-                    // [PERBAIKAN] Gunakan format Authorization Bearer sesuai permintaan server NeetPay
                     'Authorization': 'Bearer ' + key1, 
                     'Content-Type': 'application/json' 
                 },
@@ -2734,20 +2885,25 @@ expressApp.all('/api/payment/qris-dynamic', async (req, res) => {
             const npData = await npRes.json();
             if (!npRes.ok) throw new Error(`NeetPay: ${npData.message || 'Gagal generate QRIS'}`);
             
-            // Mengambil teks QR (QR String) dari balasan server Neetpay
             qrString = npData.data ? npData.data.qr_string : npData.qr_string;
         }
 
         // --- KONVERSI DATA QR KE GAMBAR YANG BISA DILIHAT KLIEN ---
         if (!qrString) throw new Error("Gagal mengekstrak QR String dari penyedia.");
         
-        // Panggil langsung library 'qrcode' bawaan sistem untuk menghindari variabel tidak dikenali
         const qrcode = require('qrcode');
         const qrImageBase64 = await qrcode.toDataURL(qrString, {
             errorCorrectionLevel: 'H', type: 'image/png', margin: 2, width: 400
         });
 
-        res.json({ success: true, qrImage: qrImageBase64, amount: amount, orderId: orderId });
+        res.json({ 
+            success: true, 
+            qrImage: qrImageBase64, 
+            amount: amount, 
+            orderId: orderId,
+            checkoutUrl: checkoutUrlFallback,
+            isRawQris: qrString.startsWith('000201') // True jika murni EMVCo QRIS
+        });
     } catch (error) {
         console.error('Payment Gateway Error:', error.message);
         res.status(500).json({ success: false, message: error.message });

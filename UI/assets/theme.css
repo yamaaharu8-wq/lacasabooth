@@ -19,18 +19,21 @@ body.theme-pop-art {
 
 /* 2. Dark Elegance (Midnight Navy & Champagne Gold) */
 body.theme-dark {
-    --bg-color: #0f172a;
-    --ink: #f8fafc;
-    --pink: #9333ea;
-    --green: #10b981;
-    --blue: #38bdf8;
-    --yellow: #f59e0b;
-    --dot-color: #1e293b;
-    --paper-white: #1e293b;
-    --doodle-border: 2px solid #38bdf8;
-    --doodle-radius: 14px;
-    --input-bg: #0f172a; /* Warna kolom disamakan dengan background utama agar terlihat 'tenggelam' elegan ke dalam kartu */
-}
+            --bg-color: #fdf8f9;
+            --paper-white: #ffffff;
+            --ink: #1e293b;
+            --dot-color: #f2dce2;
+            --pink: #fceef2;
+            --blue: #f5d0dc;
+            --yellow: #fdf2f8;
+            --green: #dcfce7;
+            --doodle-border: 2px solid #f5d0dc;
+            --doodle-radius: 26px;
+            background-color: #fdf8f9 !important;
+            background-image: radial-gradient(#f2dce2 1.5px, transparent 1.5px) !important;
+            background-size: 35px 35px !important;
+            color: #1e293b !important;
+        }
 
 /* 3. Minimalist Clean */
 body.theme-minimalist {
