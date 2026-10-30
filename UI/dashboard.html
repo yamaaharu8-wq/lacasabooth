@@ -489,36 +489,42 @@
                     <div class="card-header">Layar & Mesin Kamera</div>
                     <div class="form-group">
                         <label>Mesin / SDK Kamera Aktif</label>
-                        <select id="sys-cameraEngine">
-                            <option value="canon">Canon (Default)</option>
-                            <option value="webcam">Webcam (Alternative other camera)</option>
+                        <select id="sys-cameraEngine" onchange=" ubahEngineKameraUI(); ">
+                            <option value="canon">📸 Canon EOS (Native EDSDK)</option>
+                            <option value="sony">📷 Sony Alpha (Native CrSDK USB)</option>
+                            <option value="fujifilm">🎞️ Fujifilm X-Series (Native USB)</option>
+                            <option value="nikon">🔭 Nikon DSLR / Z (Native USB)</option>
+                            <option value="webcam">📹 Webcam / Capture Card (UVC)</option>
+                        </select>
+                        <p id="info-status-kamera-sdk" style="font-size: 0.8rem; color: #0f766e; font-weight: 700; margin-top: 6px;">
+                            🔌 Pilih merk kamera yang terhubung via USB.
+                        </p>
+                    </div>
+                    <div class="form-group">
+                        <label>Orientasi Tampilan Kamera</label>
+                        <select id="sys-cameraOrientation" onchange="cekPeringatanPotret(this.value, true)">
+                            <option value="landscape">Lanskap (Normal - Horizontal)</option>
+                            <option value="portrait">Potret (Miring 90° - Vertikal)</option>
+                        </select>
+                        <div id="warning-portrait" style="display: none; color: #ef4444; font-size: 0.85rem; font-weight: 600; margin-top: 8px; background: #fee2e2; padding: 8px; border-radius: 6px; border: 1px solid #fca5a5;">
+                            ⚠️ <b>Perhatian:</b> Mode Potret dipilih. Fitur Cermin (Mirror) telah dimatikan otomatis (OFF) agar hasil tidak terbalik.
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Efek Cermin (Mirror) Layar Kamera</label>
+                        <select id="sys-mirrorCamera">
+                            <option value="false">OFF (Normal)</option>
+                            <option value="true">ON (Cermin / Flipped)</option>
                         </select>
                     </div>
                     <div class="form-group">
-    <label>Orientasi Tampilan Kamera</label>
-    <select id="sys-cameraOrientation" onchange="cekPeringatanPotret(this.value, true)">
-        <option value="landscape">Lanskap (Normal - Horizontal)</option>
-        <option value="portrait">Potret (Miring 90° - Vertikal)</option>
-    </select>
-    <div id="warning-portrait" style="display: none; color: #ef4444; font-size: 0.85rem; font-weight: 600; margin-top: 8px; background: #fee2e2; padding: 8px; border-radius: 6px; border: 1px solid #fca5a5;">
-        ⚠️ <b>Perhatian:</b> Mode Potret dipilih. Fitur Cermin (Mirror) telah dimatikan otomatis (OFF) agar hasil tidak terbalik.
-    </div>
-</div>
-
-<div class="form-group">
-    <label>Efek Cermin (Mirror) Layar Kamera</label>
-    <select id="sys-mirrorCamera">
-        <option value="false">OFF (Normal)</option>
-        <option value="true">ON (Cermin / Flipped)</option>
-    </select>
-</div>
-<div class="form-group">
-    <label>Take from Kamera / Remote</label>
-    <select id="sys-takeFromRemote">
-        <option value="false">OFF (Normal - via Tombol Layar / Auto Timer)</option>
-        <option value="true">ON (Bisa Jepret via Remote / Tombol Kamera)</option>
-    </select>
-</div>
+                        <label>Take from Kamera / Remote</label>
+                        <select id="sys-takeFromRemote">
+                            <option value="false">OFF (Normal - via Tombol Layar / Auto Timer)</option>
+                            <option value="true">ON (Bisa Jepret via Remote / Tombol Kamera)</option>
+                        </select>
+                    </div>
                     <hr style="border: 1px dashed #ccc; margin: 15px 0;">
                     <div class="form-group"><label>Kecerahan Kamera di Layar (%)</label><input type="number" id="sys-brightness" min="10" max="500"></div>
                     <div class="form-group">
@@ -528,16 +534,15 @@
                             <option value="false">OFF (Layar menyala normal)</option>
                         </select>
                     </div>
-                    <hr style="border: 1px dashed #ccc; margin: 15px 0;">
-                    <button type="button" class="btn-primary" style="background: #6a35a3; color: white; margin-top: 10px;" onclick="simpanPengaturan()">🎥 Simpan Setelan Kamera</button>
                 </div>
+
                 <div class="card">
                     <div class="card-header">🎥 Video Panduan Pose (PIP)</div>
                     <div class="guide-box" style="background: var(--yellow);">
                         <h4>Cara Upload Video:</h4>
                         <ol style="font-size:0.8rem;">
                             <li>Siapkan video potrait (vertikal).</li>
-                            <li>Format harus <b>.mp4</b> dan ukuran kecil (< 5MB).</li>
+                            <li>Format harus <b>.mp4</b> dan ukuran kecil (&lt; 5MB).</li>
                         </ol>
                     </div>
                     <form id="formVideoPose">
@@ -545,25 +550,47 @@
                         <button type="submit" class="btn-primary" style="background:var(--pink); color:var(--ink);">📤 Perbarui Video</button>
                     </form>
                 </div>
+
                 <div class="card" style="background: var(--blue);">
                     <div class="card-header" style="border-bottom-color: var(--ink);">🖨️ Pengaturan Printer</div>
-                    <div class="form-group" style="background: rgba(255,255,255,0.5); padding: 10px; border-radius: 10px; border: 2px dashed var(--ink);">
-                        <label>Printer (Collage & Self Studio)</label>
-                        <select id="sys-printer4R" style="font-weight: bold; margin-bottom: 10px;" onchange="simpanPengaturan()"></select>
+                    
+                    <!-- SAKLAR ON/OFF DUAL PRINTER (2 PRINTER BERGANTIAN) -->
+                    <div class="form-group" style="background: #ffffff; padding: 12px; border-radius: 12px; border: 2px solid var(--ink); margin-bottom: 12px;">
+                        <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; margin: 0; font-weight: 700; color: var(--ink);">
+                            <span>🔀 Mode 2 Printer Bergantian (4R)</span>
+                            <input type="checkbox" id="sys-dualPrinterEnabled" style="width: 22px; height: 22px; accent-color: #10b981; cursor: pointer;" onchange="toggleDualPrinterUI()">
+                        </label>
+                        <p style="font-size: 0.76rem; color: #64748b; margin: 6px 0 0 0; line-height: 1.35;">
+                            Jika ON, perintah cetak akan dibagi bergantian: <b>Printer 1 ➔ Printer 2 ➔ Printer 1</b> (mengingat urutan terakhir lintas sesi).
+                        </p>
+                    </div>
+
+                    <!-- PRINTER 1 (UTAMA) -->
+                    <div class="form-group" style="background: rgba(255,255,255,0.65); padding: 10px; border-radius: 10px; border: 2px dashed var(--ink);">
+                        <label id="label-printer-1">🖨️ Printer 1 Utama (Collage & Self Studio)</label>
+                        <select id="sys-printer4R" style="font-weight: bold; margin-bottom: 8px;"></select>
                         <div style="display: flex; gap: 5px;">
-                            <button type="button" onclick="bukaSetupPrinter('4R')" style="flex: 1; padding: 8px; border-radius: 8px; background: #fff; border: 2px solid var(--ink); font-weight: bold; cursor: pointer; font-size: 0.85rem; box-shadow: 2px 2px 0px var(--ink);">⚙️ Setup</button>
-                           <button type="button" onclick="buatProfilPrinterBaru('sys-printer4R', this)" style="flex: 1; padding: 8px; border-radius: 8px; background: var(--yellow); color: var(--ink); border: 2px solid var(--ink); font-weight: bold; cursor: pointer; font-size: 0.85rem; box-shadow: 2px 2px 0px var(--ink);">➕ Gandakan</button>
+                            <button type="button" onclick="bukaSetupPrinter('4R')" style="flex: 1; padding: 7px; border-radius: 8px; background: #fff; border: 2px solid var(--ink); font-weight: bold; cursor: pointer; font-size: 0.82rem;">⚙️ Setup</button>
+                            <button type="button" onclick="buatProfilPrinterBaru('sys-printer4R', this)" style="flex: 1; padding: 7px; border-radius: 8px; background: var(--yellow); color: var(--ink); border: 2px solid var(--ink); font-weight: bold; cursor: pointer; font-size: 0.82rem;">➕ Gandakan</button>
                         </div>
                     </div>
-                    <div class="form-group" style="background: rgba(255,255,255,0.5); padding: 10px; border-radius: 10px; border: 2px dashed var(--ink);">
-                        <label>Printer (Mode Newspaper)</label>
-                        <select id="sys-printerA4" style="font-weight: bold; margin-bottom: 10px;" onchange="simpanPengaturan()"></select>
-                        <div style="display: flex; gap: 5px;">
-                            <button type="button" onclick="bukaSetupPrinter('A4')" style="flex: 1; padding: 8px; border-radius: 8px; background: #fff; border: 2px solid var(--ink); font-weight: bold; cursor: pointer; font-size: 0.85rem; box-shadow: 2px 2px 0px var(--ink);">⚙️ Setup</button>
-                            <button type="button" onclick="buatProfilPrinterBaru('sys-printerA4', this)" style="flex: 1; padding: 8px; border-radius: 8px; background: var(--pink); color: var(--ink); border: 2px solid var(--ink); font-weight: bold; cursor: pointer; font-size: 0.85rem; box-shadow: 2px 2px 0px var(--ink);">➕ Gandakan</button>
-                         </div>
+
+                    <!-- PRINTER 2 (MUNCUL SAAT DUAL PRINTER ON) -->
+                    <div id="box-printer-2" class="form-group" style="display: none; background: #dcfce7; padding: 10px; border-radius: 10px; border: 2px solid #16a34a;">
+                        <label style="color: #166534;">🖨️ Printer 2 Kedua (Collage & Self Studio)</label>
+                        <select id="sys-printer4R_2" style="font-weight: bold; margin-bottom: 8px; border-color: #16a34a;"></select>
+                        <p style="font-size: 0.75rem; color: #15803d; margin: 0; font-weight: 600;">*Menggunakan profil ukuran kertas 4R yang sama dengan Printer 1.</p>
                     </div>
-                    <button type="button" class="btn-primary" style="background: var(--ink); color: white; margin-top: 10px;" onclick="simpanPengaturan()">🖨️ Simpan Setelan Printer</button>
+
+                    <!-- PRINTER NEWSPAPER -->
+                    <div class="form-group" style="background: rgba(255,255,255,0.65); padding: 10px; border-radius: 10px; border: 2px dashed var(--ink); margin-bottom: 0;">
+                        <label>📰 Printer (Mode Newspaper)</label>
+                        <select id="sys-printerA4" style="font-weight: bold; margin-bottom: 8px;"></select>
+                        <div style="display: flex; gap: 5px;">
+                            <button type="button" onclick="bukaSetupPrinter('A4')" style="flex: 1; padding: 7px; border-radius: 8px; background: #fff; border: 2px solid var(--ink); font-weight: bold; cursor: pointer; font-size: 0.82rem;">⚙️ Setup</button>
+                            <button type="button" onclick="buatProfilPrinterBaru('sys-printerA4', this)" style="flex: 1; padding: 7px; border-radius: 8px; background: var(--pink); color: var(--ink); border: 2px solid var(--ink); font-weight: bold; cursor: pointer; font-size: 0.82rem;">➕ Gandakan</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1277,19 +1304,22 @@
                         <span>🎟️ Generate Voucher Sesi (Gratis 100%)</span>
                         <span style="background: var(--pink); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; border: 2px solid var(--ink);">Tiket Masuk</span>
                     </div>
-                    <p style="font-size: 0.85rem; color: #555; margin-bottom: 15px;">
-                        Digunakan di halaman Pembayaran (Tab <b>Tukar Voucher</b>). Tamu yang memasukkan kode ini langsung masuk ke kamera tanpa membayar QRIS.
-                    </p>
                     <div class="form-group">
-                        <label>Nama Awalan (Prefix) Voucher:</label>
-                        <input type="text" id="vch-prefix" placeholder="Contoh: VIP- atau WEDDING-" value="VIP-" style="text-transform: uppercase; font-weight: bold;">
+                        <label>Nama Brand / Judul Campaign di Kartu:</label>
+                        <input type="text" id="vch-brand" placeholder="Contoh: LACASABOOTH x EVENT" value="LACASABOOTH STUDIO" style="font-weight: bold;">
                     </div>
-                    <div class="form-group">
-                        <label>Jumlah Voucher yang Ingin Dibuat:</label>
-                        <input type="number" id="vch-count" placeholder="Contoh: 100" value="50" min="1" max="5000" style="font-weight: bold;">
+                    <div style="display: flex; gap: 12px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label>Awalan (Prefix):</label>
+                            <input type="text" id="vch-prefix" placeholder="VIP-" value="VIP-" style="text-transform: uppercase; font-weight: bold;">
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label>Jumlah Kartu:</label>
+                            <input type="number" id="vch-count" placeholder="50" value="50" min="1" max="500" style="font-weight: bold;">
+                        </div>
                     </div>
-                    <button type="button" class="btn-primary" style="background: var(--blue); color: var(--ink);" onclick="generateBulkCodes('voucher')">
-                        ⚡ Generate & Download CSV Voucher
+                    <button type="button" class="btn-primary" id="btn-gen-voucher" style="background: var(--blue); color: var(--ink);" onclick="generateBulkCodes('voucher')">
+                        📥 Generate & Download File Word (.doc)
                     </button>
                 </div>
 
@@ -1299,29 +1329,29 @@
                         <span>🏷️ Generate Kupon Diskon (Potongan Rp)</span>
                         <span style="background: var(--green); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; border: 2px solid var(--ink);">Potong Harga QRIS</span>
                     </div>
-                    <p style="font-size: 0.85rem; color: #555; margin-bottom: 15px;">
-                        Digunakan saat popup diskon menyala setelah layar <i>Touch to Start</i>. Memotong nominal tagihan QRIS Dinamis sesuai angka rupiah di bawah.
-                    </p>
                     <div class="form-group">
-                        <label>Nama Awalan (Prefix) Diskon:</label>
-                        <input type="text" id="dsc-prefix" placeholder="Contoh: PROMO- atauHEMAT-" value="PROMO-" style="text-transform: uppercase; font-weight: bold;">
+                        <label>Nama Brand / Judul Promo di Kartu:</label>
+                        <input type="text" id="dsc-brand" placeholder="Contoh: PROMO SPESIAL LACASABOOTH" value="LACASABOOTH PROMO" style="font-weight: bold;">
                     </div>
-                    <div style="display: flex; gap: 12px;">
+                    <div style="display: flex; gap: 10px;">
                         <div class="form-group" style="flex: 1;">
-                            <label>Jumlah Kupon:</label>
-                            <input type="number" id="dsc-count" placeholder="50" value="50" min="1" max="5000" style="font-weight: bold;">
+                            <label>Prefix:</label>
+                            <input type="text" id="dsc-prefix" placeholder="PROMO-" value="PROMO-" style="text-transform: uppercase; font-weight: bold;">
                         </div>
-                        <div class="form-group" style="flex: 1.4;">
-                            <label>Nominal Potongan (Rp):</label>
-                            <input type="number" id="dsc-amount" placeholder="Contoh: 10000" value="10000" min="500" style="font-weight: bold; color: #16a34a;">
+                        <div class="form-group" style="flex: 0.8;">
+                            <label>Jumlah:</label>
+                            <input type="number" id="dsc-count" placeholder="50" value="50" min="1" max="500" style="font-weight: bold;">
+                        </div>
+                        <div class="form-group" style="flex: 1.2;">
+                            <label>Potongan (Rp):</label>
+                            <input type="number" id="dsc-amount" placeholder="10000" value="10000" min="500" style="font-weight: bold; color: #16a34a;">
                         </div>
                     </div>
-                    <button type="button" class="btn-primary" style="background: var(--green); color: var(--ink);" onclick="generateBulkCodes('discount')">
-                        ⚡ Generate & Download CSV Diskon
+                    <button type="button" class="btn-primary" id="btn-gen-discount" style="background: var(--green); color: var(--ink);" onclick="generateBulkCodes('discount')">
+                        📥 Generate & Download File Word (.doc)
                     </button>
                 </div>
             </div>
-
             <!-- DAFTAR & RINGKASAN STOK VOUCHER / DISKON AKTIF -->
             <div class="card">
                 <div class="card-header">
@@ -1495,6 +1525,12 @@
 
         function togglePinInput() {
     document.getElementById('pin-input-container').style.display = document.getElementById('sys-usePin').checked ? 'block' : 'none';
+}
+function toggleDualPrinterUI() {
+    const isDual = document.getElementById('sys-dualPrinterEnabled')?.checked;
+    const box2 = document.getElementById('box-printer-2');
+    if (box2) box2.style.display = isDual ? 'block' : 'none';
+    if (window.simpanPengaturanSilent) window.simpanPengaturanSilent();
 }
       // MENGUBAH TEMA
         async function ubahTema(namaTema) {
@@ -1748,6 +1784,7 @@
                 const dataPrinter = await resPrinter.json();
                 const select4R = document.getElementById('sys-printer4R');
                 const selectA4 = document.getElementById('sys-printerA4');
+                
                 select4R.innerHTML = '<option value="">-- Pilih Printer --</option>';
                 selectA4.innerHTML = '<option value="">-- Pilih Printer --</option>';
                 if (dataPrinter.success && dataPrinter.printers.length > 0) {
@@ -1756,6 +1793,13 @@
                         selectA4.innerHTML += `<option value="${p}">${p}</option>`;
                     });
                 }
+                const select4R_2 = document.getElementById('sys-printer4R_2');
+if (select4R_2) select4R_2.innerHTML = '<option value="">-- Pilih Printer 2 --</option>';
+if (dataPrinter.success && dataPrinter.printers.length > 0) {
+    dataPrinter.printers.forEach(p => {
+        if (select4R_2) select4R_2.innerHTML += `<option value="${p}">${p}</option>`;
+    });
+}
 
                 const res = await fetch('/api/settings?t=' + Date.now(), { cache: 'no-store' }); const data = await res.json();
 
@@ -1824,6 +1868,13 @@ const setPrinterSelect = (selEl, targetVal) => {
 };
 setPrinterSelect(select4R, saved4R);
 setPrinterSelect(selectA4, savedA4);
+const saved4R_2 = data.global?.printer4R_2 || localStorage.getItem('backup_printer4R_2') || "";
+if (select4R_2) setPrinterSelect(select4R_2, saved4R_2);
+if (document.getElementById('sys-dualPrinterEnabled')) {
+    document.getElementById('sys-dualPrinterEnabled').checked = data.global?.dualPrinterEnabled === true;
+    const box2 = document.getElementById('box-printer-2');
+    if (box2) box2.style.display = data.global?.dualPrinterEnabled ? 'block' : 'none';
+}
 if (data.global?.customIdleScreen) {
                     document.getElementById('status-idle-screen').innerHTML = `<b style="color: var(--blue);">Terdapat Custom Layar</b>`;
                 }
@@ -1905,6 +1956,8 @@ if (document.getElementById('sys-printerA4')) localStorage.setItem('backup_print
                         driveParentFolderId: getVal('driveParentFolderId', currentData.global?.driveParentFolderId || ''),
                         printer4R: document.getElementById('sys-printer4R') ? document.getElementById('sys-printer4R').value : (currentData.global?.printer4R || ''),  
                         printerA4: document.getElementById('sys-printerA4') ? document.getElementById('sys-printerA4').value : (currentData.global?.printerA4 || ''),
+                        dualPrinterEnabled: getCheck('sys-dualPrinterEnabled', currentData.global?.dualPrinterEnabled || false),
+printer4R_2: document.getElementById('sys-printer4R_2') ? document.getElementById('sys-printer4R_2').value : (currentData.global?.printer4R_2 || ''),
                         canonIso: getVal('sys-canonIso', currentData.global?.canonIso || 'auto'),
 canonTv: getVal('sys-canonTv', currentData.global?.canonTv || 'auto'),
 canonAv: getVal('sys-canonAv', currentData.global?.canonAv || 'auto'),
@@ -1967,17 +2020,17 @@ idlePreset: currentData.global?.idlePreset || 'style-1',
 }
         async function scanKameraUSB() {
             const btn = document.getElementById('btn-scan-kamera');
-            btn.innerText = "⏳ Mengecek..."; btn.disabled = true;
+            if (btn) { btn.innerText = "⏳ Mengecek..."; btn.disabled = true; }
             try {
                 const res = await fetch('/api/rescan-camera');
                 const data = await res.json(); 
                 alert(data.message); 
                 loadDashboardStats();
-                sinkronDariKamera(); // <--- TAMBAHKAN BARIS INI
+                const eng = document.getElementById('sys-cameraEngine')?.value || 'canon';
+                if (eng === 'canon' && data.success) sinkronDariKamera();
             } catch (e) {}
-            btn.innerText = "🔄 Scan Ulang Kamera"; btn.disabled = false;
+            if (btn) { btn.innerText = "🔄 Scan Ulang Kamera"; btn.disabled = false; }
         }
-
         async function loadAnalyticData() {
             try {
                 const tbody = document.getElementById('table-analytic-body');
@@ -2840,43 +2893,77 @@ document.addEventListener('DOMContentLoaded', () => {
 let selectedTier = '';
 let selectedDuration = '';
 
-// --- LOGIKA PEMBAYARAN LANGGANAN OTOMATIS VIA DOKU ---
+// --- LOGIKA PEMBAYARAN LANGGANAN NEETPAY (ANTI-GAGAL MESKIPUN MODAL DITUTUP) ---
 let saasPollingInterval = null;
 let currentSaasOrderId = null;
-let paymentWindow = null;
 
 window.tutupModalPaymentSaas = function() {
-    if (saasPollingInterval) clearInterval(saasPollingInterval);
+    // JANGAN hentikan saasPollingInterval saat modal ditutup!
+    // Biarkan tetap memantau di latar belakang jika klien sudah terlanjur scan QRIS lalu klik Batal/X.
     document.getElementById('paymentModal').style.display = 'none';
 };
 
-window.cekStatusSaasManual = async function() {
-    if (!currentSaasOrderId) return;
-    const btnCek = document.getElementById('btn-cek-manual');
-    const statusEl = document.getElementById('saas-payment-status');
-    btnCek.innerHTML = "⏳ Mengecek..."; btnCek.disabled = true;
+function mulaiPantauOrderSaasBackground(orderId, tierTarget, daysToAdd) {
+    // Simpan ke localStorage agar meskipun halaman ter-refresh, order tetap dipantau
+    localStorage.setItem('pending_saas_order', JSON.stringify({
+        orderId,
+        tier: tierTarget,
+        daysToAdd,
+        timestamp: Date.now()
+    }));
 
-    try {
-        const chkRes = await fetch(`/api/saas/check-status/${currentSaasOrderId}?t=${Date.now()}`);
-        const chkData = await chkRes.json();
+    if (saasPollingInterval) clearInterval(saasPollingInterval);
 
-        if (chkData.success && chkData.status === 'PAID') {
-            if (saasPollingInterval) clearInterval(saasPollingInterval);
-            if (paymentWindow && !paymentWindow.closed) paymentWindow.close(); // Tutup jendela otomatis
+    // Percepat polling menjadi setiap 2 detik (2000ms) agar terdeteksi instan!
+    saasPollingInterval = setInterval(async () => {
+        try {
+            const savedRaw = localStorage.getItem('pending_saas_order');
+            if (!savedRaw) {
+                clearInterval(saasPollingInterval);
+                return;
+            }
+            const saved = JSON.parse(savedRaw);
+            // Hentikan jika sudah lewat 15 menit (kadaluarsa)
+            if (Date.now() - saved.timestamp > 15 * 60 * 1000) {
+                localStorage.removeItem('pending_saas_order');
+                clearInterval(saasPollingInterval);
+                return;
+            }
 
-            statusEl.innerHTML = `<span style="color:#10b981; font-size:1.2rem;">🎉 PEMBAYARAN BERHASIL! Mengaktifkan Lisensi...</span>`;
-            const dur = selectedDuration || '1m';
-            const daysToAdd = (dur === '3d') ? 3 : (dur === '1w') ? 7 : (dur === '1m') ? 30 : 365;
-            const expiredDate = new Date(); expiredDate.setDate(expiredDate.getDate() + daysToAdd);
-            if (window.updateLicenseToFirebase) await window.updateLicenseToFirebase(selectedTier, expiredDate);
-        } else {
-            alert("⚠️ Pembayaran belum terdeteksi Lunas oleh sistem DOKU. Jika Anda sudah membayar, tunggu 1-2 menit lalu klik cek lagi.");
-            btnCek.innerHTML = "🔄 Cek Status Pembayaran"; btnCek.disabled = false;
-        }
-    } catch (e) {
-        btnCek.innerHTML = "🔄 Cek Status Pembayaran"; btnCek.disabled = false;
+            const chkRes = await fetch(`/api/saas/check-status/${saved.orderId}?t=${Date.now()}`);
+            const chkData = await chkRes.json();
+
+            if (chkData.success && chkData.status === 'PAID') {
+                clearInterval(saasPollingInterval);
+                localStorage.removeItem('pending_saas_order');
+
+                const statusEl = document.getElementById('saas-payment-status');
+                if (statusEl) {
+                    statusEl.style.display = 'block';
+                    statusEl.innerHTML = `<span style="color:#10b981; font-size:1.15rem;">🎉 PEMBAYARAN BERHASIL! Mengaktifkan Lisensi...</span>`;
+                }
+                const expiredDate = new Date();
+                expiredDate.setDate(expiredDate.getDate() + saved.daysToAdd);
+                if (window.updateLicenseToFirebase) await window.updateLicenseToFirebase(saved.tier, expiredDate);
+            }
+        } catch (err) {}
+    }, 2000);
+}
+
+// Otomatis lanjutkan pemantauan jika ada pembayaran yang belum selesai saat Dashboard baru dibuka
+document.addEventListener('DOMContentLoaded', () => {
+    const savedRaw = localStorage.getItem('pending_saas_order');
+    if (savedRaw) {
+        try {
+            const saved = JSON.parse(savedRaw);
+            if (Date.now() - saved.timestamp < 15 * 60 * 1000) {
+                mulaiPantauOrderSaasBackground(saved.orderId, saved.tier, saved.daysToAdd);
+            } else {
+                localStorage.removeItem('pending_saas_order');
+            }
+        } catch (e) {}
     }
-};
+});
 
 window.bukaPayment = function(tier) {
     const user = window.auth ? window.auth.currentUser : null;
@@ -2889,15 +2976,11 @@ window.bukaPayment = function(tier) {
     const durasiTeks = (selectedDuration === '3d') ? '3 Hari' : (selectedDuration === '1w') ? '7 Hari' : (selectedDuration === '1m') ? '1 Bulan' : '1 Tahun';
     const priceText = pricing[tier][selectedDuration].price;
 
-    // Reset isi pop-up ke mode pemilihan metode
-    document.getElementById('payment-method-selector').style.display = 'block';
-    document.getElementById('btn-generate-doku').style.display = 'flex';
-    document.getElementById('saas-payment-status').style.display = 'none';
-    document.getElementById('btn-lanjut-doku').style.display = 'none';
-    document.getElementById('btn-cek-manual').style.display = 'none';
-
-    document.getElementById('payment-desc').innerHTML = `Akun: <b>${user.email}</b><br>Paket: <b style="color:var(--ink); font-size:1.3rem;">${tier.toUpperCase()} (${durasiTeks})</b><br><span style="color:var(--blue); font-size:1.6rem; font-weight:bold;">${priceText}</span>`;
+    document.getElementById('payment-desc').innerHTML = `Akun: <b>${user.email}</b><br>Paket: <b style="color:var(--ink); font-size:1.2rem;">${tier.toUpperCase()} (${durasiTeks})</b> — <span style="color:#0f766e; font-size:1.35rem; font-weight:bold;">${priceText}</span>`;
+    document.getElementById('saas-qris-box').style.display = 'none';
     document.getElementById('paymentModal').style.display = 'flex';
+
+    window.prosesGenerateInvoice();
 };
 
 window.prosesGenerateInvoice = async function() {
@@ -2906,78 +2989,40 @@ window.prosesGenerateInvoice = async function() {
     const daysToAdd = (selectedDuration === '3d') ? 3 : (selectedDuration === '1w') ? 7 : (selectedDuration === '1m') ? 30 : 365;
     const priceText = pricing[selectedTier][selectedDuration].price;
     const nominalAngka = parseInt(priceText.replace(/\D/g, ''));
-    
-    // Ambil pilihan metode bayar klien
-    const paymentMethod = document.getElementById('saas-pay-method').value;
 
     const statusEl = document.getElementById('saas-payment-status');
-    const btnGenerate = document.getElementById('btn-generate-doku');
-    const btnBayarDoku = document.getElementById('btn-lanjut-doku');
-    const btnCekManual = document.getElementById('btn-cek-manual');
+    const qrisBox = document.getElementById('saas-qris-box');
+    const qrisImg = document.getElementById('saas-qris-img');
 
-    document.getElementById('payment-method-selector').style.display = 'none';
-    btnGenerate.style.display = 'none';
     statusEl.style.display = 'block';
-    statusEl.innerHTML = "⏳ Menghubungkan ke DOKU Payment Gateway...";
+    statusEl.innerHTML = "⏳ Membuat QRIS Pembayaran via NeetPay...";
 
     try {
         const res = await fetch('/api/saas/create-invoice', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                email: user.email, 
-                tier: selectedTier, 
-                duration: durasiTeks, 
-                amount: nominalAngka,
-                paymentMethod: paymentMethod // <-- Mengirimkan instruksi ke backend
+            body: JSON.stringify({
+                email: user.email,
+                tier: selectedTier,
+                duration: durasiTeks,
+                amount: nominalAngka
             })
         });
         const data = await res.json();
 
         if (!data.success) {
             statusEl.innerHTML = `<span style="color:#ef4444;">❌ ${data.message}</span>`;
-            btnGenerate.style.display = 'flex';
             return;
         }
 
-       currentSaasOrderId = data.orderId;
-        statusEl.innerHTML = `✅ Tagihan DOKU Siap!<br><span style="font-size:0.85rem; color:#555;">Silakan selesaikan pembayaran di jendela baru. Jika layar ini tidak tertutup otomatis setelah Anda membayar, klik tombol Cek Status di bawah.</span>`;
-        
-        btnBayarDoku.style.display = 'flex';
-        btnCekManual.style.display = 'flex';
-        
-        // Simpan referensi ke jendela pop-up
-        paymentWindow = window.open(data.paymentUrl, '_blank', 'width=500,height=750');
-        
-        // Agar jika klien terlanjur menutupnya, mereka bisa membukanya kembali
-        btnBayarDoku.onclick = () => {
-            if (!paymentWindow || paymentWindow.closed) {
-                paymentWindow = window.open(data.paymentUrl, '_blank', 'width=500,height=750');
-            } else {
-                paymentWindow.focus();
-            }
-        };
+        currentSaasOrderId = data.orderId;
+        qrisImg.src = data.qrImage;
+        qrisBox.style.display = 'flex';
+        statusEl.innerHTML = `📲 Scan QRIS di atas dengan M-Banking / E-Wallet.<br><span style="font-size:0.8rem; color:#0f766e; font-weight:bold;">⚡ Otomatis mendeteksi pembayaran (tetap aman meski jendela ini ditutup).</span>`;
 
-        if (saasPollingInterval) clearInterval(saasPollingInterval);
-        saasPollingInterval = setInterval(async () => {
-            try {
-                const chkRes = await fetch(`/api/saas/check-status/${currentSaasOrderId}?t=${Date.now()}`);
-                const chkData = await chkRes.json();
-
-                if (chkData.success && chkData.status === 'PAID') {
-                    clearInterval(saasPollingInterval);
-                    if (paymentWindow && !paymentWindow.closed) paymentWindow.close(); // Tutup jendela otomatis
-
-                    statusEl.innerHTML = `<span style="color:#10b981; font-size:1.2rem;">🎉 PEMBAYARAN BERHASIL! Mengaktifkan Lisensi...</span>`;
-                    const expiredDate = new Date(); expiredDate.setDate(expiredDate.getDate() + daysToAdd);
-                    if (window.updateLicenseToFirebase) await window.updateLicenseToFirebase(selectedTier, expiredDate);
-                }
-            } catch (err) {}
-        }, 4000);
-
+        mulaiPantauOrderSaasBackground(data.orderId, selectedTier, daysToAdd);
     } catch (e) {
         statusEl.innerHTML = `<span style="color:#ef4444;">❌ Gagal menghubungi server pembayaran.</span>`;
-        btnGenerate.style.display = 'flex';
     }
 };
 // === LOGIC PENGECEKAN PEMBARUAN KE GITHUB & IPC LISTENERS ===
@@ -3149,7 +3194,7 @@ async function buatProfilPrinterBaru(selectId, btnElement) {
 // Panggil saat dashboard selesai render
 document.addEventListener('DOMContentLoaded', loadQrisSettings);
 
-// === LOGIKA GENERATE VOUCHER & DISKON MASSAL ===
+// === LOGIKA GENERATE VOUCHER & DISKON VISUAL BER-QR (SIAP CETAK / PDF) ===
         let cachedVouchersList = [];
 
         async function loadVouchersData() {
@@ -3168,10 +3213,9 @@ document.addEventListener('DOMContentLoaded', loadQrisSettings);
                     return;
                 }
 
-                // Tampilkan maksimal 150 terbaru di tabel agar ringan
                 tbody.innerHTML = cachedVouchersList.slice(0, 150).map(v => `
                     <tr>
-                        <td style="font-family: monospace; font-weight: bold; font-size: 1rem;">${v.code}</td>
+                        <td style="font-family: monospace; font-weight: bold; font-size: 1.05rem; letter-spacing: 1px;">${v.code}</td>
                         <td><span style="background:${v.type === 'voucher' ? 'var(--pink)' : 'var(--green)'}; padding:3px 10px; border-radius:8px; font-weight:bold; font-size:0.8rem;">${v.type === 'voucher' ? '🎟️ VOUCHER GRATIS' : '🏷️ DISKON'}</span></td>
                         <td>${v.type === 'voucher' ? 'Gratis 100%' : 'Potongan Rp ' + Number(v.amount || 0).toLocaleString('id-ID')}</td>
                         <td>${v.isUsed ? '<span style="color:#ef4444; font-weight:bold;">❌ Sudah Dipakai</span>' : '<span style="color:#10b981; font-weight:bold;">✅ Tersedia</span>'}</td>
@@ -3182,24 +3226,134 @@ document.addEventListener('DOMContentLoaded', loadQrisSettings);
             }
         }
 
-        function downloadFileCSV(filename, rows) {
-            const csvContent = "data:text/csv;charset=utf-8," + rows.join("\n");
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", filename);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
+        // Fungsi Membuat QR Code Murni (Tanpa Emotikon Tengah) Menjadi Base64 Image agar Bisa Dibuka Offline di MS Word!
+        function buatQrBase64Murni(teksKode) {
+            return new Promise((resolve) => {
+                const tempDiv = document.createElement('div');
+                tempDiv.style.cssText = 'position:fixed; left:-9999px; top:-9999px;';
+                document.body.appendChild(tempDiv);
+                new QRCode(tempDiv, {
+                    text: teksKode,
+                    width: 140,
+                    height: 140,
+                    colorDark: "#0f172a",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+                setTimeout(() => {
+                    const canvas = tempDiv.querySelector('canvas');
+                    const img = tempDiv.querySelector('img');
+                    let dataUrl = '';
+                    if (canvas) dataUrl = canvas.toDataURL('image/png');
+                    else if (img && img.src) dataUrl = img.src;
+                    tempDiv.remove();
+                    resolve(dataUrl);
+                }, 40);
+            });
+        }
+
+        // Fungsi Mengunduh Langsung Kartu Voucher Ber-QR ke File Microsoft Word (.doc)
+        async function downloadDesainKartuVoucherDoc(items, namaBrandCustom = "LACASABOOTH STUDIO") {
+            const tglBerlaku = new Date();
+            tglBerlaku.setMonth(tglBerlaku.getMonth() + 3);
+            const strBerlaku = tglBerlaku.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+
+            // Render semua QR Code ke gambar Base64 terlebih dahulu
+            const qrImages = [];
+            for (let i = 0; i < items.length; i++) {
+                qrImages.push(await buatQrBase64Murni(items[i].code));
+            }
+
+            // Susun tabel 2 kolom agar rapi saat dibuka di Microsoft Word maupun Browser
+            let rowsHtml = '';
+            for (let i = 0; i < items.length; i += 2) {
+                const renderCardCell = (idx) => {
+                    if (idx >= items.length) return `<td width="50%" style="padding:8px;"></td>`;
+                    const item = items[idx];
+                    const qrSrc = qrImages[idx];
+                    const benefitText = item.type === 'voucher' ? 'Gratis 1x Sesi Foto' : `Diskon Rp ${Number(item.amount || 0).toLocaleString('id-ID')}`;
+                    const tipeLabel = item.type === 'voucher' ? 'VOUCHER PHOTOBOOTH' : 'KUPON DISKON PHOTOBOOTH';
+
+                    return `
+                        <td width="50%" style="padding: 8px; vertical-align: top;">
+                            <table width="100%" cellpadding="12" cellspacing="0" style="border: 2px solid #cbd5e1; border-radius: 16px; background-color: #ffffff; font-family: 'Segoe UI', Arial, sans-serif;">
+                                <tr>
+                                    <td width="125" align="center" valign="middle" style="border-right: 1.5px dashed #cbd5e1; padding-right: 12px;">
+                                        <div style="border: 1.5px solid #94a3b8; border-radius: 12px; padding: 6px; display: inline-block; background: #ffffff;">
+                                            <img src="${qrSrc}" width="105" height="105" alt="${item.code}" style="display:block;">
+                                        </div>
+                                    </td>
+                                    <td valign="middle" style="padding-left: 14px; text-align: left;">
+                                        <div style="margin-bottom: 4px;">
+                                            <span style="background-color: #ccfbf1; color: #0f766e; border: 1px solid #14b8a6; border-radius: 20px; padding: 2px 10px; font-size: 9pt; font-weight: bold;">● AKTIF</span>
+                                            <span style="font-size: 8.5pt; color: #64748b; font-weight: bold; margin-left: 6px;">${tipeLabel}</span>
+                                        </div>
+                                        <!-- KODE VOUCHER DIPERBESAR & DIPERJELAS SEBAGAI INTI UTAMA -->
+                                        <div style="font-size: 17pt; font-weight: 900; color: #0f172a; letter-spacing: 2px; font-family: 'Consolas', 'Courier New', monospace; background: #f8fafc; border: 1.5px solid #94a3b8; border-radius: 8px; padding: 4px 10px; margin: 5px 0; display: inline-block;">
+                                            ${item.code}
+                                        </div>
+                                        <div style="font-size: 10.5pt; font-weight: bold; color: #1e293b; margin-top: 2px;">
+                                            ${namaBrandCustom.toUpperCase()}
+                                        </div>
+                                        <div style="font-size: 9pt; color: #0f766e; font-weight: bold; margin-top: 2px;">
+                                            🏷️ 1x Pakai &nbsp;|&nbsp; ✨ ${benefitText}
+                                        </div>
+                                        <div style="font-size: 8pt; color: #64748b; margin-top: 4px;">
+                                            Berlaku s/d <b>${strBerlaku}</b>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    `;
+                };
+
+                rowsHtml += `<tr>${renderCardCell(i)}${renderCardCell(i + 1)}</tr>`;
+            }
+
+            const wordDocumentContent = `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head>
+                    <meta charset="utf-8">
+                    <title>${namaBrandCustom}</title>
+                    <style>
+                        @page { size: A4 portrait; margin: 1.2cm; }
+                        body { font-family: 'Segoe UI', Arial, sans-serif; background: #ffffff; margin: 0; padding: 0; }
+                        table { border-collapse: separate; }
+                    </style>
+                </head>
+                <body>
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                        ${rowsHtml}
+                    </table>
+                </body>
+                </html>
+            `;
+
+            const blob = new Blob(['\ufeff', wordDocumentContent], { type: 'application/msword;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const cleanBrand = namaBrandCustom.replace(/[^a-zA-Z0-9]/g, '_');
+            a.href = url;
+            a.download = `Kartu_Voucher_${cleanBrand}_${items.length}x_${Date.now()}.doc`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 5000);
         }
 
         async function generateBulkCodes(type) {
             const prefix = (type === 'voucher' ? document.getElementById('vch-prefix').value : document.getElementById('dsc-prefix').value).trim().toUpperCase();
             const count = parseInt(type === 'voucher' ? document.getElementById('vch-count').value : document.getElementById('dsc-count').value) || 0;
             const amount = type === 'discount' ? (parseInt(document.getElementById('dsc-amount').value) || 0) : 0;
+            const brandName = (type === 'voucher' ? document.getElementById('vch-brand')?.value : document.getElementById('dsc-brand')?.value) || "LACASABOOTH STUDIO";
 
-            if (count <= 0 || count > 5000) return alert("⚠️ Masukkan jumlah antara 1 sampai 5000!");
+            if (count <= 0 || count > 500) return alert("⚠️ Masukkan jumlah antara 1 sampai 500 kartu!");
             if (type === 'discount' && amount <= 0) return alert("⚠️ Masukkan nominal potongan rupiah yang valid!");
+
+            const btn = document.getElementById(type === 'voucher' ? 'btn-gen-voucher' : 'btn-gen-discount');
+            const oldText = btn ? btn.innerHTML : '';
+            if (btn) { btn.innerHTML = "⏳ Merender QR & Mengunduh File..."; btn.disabled = true; }
 
             try {
                 const res = await fetch('/api/vouchers/generate', {
@@ -3209,29 +3363,25 @@ document.addEventListener('DOMContentLoaded', loadQrisSettings);
                 });
                 const data = await res.json();
                 if (data.success) {
-                    const csvRows = ["KODE,TIPE,POTONGAN_RP,STATUS"];
-                    data.generated.forEach(item => {
-                        csvRows.push(`${item.code},${item.type.toUpperCase()},${item.type === 'voucher' ? 'GRATIS_100%' : item.amount},AKTIF`);
-                    });
-                    downloadFileCSV(`Lacasabooth_${type.toUpperCase()}_${count}x_${Date.now()}.csv`, csvRows);
-                    alert(`✅ Berhasil membuat ${count} kode ${type === 'voucher' ? 'Voucher' : 'Diskon'} & mengunduh file CSV!`);
+                    await downloadDesainKartuVoucherDoc(data.generated, brandName);
                     loadVouchersData();
+                    alert(`✅ Berhasil! File berisi ${count} Desain Kartu QR telah diunduh (.doc).\nSilakan buka file tersebut di Microsoft Word / WPS Office untuk dicetak.`);
                 } else {
                     alert("❌ Gagal: " + data.message);
                 }
             } catch (e) {
                 alert("❌ Gagal menghubungi server.");
+            } finally {
+                if (btn) { btn.innerHTML = oldText; btn.disabled = false; }
             }
         }
 
-        function downloadActiveCodesCSV() {
+        async function downloadActiveCodesCSV() {
             const activeList = cachedVouchersList.filter(v => !v.isUsed);
-            if (activeList.length === 0) return alert("⚠️ Tidak ada kode aktif yang bisa diekspor.");
-            const csvRows = ["KODE,TIPE,POTONGAN_RP,STATUS"];
-            activeList.forEach(item => {
-                csvRows.push(`${item.code},${item.type.toUpperCase()},${item.type === 'voucher' ? 'GRATIS_100%' : item.amount},TERSEDIA`);
-            });
-            downloadFileCSV(`Stok_Voucher_Aktif_${Date.now()}.csv`, csvRows);
+            if (activeList.length === 0) return alert("⚠️ Tidak ada kode aktif yang bisa diunduh.");
+            const brandName = document.getElementById('vch-brand')?.value || "LACASABOOTH STUDIO";
+            await downloadDesainKartuVoucherDoc(activeList, brandName);
+            alert(`✅ Berhasil mengunduh ${activeList.length} Kartu Voucher Aktif (.doc)!`);
         }
 
         async function hapusSemuaVoucher() {
@@ -3738,6 +3888,14 @@ document.addEventListener('DOMContentLoaded', loadQrisSettings);
 
         
         }
+        async function bukaAtauSalinHotFolder() {
+            const res = await fetch('/api/open-hot-folder');
+            const data = await res.json();
+            if (data.success && data.path) {
+                navigator.clipboard.writeText(data.path);
+                alert(`✅ Folder Tether telah dibuka & jalurnya disalin ke Clipboard:\n\n${data.path}\n\n(Tempelkan jalur ini di pengaturan Destination Folder pada Fujifilm X Acquire / Sony Remote).`);
+            }
+        }
     </script>
     <div class="modal-overlay" id="customConfirmModal" style="z-index: 999999;">
         <div class="modal-content" style="max-width: 420px; text-align: center; padding: 30px;">
@@ -3770,38 +3928,22 @@ document.addEventListener('DOMContentLoaded', loadQrisSettings);
     </div>
 </div>
 
-<!-- MODAL PEMBAYARAN LANGGANAN DOKU OTOMATIS -->
+<!-- MODAL PEMBAYARAN LANGGANAN NEETPAY QRIS OTOMATIS -->
 <div class="modal-overlay" id="paymentModal" style="z-index: 999999;">
-    <div class="modal-content" style="max-width: 450px; text-align: center;">
+    <div class="modal-content" style="max-width: 440px; text-align: center; padding: 30px;">
         <button class="btn-close-modal" onclick="window.tutupModalPaymentSaas()">✕</button>
-        <div style="font-size: 3.5rem; margin-bottom: 5px;">💳</div>
-        <h3 style="font-size: 1.6rem; margin-bottom: 10px;">Pembayaran Langganan</h3>
+        <div style="font-size: 3rem; margin-bottom: 5px;">📲</div>
+        <h3 style="font-size: 1.5rem; margin-bottom: 8px;">Aktivasi Langganan Instan</h3>
         <p id="payment-desc" style="margin-bottom: 15px; line-height: 1.5;"></p>
-        
-        <!-- DROPDOWN BARU UNTUK MEMILIH METODE -->
-        <div id="payment-method-selector" style="margin-bottom: 15px; text-align: left;">
-            <label style="font-weight: 600; font-size: 0.9rem; color: var(--ink); margin-bottom: 5px; display: block;">Pilih Metode Pembayaran:</label>
-            <select id="saas-pay-method" style="width: 100%; padding: 12px; border-radius: 12px; border: 2px solid var(--ink); font-weight: bold; background: var(--bg-color); outline: none;">
-                <option value="qris">QRIS (Sesuai Harga / Bebas Biaya Admin)</option>
-                <option value="other">Transfer Bank / Minimarket (+ Biaya Admin Rp 4.500)</option>
-            </select>
+
+        <div id="saas-qris-box" style="display: none; background: #ffffff; padding: 14px; border-radius: 20px; border: 2px solid var(--ink); margin: 0 auto 15px auto; width: 220px; height: 220px; align-items: center; justify-content: center;">
+            <img id="saas-qris-img" src="" alt="QRIS NeetPay" style="width: 100%; height: 100%; object-fit: contain;">
         </div>
 
-        <div id="saas-payment-status" style="background: var(--bg-color); padding: 15px; border-radius: 15px; border: 2px dashed var(--ink); margin-bottom: 15px; font-weight: 600; display: none;">
-            ⏳ Mempersiapkan metode pembayaran...
+        <div id="saas-payment-status" style="background: var(--bg-color); padding: 12px 15px; border-radius: 15px; border: 2px dashed var(--ink); margin-bottom: 15px; font-weight: 600; font-size: 0.9rem; display: none;">
+            ⏳ Menyiapkan QRIS NeetPay...
         </div>
 
-        <!-- TOMBOL PEMICU INVOICE DOKU -->
-        <button id="btn-generate-doku" class="btn-primary" style="background: var(--blue); color: var(--ink); margin-bottom: 10px;" onclick="window.prosesGenerateInvoice()">
-            📝 Buat Tagihan DOKU
-        </button>
-        
-        <button id="btn-lanjut-doku" class="btn-primary" style="background: #ef4444; color: white; margin-bottom: 10px; display: none;">
-            🔗 Buka Halaman Pembayaran DOKU
-        </button>
-        <button id="btn-cek-manual" class="btn-primary" style="background: var(--yellow); color: var(--ink); margin-bottom: 10px; display: none;" onclick="window.cekStatusSaasManual()">
-            🔄 Cek Status Pembayaran
-        </button>
         <button onclick="window.tutupModalPaymentSaas()" class="btn-primary" style="background: #e2e8f0; color: var(--ink);">
             Batal / Tutup
         </button>
@@ -3832,5 +3974,291 @@ document.addEventListener('DOMContentLoaded', loadQrisSettings);
         <button onclick="simpanEditTemplate()" class="btn-primary" style="background: var(--green); color: var(--ink); margin-top: 15px;">💾 Simpan Perubahan</button>
     </div>
 </div>
+<!-- ========================================================================= -->
+<!-- 🚀 MODUL AUTO-SAVE DASHBOARD (TANPA TOMBOL SIMPAN) & AUTO-WEBHOOK TUNNEL  -->
+<!-- ========================================================================= -->
+<style>
+    /* 1. Sembunyikan seluruh tombol Simpan manual di halaman pengaturan */
+    button[onclick*="simpanPengaturan"],
+    button[onclick*="simpanDanTerapkanExposure"],
+    button[onclick*="saveQrisSettings"] {
+        display: none !important;
+    }
+
+    /* 2. Indikator Mengambang Auto-Save di Pojok Kanan Atas */
+    #autosave-status-pill {
+        position: fixed;
+        top: 25px;
+        right: 90px;
+        z-index: 999999;
+        background: #10b981;
+        color: #ffffff;
+        padding: 8px 18px;
+        border-radius: 50px;
+        font-weight: 700;
+        font-size: 0.88rem;
+        box-shadow: 0 8px 20px rgba(16, 185, 129, 0.28);
+        border: 2px solid #ffffff;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        opacity: 0;
+        transform: translateY(-10px);
+        transition: all 0.25s ease;
+        pointer-events: none;
+    }
+    #autosave-status-pill.show {
+        opacity: 1;
+        transform: translateY(0);
+    }
+</style>
+
+<div id="autosave-status-pill">☁️ Tersimpan Otomatis</div>
+
+<script>
+(function() {
+    const pill = document.getElementById('autosave-status-pill');
+    let pillTimeout = null;
+
+    function tampilkanIndikatorAutoSave(teks = "☁️ Tersimpan Otomatis", warna = "#10b981") {
+        if (!pill) return;
+        pill.innerText = teks;
+        pill.style.background = warna;
+        pill.classList.add('show');
+        if (pillTimeout) clearTimeout(pillTimeout);
+        pillTimeout = setTimeout(() => pill.classList.remove('show'), 2000);
+    }
+
+    // Fungsi saat Dropdown Mesin Kamera diubah: Simpan dulu ke server, baru scan ulang kamera!
+    window.ubahEngineKameraUI = async function() {
+        await window.simpanPengaturanSilent();
+        if (typeof scanKameraUSB === 'function') scanKameraUSB();
+    };
+
+    // Simpan Pengaturan Utama secara Hening (Sudah Termasuk Dual Printer & Printer 2)
+    window.simpanPengaturanSilent = async function() {
+        try {
+            tampilkanIndikatorAutoSave("⏳ Menyimpan...", "#3b82f6");
+            const resSettings = await fetch('/api/settings?t=' + Date.now(), { cache: 'no-store' });
+            if (document.getElementById('sys-printer4R')) localStorage.setItem('backup_printer4R', document.getElementById('sys-printer4R').value);
+            if (document.getElementById('sys-printer4R_2')) localStorage.setItem('backup_printer4R_2', document.getElementById('sys-printer4R_2').value);
+            if (document.getElementById('sys-printerA4')) localStorage.setItem('backup_printerA4', document.getElementById('sys-printerA4').value);
+            const currentData = await resSettings.json().catch(() => ({}));
+
+            const getVal = (id, fallback) => {
+                const el = document.getElementById(id);
+                if (!el) return fallback;
+                if (el.tagName === 'SELECT' && (id === 'sys-printer4R' || id === 'sys-printer4R_2' || id === 'sys-printerA4')) {
+                    return el.value;
+                }
+                if (el.tagName === 'SELECT' && el.value === "" && fallback) return fallback;
+                return el.value;
+            };
+            const getCheck = (id, fallback) => {
+                const el = document.getElementById(id);
+                return el ? el.checked : fallback;
+            };
+
+            const payload = {
+                ...currentData,
+                photobox: {
+                    ...(currentData.photobox || {}),
+                    sessionTimer: parseInt(getVal('pb-sessionTimer', currentData.photobox?.sessionTimer)) || 300
+                },
+                collage: {
+                    ...(currentData.collage || {}),
+                    timer: parseInt(getVal('clg-timer', currentData.collage?.timer)) || 5,
+                    sessionTimer: parseInt(getVal('clg-sessionTimer', currentData.collage?.sessionTimer)) || 300,
+                    maxRetake: parseInt(getVal('clg-maxRetake', currentData.collage?.maxRetake)) || 0
+                },
+                newspaper: {
+                    ...(currentData.newspaper || {}),
+                    sessionTimer: parseInt(getVal('clg-sessionTimer', currentData.newspaper?.sessionTimer)) || 300,
+                    maxRetake: parseInt(getVal('clg-maxRetake', currentData.newspaper?.maxRetake)) || 0
+                },
+                global: {
+                    ...(currentData.global || {}),
+                    cameraOrientation: getVal('sys-cameraOrientation', currentData.global?.cameraOrientation || 'landscape'),
+                    mirrorCamera: getVal('sys-mirrorCamera', currentData.global?.mirrorCamera ? 'true' : 'false') === "true",
+                    takeFromRemote: getVal('sys-takeFromRemote', currentData.global?.takeFromRemote ? 'true' : 'false') === "true",
+                    usePin: getCheck('sys-usePin', currentData.global?.usePin || false),
+                    adminPin: getVal('sys-adminPin', currentData.global?.adminPin || '1234'),
+                    theme: currentData.global?.theme || 'theme-pop-art',
+                    customIdleScreen: currentData.global?.customIdleScreen || null,
+                    extraPrintPriceStatic: parseInt(getVal('sys-extraPrintPriceStatic', currentData.global?.extraPrintPriceStatic)) || 15000,
+                    qrisPriceStatic: parseInt(getVal('sys-qrisPriceStatic', currentData.global?.qrisPriceStatic)) || 35000,
+                    cameraEngine: getVal('sys-cameraEngine', currentData.global?.cameraEngine || 'canon'),
+                    cameraPort: getVal('sys-cameraPort', currentData.global?.cameraPort || ''),
+                    liveViewBrightness: parseInt(getVal('sys-brightness', currentData.global?.liveViewBrightness)) || 100,
+                    flashWorkaround: getVal('sys-flashWorkaround', currentData.global?.flashWorkaround !== false ? 'true' : 'false') === "true",
+                    livePhotoEnabled: getVal('sys-livePhoto', currentData.global?.livePhotoEnabled ? 'true' : 'false') === "true",
+                    photoGifEnabled: getVal('sys-photoGif', currentData.global?.photoGifEnabled ? 'true' : 'false') === "true",
+                    cloudStorage: getVal('sys-cloudStorage', currentData.global?.cloudStorage !== false ? 'true' : 'false') === "true",
+                    driveParentFolderId: getVal('driveParentFolderId', currentData.global?.driveParentFolderId || ''),
+                    printer4R: document.getElementById('sys-printer4R') ? document.getElementById('sys-printer4R').value : (currentData.global?.printer4R || ''),
+                    printer4R_2: document.getElementById('sys-printer4R_2') ? document.getElementById('sys-printer4R_2').value : (currentData.global?.printer4R_2 || ''),
+                    dualPrinterEnabled: getCheck('sys-dualPrinterEnabled', currentData.global?.dualPrinterEnabled || false),
+                    printerA4: document.getElementById('sys-printerA4') ? document.getElementById('sys-printerA4').value : (currentData.global?.printerA4 || ''),
+                    canonIso: getVal('sys-canonIso', currentData.global?.canonIso || 'auto'),
+                    canonTv: getVal('sys-canonTv', currentData.global?.canonTv || 'auto'),
+                    canonAv: getVal('sys-canonAv', currentData.global?.canonAv || 'auto'),
+                    discountEnabled: getVal('sys-discountEnabled', currentData.global?.discountEnabled ? 'true' : 'false') === "true",
+                    idlePreset: currentData.global?.idlePreset || 'style-1',
+                    cloudflareToken: getVal('input-cf-token', currentData.global?.cloudflareToken || '')
+                },
+                waMessage: getVal('wa-message-text', currentData.waMessage || '')
+            };
+
+            await fetch('/api/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            tampilkanIndikatorAutoSave("☁️ Tersimpan Otomatis", "#10b981");
+        } catch (e) {
+            tampilkanIndikatorAutoSave("⚠️ Gagal Menyimpan", "#ef4444");
+        }
+    };
+
+    // Pastikan tombol stepper +/- Kamera Pro juga langsung Auto-Save ke file JSON selain menembak kamera
+    const origStepExposure = window.stepExposure;
+    if (typeof origStepExposure === 'function') {
+        window.stepExposure = function(selectId, direction) {
+            origStepExposure(selectId, direction);
+            window.simpanPengaturanSilent();
+        };
+    }
+
+    // Daftar seluruh ID input pengaturan umum & kamera
+    const generalSettingIds = [
+        'sys-usePin', 'sys-adminPin',
+        'clg-sessionTimer', 'clg-timer', 'clg-maxRetake', 'pb-sessionTimer',
+        'sys-cameraEngine', 'sys-cameraOrientation', 'sys-mirrorCamera', 'sys-takeFromRemote',
+        'sys-brightness', 'sys-flashWorkaround', 'sys-printer4R', 'sys-printerA4',
+        'sys-livePhoto', 'sys-photoGif',
+        'sys-canonIso', 'sys-canonTv', 'sys-canonAv',
+        'sys-cloudStorage', 'driveParentFolderId',
+        'wa-message-text',
+        'sys-dualPrinterEnabled',
+        'sys-printer4R_2',
+        'sys-qrisPriceStatic', 'sys-extraPrintPriceStatic',
+        'sys-discountEnabled'
+    ];
+
+    // Daftar seluruh ID input pengaturan QRIS Dinamis
+    const qrisSettingIds = [
+        'qrisType', 'sys-paymentGateway',
+        'gatewayKey1', 'gatewayKey2', 'gatewayKey3',
+        'qrisPrice', 'sys-extraPrintPriceDynamic', 'input-cf-token'
+    ];
+
+    let debounceTimerGeneral = null;
+    let debounceTimerQris = null;
+
+    function pasangAutoSaveListeners() {
+        generalSettingIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (!el || el.dataset.autoSaveBound) return;
+            el.dataset.autoSaveBound = 'true';
+
+            if (el.tagName === 'SELECT' || el.type === 'checkbox') {
+                el.addEventListener('change', () => {
+                    if (id.startsWith('sys-canon') && typeof tembakKameraSilent === 'function') {
+                        tembakKameraSilent();
+                    }
+                    window.simpanPengaturanSilent();
+                });
+            } else {
+                el.addEventListener('input', () => {
+                    if (debounceTimerGeneral) clearTimeout(debounceTimerGeneral);
+                    debounceTimerGeneral = setTimeout(() => window.simpanPengaturanSilent(), 600);
+                });
+            }
+        });
+
+        qrisSettingIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (!el || el.dataset.autoSaveBound) return;
+            el.dataset.autoSaveBound = 'true';
+
+            if (el.tagName === 'SELECT') {
+                el.addEventListener('change', async () => {
+                    tampilkanIndikatorAutoSave("⏳ Menyimpan QRIS...", "#3b82f6");
+                    await saveQrisSettings(true);
+                    tampilkanIndikatorAutoSave("☁️ QRIS Tersimpan Otomatis", "#10b981");
+                });
+            } else {
+                el.addEventListener('input', () => {
+                    if (debounceTimerQris) clearTimeout(debounceTimerQris);
+                    debounceTimerQris = setTimeout(async () => {
+                        tampilkanIndikatorAutoSave("⏳ Menyimpan QRIS...", "#3b82f6");
+                        await saveQrisSettings(true);
+                        tampilkanIndikatorAutoSave("☁️ QRIS Tersimpan Otomatis", "#10b981");
+                    }, 600);
+                });
+            }
+        });
+    }
+
+    // =========================================================================
+    // 🌐 TAMPILKAN URL WEBHOOK OTOMATIS (TANPA PERLU BUAT TOKEN SATU-SATU)
+    // =========================================================================
+    function upgradeCloudflareWebhookBox() {
+        const cfInput = document.getElementById('input-cf-token');
+        if (!cfInput || cfInput.dataset.upgradedWebhookBox) return;
+        cfInput.dataset.upgradedWebhookBox = 'true';
+
+        const parentBox = cfInput.parentElement;
+        parentBox.innerHTML = `
+            <label style="color: #0f766e; font-weight: 700; display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                <span>🌐 URL Webhook Otomatis (Zero-Config Tunnel):</span>
+                <span style="background: #ccfbf1; color: #0f766e; padding: 2px 8px; border-radius: 10px; font-size: 0.72rem;">Aktif Otomatis</span>
+            </label>
+            <div style="display: flex; gap: 6px; margin-bottom: 8px;">
+                <input type="text" id="auto-webhook-url-display" readonly value="⏳ Menyiapkan URL Publik Otomatis..." style="flex: 1; font-weight: bold; font-size: 0.8rem; font-family: monospace; background: #ffffff; border: 2px solid #14b8a6; color: #0f766e; padding: 8px 10px; border-radius: 8px;">
+                <button type="button" onclick="salinWebhookOtomatis()" style="background: #0f766e; color: white; border: none; padding: 0 14px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.8rem; white-space: nowrap;">📋 Salin</button>
+            </div>
+            <p style="font-size: 0.78rem; color: #475569; margin: 0 0 8px 0; line-height: 1.35;">
+                *Sistem otomatis membuatkan jalur internet tanpa perlu membuat Token Cloudflare satu-satu. Untuk NeetPay/DOKU/Tripay/Duitku, URL ini juga sudah dikirim otomatis di setiap transaksi!
+            </p>
+            <details style="font-size: 0.78rem; color: #64748b; cursor: pointer;">
+                <summary style="font-weight: 600;">⚙️ Opsi Lanjutan: Pakai Token Cloudflare Sendiri (Opsional)</summary>
+                <input type="text" id="input-cf-token" placeholder="Kosongkan jika memakai mode otomatis di atas..." style="margin-top: 6px; font-weight: bold; font-size: 0.8rem; font-family: monospace; border: 1.5px solid #cbd5e1; width: 100%; padding: 8px; border-radius: 8px;">
+            </details>
+        `;
+
+        pasangAutoSaveListeners();
+        tarikUrlWebhookOtomatis();
+    }
+
+    window.salinWebhookOtomatis = function() {
+        const el = document.getElementById('auto-webhook-url-display');
+        if (!el || el.value.includes('⏳')) return alert("URL sedang disiapkan, tunggu beberapa detik.");
+        navigator.clipboard.writeText(el.value);
+        alert("✅ URL Webhook berhasil disalin!\n" + el.value);
+    };
+
+    async function tarikUrlWebhookOtomatis() {
+        try {
+            const res = await fetch('/api/tunnel-info?t=' + Date.now());
+            const data = await res.json();
+            const el = document.getElementById('auto-webhook-url-display');
+            if (el && data.webhookUrl) {
+                el.value = data.webhookUrl;
+            }
+        } catch (e) {}
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        upgradeCloudflareWebhookBox();
+        pasangAutoSaveListeners();
+        setInterval(tarikUrlWebhookOtomatis, 4000);
+    });
+    setTimeout(() => {
+        upgradeCloudflareWebhookBox();
+        pasangAutoSaveListeners();
+    }, 800);
+})();
+</script>
 </body>
 </html>
