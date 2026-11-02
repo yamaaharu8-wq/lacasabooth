@@ -279,130 +279,164 @@ let activeEvent = null;
 let activeSessionId = 'DEFAULT_SESSION';
 
 // =======================================================
-// FUNGSI PENCARI LOKASI BROWSER OTOMATIS
+// FUNGSI PENCARI LOKASI BROWSER OTOMATIS (SUPPORT 64-BIT & 32-BIT DI .EXE)
 // =======================================================
 function getBrowserPath() {
     const paths = [
         'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
         'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
         path.join(os.homedir(), 'AppData', 'Local', 'Google', 'Chrome', 'Application', 'chrome.exe'),
-        'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe' // Fallback ke Microsoft Edge
+        'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',       // ✅ Edge 64-bit (Wajib untuk Windows 10/11 Modern!)
+        'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe', // Edge 32-bit
+        path.join(os.homedir(), 'AppData', 'Local', 'Microsoft', 'Edge', 'Application', 'msedge.exe')
     ];
 
     for (let p of paths) {
-        if (fs.existsSync(p)) return p;
+        if (fs.existsSync(p)) {
+            console.log(`🌐 [WA BROWSER] Menggunakan browser: ${p}`);
+            return p;
+        }
     }
-    
     console.log("⚠️ Peringatan: Chrome/Edge tidak ditemukan di lokasi standar.");
-    return null; // Biarkan Puppeteer mencoba mencari sendiri jika semua path gagal
+    return undefined;
 }
+
+// Fungsi pembersih proses browser zombie yang mengunci folder wa_session di versi .exe
+function bersihkanKunciSesiWa() {
+    return new Promise((resolve) => {
+        // Matikan hanya proses chrome/msedge headless yang memakai folder wa_session kita
+        const cmd = `powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { ($_.Name -eq 'chrome.exe' -or $_.Name -eq 'msedge.exe') -and $_.CommandLine -match 'wa_session' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"`;
+        exec(cmd, () => {
+            try {
+                const lockFiles = ['SingletonLock', 'SingletonCookie', 'SingletonSocket', 'lockfile'];
+                const botDir = path.join(userDataPath, 'wa_session', 'session-lacasabooth-bot');
+                lockFiles.forEach(lf => {
+                    const p = path.join(botDir, lf);
+                    if (fs.existsSync(p)) fs.unlinkSync(p);
+                });
+            } catch (e) {}
+            setTimeout(resolve, 500);
+        });
+    });
+}
+
 // =======================================================
-// 2. 🤖 SISTEM WHATSAPP BOT LOKAL (SESI PERMANEN & ANTI BUG)
+// 2. 🤖 SISTEM WHATSAPP BOT LOKAL (ANTI-MACET DI VERSI .EXE)
 // =======================================================
 const waSessionPath = path.join(userDataPath, 'wa_session');
-const waClient = new Client({
-    // Menambahkan clientId agar sesi terikat kuat dan permanen
-    authStrategy: new LocalAuth({ 
-        clientId: "lacasabooth-bot",
-        dataPath: waSessionPath 
-    }), 
-    puppeteer: {
-        headless: true,
-        executablePath: getBrowserPath(),
-        args: [
-            '--no-sandbox', 
-            '--disable-setuid-sandbox', 
-            '--disable-dev-shm-usage', // Mencegah crash memori di latar belakang
-            '--disable-accelerated-2d-canvas',
-            '--no-first-run',
-            '--no-zygote',
-            '--disable-gpu', // Mengurangi beban CPU Mini PC
-            '--disable-extensions'
-        ]
-    },
-    webVersionCache: { type: 'none' } 
-});
-
+let waClient = null;
 let waBotStatus = 'STARTING';
 let waBotQr = '';
+let isWaInitializing = false;
 
-waClient.on('qr', (qr) => {
-    console.log('[WA] QR Code tersedia. Silakan scan melalui Dashboard.');
-    waBotStatus = 'QR_READY';
-    waBotQr = qr;
-});
+function buatInstanceWaClient() {
+    return new Client({
+        authStrategy: new LocalAuth({ 
+            clientId: "lacasabooth-bot",
+            dataPath: waSessionPath 
+        }), 
+        puppeteer: {
+            headless: 'new', // Mode Headless modern agar tidak diblokir WhatsApp Web
+            executablePath: getBrowserPath(),
+            args: [
+                '--no-sandbox', 
+                '--disable-setuid-sandbox', 
+                '--disable-dev-shm-usage',
+                '--disable-accelerated-2d-canvas',
+                '--no-first-run',
+                '--disable-gpu',
+                '--disable-extensions',
+                '--disable-software-rasterizer',
+                '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+            ]
+        }
+    });
+}
 
-waClient.on('ready', () => {
-    console.log('[WA] ✅ Bot WhatsApp Siap Digunakan (Sesi Permanen Aktif)!');
-    waBotStatus = 'READY';
+async function nyalakanMesinWa() {
+    if (isWaInitializing) return;
+    isWaInitializing = true;
+    waBotStatus = 'STARTING';
     waBotQr = '';
-});
 
-waClient.on('authenticated', () => {
-    console.log('[WA] Autentikasi berhasil!');
-    waBotStatus = 'AUTHENTICATED';
-});
+    await bersihkanKunciSesiWa();
+    waClient = buatInstanceWaClient();
 
-// [BARU] Deteksi otomatis jika terputus dari server WhatsApp
-waClient.on('disconnected', (reason) => {
-    console.log('⚠️ [BOT WA] Sesi terputus! Alasan:', reason);
-    waBotStatus = 'DISCONNECTED';
-    waBotQr = '';
-    
-    // Jika terputus karena aplikasi di HP di-logout atau bentrok sesi
-    if (reason === 'NAVIGATION' || reason === 'CONFLICT' || reason === 'LOGOUT') {
-        console.log('🧹 [BOT WA] Sesi rusak terdeteksi. Menghancurkan memori lama...');
-        waClient.destroy();
-        // User harus klik tombol "Logout / Reset Bot WA" di Dashboard untuk membersihkan foldernya
-    } else {
-        // Jika terputus hanya karena jaringan ngadat sesaat, coba inisialisasi ulang
-        waClient.initialize(); 
-    }
-});
-try {
-    const sessionLockPath = path.join(waSessionPath, 'session-lacasabooth-bot', 'SingletonLock');
-    if (fs.existsSync(sessionLockPath)) {
-        fs.unlinkSync(sessionLockPath);
-        console.log("✅ Kunci sesi WA (SingletonLock) dibersihkan saat startup.");
-    }
-} catch(e) {}
+    waClient.on('qr', (qr) => {
+        console.log('📲 [WA] QR Code baru tersedia! Silakan scan di Dashboard.');
+        waBotStatus = 'QR_READY';
+        waBotQr = qr;
+    });
 
-waClient.initialize().catch(async (err) => {
-    console.error("❌ [WA ERROR] Gagal inisialisasi WA:", err.message);
-    
-    // Buka kunci sesi Chrome secara paksa jika nyangkut dari sesi sebelumnya
+    waClient.on('ready', () => {
+        console.log('✅ [WA] Bot WhatsApp Siap Digunakan!');
+        waBotStatus = 'READY';
+        waBotQr = '';
+    });
+
+    waClient.on('authenticated', () => {
+        console.log('🔐 [WA] Autentikasi berhasil!');
+        waBotStatus = 'AUTHENTICATED';
+    });
+
+    waClient.on('auth_failure', (msg) => {
+        console.error('❌ [WA] Autentikasi gagal:', msg);
+        waBotStatus = 'DISCONNECTED';
+    });
+
+    waClient.on('disconnected', async (reason) => {
+        console.log('⚠️ [BOT WA] Sesi terputus:', reason);
+        waBotStatus = 'DISCONNECTED';
+        waBotQr = '';
+        try { await waClient.destroy(); } catch (e) {}
+    });
+
     try {
-        const sessionLock = path.join(waSessionPath, 'session-lacasabooth-bot', 'SingletonLock');
-        if (fs.existsSync(sessionLock)) fs.unlinkSync(sessionLock);
-        console.log("✅ Kunci sesi lama berhasil dibersihkan. Server tetap berjalan aman.");
-    } catch(e) {}
-});
+        await waClient.initialize();
+    } catch (err) {
+        console.error("❌ [WA ERROR] Gagal inisialisasi WA:", err.message);
+        await bersihkanKunciSesiWa();
+    }
+    isWaInitializing = false;
+}
+
+nyalakanMesinWa();
 
 expressApp.get('/api/wa-status', (req, res) => {
     res.json({ status: waBotStatus, qr: waBotQr });
 });
 
-// [PERBAIKAN] Logika Logout WA yang menghapus folder sesi hingga bersih
+// [FIXED] Logika Reset Bot WA yang membunuh proses Chrome/Edge pengunci folder di .exe sebelum membuat QR baru!
 expressApp.post('/api/wa-logout', async (req, res) => {
+    console.log("🔄 Memproses Reset & Pembersihan Total Sesi WA...");
+    waBotStatus = 'STARTING';
+    waBotQr = '';
+
     try {
-        console.log("Memproses Logout WA...");
-        await waClient.logout().catch(e => {});
-        await waClient.destroy().catch(e => {});
+        if (waClient) {
+            await waClient.logout().catch(() => {});
+            await waClient.destroy().catch(() => {});
+        }
     } catch (e) {}
 
-    // Hapus paksa folder token lama agar WA tidak mendeteksi sebagai spam
+    // 1. Bunuh paksa proses browser wa_session yang mengunci file di Windows!
+    await bersihkanKunciSesiWa();
+
+    // 2. Hapus folder wa_session sampai benar-benar bersih
     if (fs.existsSync(waSessionPath)) {
         try {
             fs.rmSync(waSessionPath, { recursive: true, force: true });
-            console.log("✅ Folder sesi WA lama berhasil dihapus.");
+            console.log("✅ Folder wa_session berhasil dihapus bersih.");
         } catch (err) {
-            console.error("Gagal menghapus folder sesi WA:", err.message);
+            console.error("⚠️ Percobaan hapus ke-1 gagal, mencoba lagi setelah 1 detik:", err.message);
+            await new Promise(r => setTimeout(r, 1000));
+            try { fs.rmSync(waSessionPath, { recursive: true, force: true }); } catch (e) {}
         }
     }
 
-    waBotStatus = 'STARTING';
-    waBotQr = '';
-    waClient.initialize();
+    // 3. Nyalakan ulang mesin WA dari nol untuk menghasilkan QR baru
+    isWaInitializing = false;
+    nyalakanMesinWa();
     res.json({ success: true });
 });
 
@@ -442,7 +476,9 @@ const EdsObjectEventHandler = koffi.proto('EdsError EdsObjectEventHandler(uint32
 const EdsSetObjectEventHandler = edsdk.func('EdsError EdsSetObjectEventHandler(EdsBaseRef inCameraRef, uint32 inEvent, EdsObjectEventHandler* inObjectEventHandler, void* inContext)');
 
 const kEdsCameraCommand_TakePicture = 0x00000000;
-let activeCamera = null; 
+let activeCamera = null;
+let canonCameraRefs = [null, null]; // Menyimpan referensi Kamera Canon 1 (Index 0) & Kamera Canon 2 (Index 1)
+let currentActiveCameraSlot = 1;    // 1 = Kamera Utama, 2 = Kamera Kedua
 let latestLvBuffer = null;
 let lvInterval = null;
 let isEdsdkInitialized = false;
@@ -450,13 +486,13 @@ let isEdsdkInitialized = false;
 const EdsTerminateSDK = edsdk.func('EdsError EdsTerminateSDK()');
 const EdsCloseSession = edsdk.func('EdsError EdsCloseSession(EdsBaseRef inCameraRef)');
 
-function hubungkanKamera(forceReinit = false) {
+function hubungkanKamera(forceReinit = false, targetSlot = null) {
     console.log("🔌 Mencari kamera Canon via USB...");
     try {
-        // Jika diminta rescan paksa dan sebelumnya belum ada kamera aktif, siklus ulang SDK agar bus USB Windows ter-refresh!
         if (forceReinit && isEdsdkInitialized && !activeCamera) {
             try { EdsTerminateSDK(); } catch (e) {}
             isEdsdkInitialized = false;
+            canonCameraRefs = [null, null];
         }
 
         if (!isEdsdkInitialized) {
@@ -470,74 +506,57 @@ function hubungkanKamera(forceReinit = false) {
 
         let cameraList = [null];
         const listErr = EdsGetCameraList(cameraList);
-        if (listErr !== 0 || !cameraList[0]) {
-            console.log(`⚠️ Gagal mengambil daftar kamera (Kode: 0x${listErr.toString(16)})`);
-            return false;
-        }
+        if (listErr !== 0 || !cameraList[0]) return false;
 
         let count = [0];
         EdsGetChildCount(cameraList[0], count);
 
         if (count[0] === 0) {
-            // WAJIB RELEASE cameraList[0] AGAR TIDAK MENGUNCI BUS USB CANON!
             EdsRelease(cameraList[0]);
             activeCamera = null;
+            canonCameraRefs = [null, null];
             console.log("⚠️ Tidak ada kamera Canon terdeteksi di jalur EDSDK.");
             return false;
         }
 
-        let camera = [null];
-        EdsGetChildAtIndex(cameraList[0], 0, camera);
-        // Segera release cameraList setelah kamera diambil
+        console.log(`📸 Terdeteksi ${count[0]} unit Kamera Canon di USB.`);
+        const dbSet = safeReadJson(settingsPath, {});
+
+        // Buka sesi untuk maksimal 2 kamera Canon yang tercolok
+        for (let i = 0; i < Math.min(count[0], 2); i++) {
+            if (!canonCameraRefs[i]) {
+                let cam = [null];
+                if (EdsGetChildAtIndex(cameraList[0], i, cam) === 0 && cam[0]) {
+                    if (EdsOpenSession(cam[0]) === 0) {
+                        canonCameraRefs[i] = cam[0];
+                        const saveTo = Buffer.alloc(4); saveTo.writeUInt32LE(2, 0);
+                        EdsSetPropertyData(cam[0], 0x0000000b, 0, 4, saveTo);
+                        const kapasitasPC = { numberOfFreeClusters: 0x7FFFFFFF, bytesPerSector: 512, reset: 1 };
+                        EdsSetCapacity(cam[0], kapasitasPC);
+                        try { EdsSendStatusCommand(cam[0], 1, 0); } catch (e) {}
+                        EdsSetObjectEventHandler(cam[0], 0x0200, callbackPenarikFoto, null);
+                        console.log(`✅ Sesi Kamera Canon #${i + 1} berhasil dibuka!`);
+                    } else {
+                        EdsRelease(cam[0]);
+                    }
+                }
+            }
+        }
         EdsRelease(cameraList[0]);
 
-        activeCamera = camera[0];
-        const sessionErr = EdsOpenSession(activeCamera);
+        // Tentukan kamera mana yang aktif sekarang
+        const slotPilihan = targetSlot || (dbSet.global?.activeCameraSlot ? parseInt(dbSet.global.activeCameraSlot) : 1);
+        currentActiveCameraSlot = slotPilihan;
 
-        if (sessionErr === 0) {
-            console.log("✅ BERHASIL TERHUBUNG! Kamera Canon siap dikendalikan.");
-
-            // 1. Set kamera menyimpan foto ke PC (Host = 2)
-            const saveTo = Buffer.alloc(4);
-            saveTo.writeUInt32LE(2, 0);
-            EdsSetPropertyData(activeCamera, 0x0000000b, 0, 4, saveTo);
-
-            // 2. Set kapasitas HDD PC agar kamera mau menjepret
-            const kapasitasPC = { numberOfFreeClusters: 0x7FFFFFFF, bytesPerSector: 512, reset: 1 };
-            EdsSetCapacity(activeCamera, kapasitasPC);
-
-            // 3. Buka Kunci Tombol Bodi Kamera (UI Unlock = 1) - Abaikan jika seri 1200D tidak mendukung
-            try { EdsSendStatusCommand(activeCamera, 1, 0); } catch (e) {}
-
-            // 4. Terapkan Setting Segitiga Exposure otomatis
-            try {
-                const dbSet = safeReadJson(settingsPath, {});
-                if (dbSet.global) {
-                    const setExp = (propId, valHex) => {
-                        if (valHex && valHex !== "auto") {
-                            let buf = Buffer.alloc(4);
-                            buf.writeUInt32LE(parseInt(valHex, 16), 0);
-                            EdsSetPropertyData(activeCamera, propId, 0, 4, buf);
-                        }
-                    };
-                    setTimeout(() => setExp(0x00000402, dbSet.global.canonIso), 150);
-                    setTimeout(() => setExp(0x00000406, dbSet.global.canonTv), 350);
-                    setTimeout(() => setExp(0x00000405, dbSet.global.canonAv), 550);
-                }
-            } catch (e) {}
-
-            // 5. Pasang pendengar jepretan (0x0200 = kEdsObjectEvent_All)
-            EdsSetObjectEventHandler(activeCamera, 0x0200, callbackPenarikFoto, null);
-            return true;
+        if (slotPilihan === 2 && canonCameraRefs[1]) {
+            activeCamera = canonCameraRefs[1];
         } else {
-            console.log(`❌ Gagal membuka sesi kamera (Kode Error: 0x${sessionErr.toString(16)}). Pastikan aplikasi lain/Windows Photos tidak sedang membuka kamera.`);
-            EdsRelease(activeCamera);
-            activeCamera = null;
-            return false;
+            activeCamera = canonCameraRefs[0];
         }
+
+        return activeCamera !== null;
     } catch (err) {
         console.error("❌ Exception saat menghubungkan kamera:", err.message);
-        activeCamera = null;
         return false;
     }
 }
@@ -1461,6 +1480,61 @@ expressApp.post('/toggle-liveview', (req, res) => {
     else stopLiveView();
     res.status(200).json({ success: true });
 });
+// =======================================================
+// 🔄 API PENGALIH KAMERA REAL-TIME (KAMERA 1 <-> KAMERA 2)
+// =======================================================
+expressApp.post('/api/switch-camera', async (req, res) => {
+    try {
+        let settings = safeReadJson(settingsPath, {});
+        if (!settings.global) settings.global = {};
+
+        const isDualEnabled = settings.global.dualCameraEnabled === true;
+        if (!isDualEnabled) {
+            return res.json({ success: false, message: "Fitur Dual Kamera sedang NONAKTIF di Dashboard." });
+        }
+
+        const currentSlot = parseInt(settings.global.activeCameraSlot) || 1;
+        const nextSlot = req.body.targetSlot ? parseInt(req.body.targetSlot) : (currentSlot === 1 ? 2 : 1);
+
+        settings.global.activeCameraSlot = nextSlot;
+        atomicWriteJson(settingsPath, settings);
+        currentActiveCameraSlot = nextSlot;
+
+        const engineTarget = (nextSlot === 1) ? (settings.global.cameraEngine || 'canon') : (settings.global.cameraEngine2 || 'webcam');
+        const wasLvRunning = (lvInterval !== null);
+
+        if (wasLvRunning) stopLiveView();
+
+        if (engineTarget === 'canon') {
+            // Jika keduanya disetel Canon dan ada 2 bodi Canon tercolok, pindah ke Canon ke-2. Jika hanya 1 Canon, pakai Canon ke-1.
+            const bothCanon = (settings.global.cameraEngine === 'canon' && settings.global.cameraEngine2 === 'canon');
+            if (bothCanon && nextSlot === 2 && canonCameraRefs[1]) {
+                activeCamera = canonCameraRefs[1];
+            } else {
+                if (!canonCameraRefs[0]) hubungkanKamera(false, nextSlot);
+                else activeCamera = canonCameraRefs[0];
+            }
+            if (wasLvRunning && activeCamera) startLiveView();
+        }
+
+        // Pancarkan sinyal ke seluruh layar (Collage, Photobox, Newspaper, Dashboard) agar Live View langsung berganti!
+        io.emit('camera-switched', {
+            activeSlot: nextSlot,
+            engine: engineTarget,
+            webcamDeviceId: (nextSlot === 1) ? (settings.global.webcamDeviceId1 || '') : (settings.global.webcamDeviceId2 || '')
+        });
+
+        console.log(`🔄 [DUAL CAMERA] Beralih ke Kamera ${nextSlot} (Mesin: ${engineTarget.toUpperCase()})`);
+        res.json({
+            success: true,
+            activeSlot: nextSlot,
+            engine: engineTarget,
+            webcamDeviceId: (nextSlot === 1) ? (settings.global.webcamDeviceId1 || '') : (settings.global.webcamDeviceId2 || '')
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
 
 expressApp.post('/capture', async (req, res) => {
     const { mirror, lvActive, mode } = req.body;
@@ -1890,7 +1964,7 @@ expressApp.post('/api/generate-ai', async (req, res) => {
 expressApp.post('/api/generate-photobox', async (req, res) => {
     try {
         // 🔥 1. GEMBOK SESI SAAT INI AGAR ANTI-BENTROK DENGAN SESI BERIKUTNYA!
-        const lockedSessionId = activeSessionId;
+const lockedSessionId = req.body.sessionId || activeSessionId;
 
         let db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
         let templateData = null;
@@ -2018,19 +2092,22 @@ expressApp.post('/api/generate-photobox', async (req, res) => {
         global.liveFramesByPhoto = {}; 
 
         let isOnlineMode = true; 
+        let driveFolderMode = "per_session"; // 'per_session' atau 'single_mixed'
         let parentFolderId = "1scPtcs7JaGmnF4TYfpUL2DIcN_7iU9DB"; 
+        let mixedFolderId = "";
         let isLivePhotoOn = false;
         let isPhotoGifOn = false;
 
         try {
-            if (fs.existsSync(settingsPath)) {
-                const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
-                if (settings.global && settings.global.cloudStorage !== undefined) isOnlineMode = settings.global.cloudStorage;
-                if (settings.global && settings.global.driveParentFolderId) parentFolderId = settings.global.driveParentFolderId;
+            const settings = safeReadJson(settingsPath, {});
+            if (settings.global) {
+                if (settings.global.cloudStorage !== undefined) isOnlineMode = settings.global.cloudStorage;
+                driveFolderMode = settings.global.driveFolderMode || "per_session";
+                if (settings.global.driveParentFolderId) parentFolderId = settings.global.driveParentFolderId.trim();
+                if (settings.global.driveMixedFolderId) mixedFolderId = settings.global.driveMixedFolderId.trim();
                 
-                // Cek apakah fitur diaktifkan di Dashboard DAN dicentang oleh user di layar
-                const dashLive = (settings.global?.livePhotoEnabled === true || settings.global?.livePhotoEnabled === "true");
-                const dashGif = (settings.global?.photoGifEnabled === true || settings.global?.photoGifEnabled === "true");
+                const dashLive = (settings.global.livePhotoEnabled === true || settings.global.livePhotoEnabled === "true");
+                const dashGif = (settings.global.photoGifEnabled === true || settings.global.photoGifEnabled === "true");
                 
                 isLivePhotoOn = dashLive && (req.body.livePhoto !== false);
                 isPhotoGifOn = dashGif && (req.body.photoGif !== false);
@@ -2038,7 +2115,6 @@ expressApp.post('/api/generate-photobox', async (req, res) => {
         } catch (e) {}
 
         let urlLivePhoto = isLivePhotoOn ? 'processing' : null;
-        // 🚀 3. KIRIM BALASAN KE LAYAR KLIEN DETIK INI JUGA!
         res.json({ 
             success: true, 
             file: `/uploads/${lockedSessionId}/${outputName}`, 
@@ -2046,28 +2122,64 @@ expressApp.post('/api/generate-photobox', async (req, res) => {
             livePhoto: urlLivePhoto 
         });
 
-        // ==========================================
-        // 👻 4. BACKGROUND TASK ANTI-BENTROK SESI
-        // ==========================================
+        // =========================================================================
+        // 👻 4. BACKGROUND TASK: PENAMAAN RAPI & UPLOAD G-DRIVE (PER SESI VS CAMPUR)
+        // =========================================================================
         (async () => {
-            const datePrefix = new Date().toISOString().replace(/T/, '_').replace(/\..+/, '').replace(/:/g, '-');
-            const driveFolderName = `${datePrefix}_${lockedSessionId}`;
-            
+            const now = new Date();
+            const namaBulan = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+            const tglSingkat = `${String(now.getDate()).padStart(2, '0')}${namaBulan[now.getMonth()]}`;
+            const jamSingkat = `${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
+            const detikSingkat = String(now.getSeconds()).padStart(2, '0');
+
+            // 1. Nama Folder Singkat & Jelas untuk Mode Per Sesi (Contoh: Sesi_31Okt_08-55_04)
+            const driveFolderName = `Sesi_${tglSingkat}_${jamSingkat}_${detikSingkat}`;
+
+            // 2. Kode Urut Terbalik (Reverse Timestamp) untuk Mode 1 Folder Campur:
+           const reverseOrderKey = String(99999999 - Math.floor((Date.now() - 1735689600000) / 1000)).padStart(8, '0');
+            const isMixedMode = (driveFolderMode === 'single_mixed');
+            // Jika mode campur dipilih tapi kolom mixedFolderId kosong, gunakan parentFolderId sebagai fallback agar tetap terupload!
+            const targetRootFolderId = (isMixedMode ? (mixedFolderId || parentFolderId) : (parentFolderId || mixedFolderId)).trim();
+
             let pathGif = null;
             const namaGif = `live_${lockedSessionId}.gif`;
 
             let pathPhotoGif = null;
             const namaPhotoGif = `slideshow_${lockedSessionId}.gif`;
 
-            // ---> TUGAS A: GOOGLE DRIVE (Mendapatkan Link Folder Spesifik)
+            const uploadFileWithCleanName = async (sourceFilePath, cleanNamePerSession, cleanNameMixed) => {
+                if (!fs.existsSync(sourceFilePath)) return null;
+                const finalUploadName = isMixedMode ? cleanNameMixed : cleanNamePerSession;
+                const tempNamedPath = path.join(tempDir, `${lockedSessionId}_${finalUploadName}`);
+                try {
+                    fs.copyFileSync(sourceFilePath, tempNamedPath);
+                    const folderArg = isMixedMode ? null : driveFolderName;
+                    // Rename di dalam uploadToDrive menggunakan nama bersih
+                    const finalTempClean = path.join(tempDir, finalUploadName);
+                    try { fs.copyFileSync(tempNamedPath, finalTempClean); } catch (_) {}
+                    const link = await uploadToDrive(fs.existsSync(finalTempClean) ? finalTempClean : tempNamedPath, folderArg, targetRootFolderId);
+                    if (fs.existsSync(tempNamedPath)) try { fs.unlinkSync(tempNamedPath); } catch (_) {}
+                    if (fs.existsSync(finalTempClean)) try { fs.unlinkSync(finalTempClean); } catch (_) {}
+                    return link;
+                } catch (e) {
+                    console.error("❌ [UPLOAD TASK ERROR]:", e.message);
+                    if (fs.existsSync(tempNamedPath)) try { fs.unlinkSync(tempNamedPath); } catch (_) {}
+                    return null;
+                }
+            };
+
+            // ---> TUGAS A: UPLOAD FOTO CETAK UTAMA & BUAT QR CODE
             const driveTask = (async () => {
-                if (isOnlineMode && typeof uploadToDrive === 'function') {
+                if (isOnlineMode && typeof uploadToDrive === 'function' && targetRootFolderId) {
                     try {
-                        const folderLink = await uploadToDrive(outputPath, driveFolderName, parentFolderId);
-                        const finalLink = folderLink || `https://drive.google.com/drive/folders/${parentFolderId}`;
+                        const cleanMainSession = `1_Foto_Cetak_${jamSingkat}.jpg`;
+                        const cleanMainMixed = `${reverseOrderKey}_${tglSingkat}_${jamSingkat}-${detikSingkat}_1_FOTO_CETAK.jpg`;
+
+                        const folderLink = await uploadFileWithCleanName(outputPath, cleanMainSession, cleanMainMixed);
+                        const finalLink = folderLink || `https://drive.google.com/drive/folders/${targetRootFolderId}`;
                         io.emit('qr-ready', { sessionId: lockedSessionId, url: finalLink });
-                    } catch(err) {
-                        io.emit('qr-ready', { sessionId: lockedSessionId, url: `https://drive.google.com/drive/folders/${parentFolderId}` });
+                    } catch (err) {
+                        io.emit('qr-ready', { sessionId: lockedSessionId, url: `https://drive.google.com/drive/folders/${targetRootFolderId}` });
                     }
                 } else {
                     const ipLokal = getLocalIP();
@@ -2075,7 +2187,7 @@ expressApp.post('/api/generate-photobox', async (req, res) => {
                 }
             })();
 
-            // ---> TUGAS B: FFMPEG (Merakit GIF BOOMERANG WEBCAM / LIVE PHOTO)
+            // ---> TUGAS B: FFMPEG (Merakit LIVE PHOTO)
             const gifTask = (async () => {
                 if (isLivePhotoOn && req.body.selectedPhotos && req.body.selectedPhotos.length > 0) {
                     pathGif = path.join(sessionDir, namaGif);
@@ -2153,7 +2265,7 @@ expressApp.post('/api/generate-photobox', async (req, res) => {
                     const ffmpegCmd = `"${ffmpegPath}" -y ${ffmpegInputs} -filter_complex "${filterComplex}" -loop 0 "${outputPattern}"`;
 
                     await new Promise((resolve) => {
-                        exec(ffmpegCmd, (error, stdout, stderr) => {
+                        exec(ffmpegCmd, (error) => {
                             if (!error) {
                                 io.emit('gif-ready', { sessionId: lockedSessionId, url: `/uploads/${lockedSessionId}/${namaGif}` });
                             } else {
@@ -2175,13 +2287,11 @@ expressApp.post('/api/generate-photobox', async (req, res) => {
                     const slotDir = path.join(tempDir, `slideshow_${lockedSessionId}`);
                     if (!fs.existsSync(slotDir)) fs.mkdirSync(slotDir, { recursive: true });
 
-                    // Salin foto mentah pilihan user ke folder sementara (diurutkan)
                     let fotoCount = 0;
                     for (const fotoName of req.body.selectedPhotos) {
                         const src = path.join(sessionDir, fotoName);
                         const dst = path.join(slotDir, `frame_${String(fotoCount).padStart(3, '0')}.jpg`);
                         if (fs.existsSync(src)) {
-                            // Jika foto berorientasi potret dari kamera, putar dulu secara fisik
                             if (statusRotasiFoto[fotoCount]) {
                                 await sharp(src).rotate(90).toFile(dst);
                             } else {
@@ -2193,7 +2303,6 @@ expressApp.post('/api/generate-photobox', async (req, res) => {
 
                     if (fotoCount > 0) {
                         const ffmpegPath = path.join(__dirname, 'ffmpeg.exe').replace('app.asar', 'app.asar.unpacked');
-                        // Kecepatan 1.5 FPS = 1 foto tampil sekitar 0.66 detik, dengan kualitas warna tinggi
                         const ffmpegCmd = `"${ffmpegPath}" -y -framerate 1.5 -i "${path.join(slotDir, 'frame_%03d.jpg').replace(/\\/g, '/')}" -vf "scale=600:-1,split[s0][s1];[s0]palettegen=stats_mode=diff[p];[s1][p]paletteuse=dither=bayer:bayer_scale=5" -loop 0 "${pathPhotoGif.replace(/\\/g, '/')}"`;
 
                         await new Promise((resolve) => {
@@ -2209,22 +2318,33 @@ expressApp.post('/api/generate-photobox', async (req, res) => {
                 }
             })();
 
-            // ---> TUGAS D: UPLOAD SEMUA FILE KE DRIVE SETELAH SELESAI
+            // ---> TUGAS D: UPLOAD FILE PENDUKUNG KE G-DRIVE DENGAN NAMA RAPI & TERURUT
             await Promise.all([driveTask, gifTask, photoGifTask]);
             
             if (isOnlineMode && typeof uploadToDrive === 'function') {
-                if (isLivePhotoOn && fs.existsSync(pathGif)) {
-                    try { await uploadToDrive(pathGif, driveFolderName, parentFolderId); } catch(err) {}
+                if (isLivePhotoOn && pathGif && fs.existsSync(pathGif)) {
+                    await uploadFileWithCleanName(
+                        pathGif,
+                        `2_Live_Photo_${jamSingkat}.gif`,
+                        `${reverseOrderKey}_${tglSingkat}_${jamSingkat}-${detikSingkat}_2_LIVE_PHOTO.gif`
+                    );
                 }
-                if (isPhotoGifOn && fs.existsSync(pathPhotoGif)) {
-                    try { await uploadToDrive(pathPhotoGif, driveFolderName, parentFolderId); } catch(err) {}
+                if (isPhotoGifOn && pathPhotoGif && fs.existsSync(pathPhotoGif)) {
+                    await uploadFileWithCleanName(
+                        pathPhotoGif,
+                        `3_Animasi_GIF_${jamSingkat}.gif`,
+                        `${reverseOrderKey}_${tglSingkat}_${jamSingkat}-${detikSingkat}_3_ANIMASI.gif`
+                    );
                 }
                 const allRawFiles = fs.readdirSync(sessionDir).filter(f => f.endsWith('_mentah.jpg'));
-                for (let fotoName of allRawFiles) {
-                    const rawPath = path.join(sessionDir, fotoName);
-                    if (fs.existsSync(rawPath)) {
-                        try { await uploadToDrive(rawPath, driveFolderName, parentFolderId); } catch(err) {}
-                    }
+                for (let idxRaw = 0; idxRaw < allRawFiles.length; idxRaw++) {
+                    const rawPath = path.join(sessionDir, allRawFiles[idxRaw]);
+                    const nomorUrut = idxRaw + 1;
+                    await uploadFileWithCleanName(
+                        rawPath,
+                        `Foto_Mentah_${nomorUrut}.jpg`,
+                        `${reverseOrderKey}_${tglSingkat}_${jamSingkat}-${detikSingkat}_MENTAH_${nomorUrut}.jpg`
+                    );
                 }
             }
         })();
@@ -2586,7 +2706,7 @@ expressApp.get('/api/sys-status', async (req, res) => {
 
             items.forEach(item => {
                 const itemPath = path.join(uploadDir, item);
-                if (fs.statSync(itemPath).isDirectory() && (item.startsWith('COL-') || item.startsWith('SS-') || item.startsWith('EVT-') || item.startsWith('NEWS-') || item.startsWith('AIBOOTH-'))) {
+                if (fs.statSync(itemPath).isDirectory() && (item.startsWith('COL-') || item.startsWith('SS-') || item.startsWith('EVT-') || item.startsWith('NEWS-') || item.startsWith('FB-') || item.startsWith('AIBOOTH-'))) {
                     const stats = fs.statSync(itemPath);
                     const dateStr = stats.mtime.toISOString().split('T')[0];
                     
@@ -2652,7 +2772,7 @@ expressApp.get('/api/rescan-camera', async (req, res) => {
 // =========================================================================
 // 🌟 SISTEM PEMBAYARAN LANGGANAN SAAS OTOMATIS (NEETPAY DEVELOPER)
 // =========================================================================
-const SAAS_NEETPAY_API_KEY = "np_live_4c039c655b74c1e5c3229b1e799ef47b86ff66911a0f73f9";
+const SAAS_NEETPAY_API_KEY = "np_live_73d260aa38b81a2500bd38a6ecb8f94b6970377752f57763";
 
 expressApp.post('/api/saas/create-invoice', async (req, res) => {
     try {
@@ -2664,6 +2784,7 @@ expressApp.post('/api/saas/create-invoice', async (req, res) => {
         const durasiClean = (duration || '1Bulan').toString().replace(/\s+/g, '');
         const orderId = `SUBS-${tier.toUpperCase()}-${durasiClean}-${Date.now()}`;
         const finalAmount = Number(amount);
+        const autoWebhookUrl = global.publicTunnelUrl ? `${global.publicTunnelUrl}/api/payment/universal-webhook` : undefined;
 
         const npRes = await fetch('https://api.neetpay.web.id/v1/transactions', {
             method: 'POST',
@@ -2678,7 +2799,9 @@ expressApp.post('/api/saas/create-invoice', async (req, res) => {
                 order_id: orderId,
                 amount: finalAmount,
                 customerName: email.split('@')[0],
-                description: `Langganan Lacasabooth ${tier.toUpperCase()} (${duration})`
+                description: `Langganan Lacasabooth ${tier.toUpperCase()} (${duration})`,
+                callback_url: autoWebhookUrl,
+                webhook_url: autoWebhookUrl
             })
         });
 
@@ -2734,6 +2857,43 @@ expressApp.get('/api/saas/check-status/:orderId', async (req, res) => {
         return res.json({ success: true, status: 'PENDING', debug: trxStatus || 'WAITING' });
     } catch (error) {
         console.error("Error Check Status SaaS NeetPay:", error);
+        return res.json({ success: false, status: 'ERROR' });
+    }
+});
+
+expressApp.get('/api/saas/check-status/:orderId', async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const dokuBaseUrl = SAAS_DOKU_IS_PROD ? 'https://api.doku.com' : 'https://api-sandbox.doku.com';
+        const cleanClientId = SAAS_DOKU_CLIENT_ID.replace('SB-', '');
+
+        const timestamp = new Date().toISOString().slice(0, 19) + 'Z';
+        const requestId = 'chk-saas-' + Date.now();
+        const targetPath = `/orders/v1/status/${orderId}`;
+
+        const sigComponent = `Client-Id:${cleanClientId}\nRequest-Id:${requestId}\nRequest-Timestamp:${timestamp}\nRequest-Target:${targetPath}`;
+        const signatureDoku = 'HMACSHA256=' + crypto.createHmac('sha256', SAAS_DOKU_SECRET_KEY).update(sigComponent).digest('base64');
+
+        const dokuRes = await fetch(dokuBaseUrl + targetPath, {
+            method: 'GET',
+            headers: {
+                'Client-Id': cleanClientId,
+                'Request-Id': requestId,
+                'Request-Timestamp': timestamp,
+                'Signature': signatureDoku
+            }
+        });
+
+        const dokuData = await dokuRes.json();
+        const trxStatus = (dokuData?.transaction?.status || dokuData?.order?.status || '').toString().toUpperCase();
+        const isSuccess = (trxStatus === 'SUCCESS' || trxStatus === 'PAID' || trxStatus === 'SETTLEMENT');
+
+        if (dokuRes.ok && isSuccess) {
+            return res.json({ success: true, status: 'PAID' });
+        }
+        return res.json({ success: true, status: 'PENDING', debug: dokuData.transaction?.status || 'WAITING' });
+    } catch (error) {
+        console.error("Error Check Status DOKU:", error);
         return res.json({ success: false, status: 'ERROR' });
     }
 });

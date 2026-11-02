@@ -1,87 +1,106 @@
 const { google } = require('googleapis');
 const fs = require('fs');
 const path = require('path');
-const { app } = require('electron'); // <-- [BARU] Tambahkan modul electron
+const { app } = require('electron');
 
-async function uploadToDrive(filePath, folderName, parentId) {
-    console.log(`\n[DRIVE-DEBUG] Memulai proses upload...`);
-    console.log(`[DRIVE-DEBUG] File Target: ${filePath}`);
-    console.log(`[DRIVE-DEBUG] Nama Folder Sesi: ${folderName}`);
-    console.log(`[DRIVE-DEBUG] ID Folder Utama (Parent): "${parentId}"`);
+// Fungsi cerdas: Jika klien menempelkan URL lengkap Google Drive, ambil hanya ID foldernya saja!
+function cleanDriveFolderId(rawInput) {
+    if (!rawInput || typeof rawInput !== 'string') return "";
+    let str = rawInput.trim();
+    const matchFolder = str.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+    if (matchFolder && matchFolder[1]) return matchFolder[1];
+    const matchId = str.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (matchId && matchId[1]) return matchId[1];
+    return str.split('?')[0].split('/')[0].trim();
+}
 
-    // Validasi super ketat untuk Parent ID
-    if (!parentId || parentId.trim() === "" || parentId === ".") {
-        throw new Error("ID Folder Utama tidak valid atau hanya berisi titik.");
+async function uploadToDrive(filePath, folderName, rawParentId) {
+    const parentId = cleanDriveFolderId(rawParentId);
+    console.log(`\n[DRIVE] Memulai upload: ${path.basename(filePath)}`);
+    console.log(`[DRIVE] Sub-Folder: ${folderName || '(LANGSUNG KE FOLDER UTAMA / CAMPUR)'} | Parent ID: "${parentId}"`);
+
+    if (!parentId || parentId === ".") {
+        throw new Error("ID Folder Google Drive kosong atau tidak valid.");
     }
-    parentId = parentId.split('?')[0];
-    
-    // --- [DIUBAH] Arahkan ke folder AppData (userData) sama seperti index.js ---
+
     const userDataPath = app.getPath('userData');
     const credPath = path.join(userDataPath, 'oauth_credentials.json');
     const tokenPath = path.join(userDataPath, 'token.json');
-    // -------------------------------------------------------------------------
 
     if (!fs.existsSync(credPath) || !fs.existsSync(tokenPath)) {
-        throw new Error("File Kredensial (oauth_credentials.json) atau Token (token.json) tidak ditemukan di folder.");
+        throw new Error("Kredensial atau Token Google Drive belum login di Dashboard.");
     }
 
     try {
         const creds = JSON.parse(fs.readFileSync(credPath, 'utf8'));
         const keys = creds.installed || creds.web;
-        const oauth2Client = new google.auth.OAuth2(keys.client_id, keys.client_secret, keys.redirect_uris[0]);
+        const redirectUri = (keys.redirect_uris && keys.redirect_uris[0]) ? keys.redirect_uris[0] : 'http://localhost:3000/api/auth-google-callback';
+        const oauth2Client = new google.auth.OAuth2(keys.client_id, keys.client_secret, redirectUri);
         oauth2Client.setCredentials(JSON.parse(fs.readFileSync(tokenPath, 'utf8')));
         const drive = google.drive({ version: 'v3', auth: oauth2Client });
 
-        let targetFolderId = null;
-        let folderLink = null;
+        let targetFolderId = parentId;
+        let folderLink = `https://drive.google.com/drive/folders/${parentId}`;
 
-        console.log(`[DRIVE-DEBUG] Mencari folder "${folderName}" di dalam ID "${parentId}"...`);
-        const res = await drive.files.list({
-            q: `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and '${parentId}' in parents and trashed=false`,
-            fields: 'files(id, webViewLink)',
-            spaces: 'drive'
-        });
-
-        if (res.data.files.length > 0) {
-            targetFolderId = res.data.files[0].id;
-            folderLink = res.data.files[0].webViewLink;
-            console.log(`[DRIVE-DEBUG] Folder sudah ada! Menggunakan ID: ${targetFolderId}`);
-        } else {
-            console.log(`[DRIVE-DEBUG] Folder belum ada. Membuat folder baru...`);
-            const folder = await drive.files.create({
-                resource: { name: folderName, mimeType: 'application/vnd.google-apps.folder', parents: [parentId] },
-                fields: 'id, webViewLink'
+        // JIKA MODE PER SESI (folderName ada isinya): Cari atau buat sub-folder
+        // JIKA MODE 1 FOLDER CAMPUR (folderName === null / kosong): Langsung gunakan parentId!
+        if (folderName && typeof folderName === 'string' && folderName.trim() !== "" && folderName !== '__DIRECT_ROOT__') {
+            const safeName = folderName.trim().replace(/'/g, "\\'");
+            const res = await drive.files.list({
+                q: `mimeType='application/vnd.google-apps.folder' and name='${safeName}' and '${parentId}' in parents and trashed=false`,
+                fields: 'files(id, webViewLink)',
+                spaces: 'drive'
             });
-            targetFolderId = folder.data.id;
-            folderLink = folder.data.webViewLink;
-            
-            await drive.permissions.create({ fileId: targetFolderId, requestBody: { role: 'reader', type: 'anyone' } });
-            console.log(`[DRIVE-DEBUG] Folder berhasil dibuat dan dibuka aksesnya.`);
+
+            if (res.data.files && res.data.files.length > 0) {
+                targetFolderId = res.data.files[0].id;
+                folderLink = res.data.files[0].webViewLink || `https://drive.google.com/drive/folders/${targetFolderId}`;
+            } else {
+                const folder = await drive.files.create({
+                    requestBody: {
+                        name: folderName.trim(),
+                        mimeType: 'application/vnd.google-apps.folder',
+                        parents: [parentId]
+                    },
+                    fields: 'id, webViewLink'
+                });
+                targetFolderId = folder.data.id;
+                folderLink = folder.data.webViewLink || `https://drive.google.com/drive/folders/${targetFolderId}`;
+
+                // Bungkus dengan try-catch agar jika mewarisi izin dari parent, tidak pernah menggagalkan upload file!
+                try {
+                    await drive.permissions.create({
+                        fileId: targetFolderId,
+                        requestBody: { role: 'reader', type: 'anyone' }
+                    });
+                } catch (permErr) {
+                    console.log(`[DRIVE] Sub-folder otomatis mewarisi izin akses dari folder utama.`);
+                }
+            }
         }
 
-        console.log(`[DRIVE-DEBUG] Mengunggah file ke Google Drive...`);
         const fileName = path.basename(filePath);
-        
-        // --- [PERBAIKAN] Deteksi cerdas ekstensi file agar GIF bisa bergerak ---
-        let fileMimeType = 'image/jpeg'; // Default untuk foto biasa
-        if (fileName.toLowerCase().endsWith('.gif')) {
-            fileMimeType = 'image/gif';
-        } else if (fileName.toLowerCase().endsWith('.mp4')) {
-            fileMimeType = 'video/mp4';
-        } else if (fileName.toLowerCase().endsWith('.png')) {
-            fileMimeType = 'image/png';
-        }
+        let fileMimeType = 'image/jpeg';
+        if (fileName.toLowerCase().endsWith('.gif')) fileMimeType = 'image/gif';
+        else if (fileName.toLowerCase().endsWith('.mp4')) fileMimeType = 'video/mp4';
+        else if (fileName.toLowerCase().endsWith('.png')) fileMimeType = 'image/png';
 
         await drive.files.create({
-            resource: { name: fileName, parents: [targetFolderId] },
-            media: { mimeType: fileMimeType, body: fs.createReadStream(filePath) },
+            requestBody: {
+                name: fileName,
+                parents: [targetFolderId]
+            },
+            media: {
+                mimeType: fileMimeType,
+                body: fs.createReadStream(filePath)
+            },
             fields: 'id'
         });
 
-        return folderLink; 
+        console.log(`✅ [DRIVE SUKSES] Terupload: ${fileName} -> ${folderLink}`);
+        return folderLink;
     } catch (error) {
-        // Tangkap error langsung dari Google API agar pesannya lebih rinci
-        console.error(`\n[DRIVE-ERROR-DETAIL] Terjadi kesalahan fatal:`, error.message);
+        console.error(`❌ [DRIVE ERROR] Gagal upload ${path.basename(filePath)}:`, error.message);
         throw error;
     }
 }

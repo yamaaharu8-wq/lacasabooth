@@ -1533,50 +1533,34 @@ if (mesinKamera.toLowerCase() !== 'canon') {
             const vid = document.getElementById('webcam-view');
             if (!vid) return;
             vid.style.display = 'block'; 
+            vid.setAttribute('autoplay', '');
+            vid.setAttribute('playsinline', '');
+            vid.muted = true;
 
-            // Jika stream sudah jalan sebelumnya, tidak perlu request ulang
             if (webcamStream && webcamStream.active) {
                 vid.srcObject = webcamStream;
-                vid.play().catch(()=>{});
+                vid.play().catch(() => {});
                 return;
             }
             
             try {
-                // 1. Cari semua daftar perangkat video yang tercolok di PC
-                const devices = await navigator.mediaDevices.enumerateDevices();
-                const videoDevices = devices.filter(d => d.kind === 'videoinput');
-                console.log("🎥 Daftar Kamera Terdeteksi:", videoDevices.map(d => d.label));
-
-                // 2. Prioritaskan memilih kamera yang mengandung nama "Insta360" atau "Ace"
-                const instaCam = videoDevices.find(d => 
-                    d.label.toLowerCase().includes('insta') || 
-                    d.label.toLowerCase().includes('ace') ||
-                    d.label.toLowerCase().includes('usb')
-                );
-
-                // Gunakan kata kunci 'ideal' agar tidak gagal jika kamera meminta resolusi berbeda
-                let videoConstraints = {
-                    width: { ideal: 1920 },
-                    height: { ideal: 1080 }
-                };
-
-                if (instaCam && instaCam.deviceId) {
-                    videoConstraints.deviceId = { exact: instaCam.deviceId };
-                }
-
-                // 3. Coba nyalakan dengan pengaturan ideal
-                webcamStream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints, audio: false });
+                // Prioritas 1: Minta stream video standar tanpa mengunci deviceId yang belum tentu aktif
+                webcamStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { width: { ideal: 1280 }, height: { ideal: 720 } }, 
+                    audio: false 
+                });
                 vid.srcObject = webcamStream;
                 await vid.play();
+                console.log("✅ Webcam berhasil menyala:", webcamStream.getVideoTracks()[0]?.label);
             } catch (err) {
-                console.warn("⚠️ Gagal mode ideal, mencoba mode fallback universal...", err);
+                console.warn("⚠️ Mencoba mode fallback webcam universal...", err);
                 try {
-                    // 4. FALLBACK DARURAT: Terima resolusi apa pun yang dikirim oleh kamera
+                    // Prioritas 2: Terima resolusi apa pun yang didukung oleh webcam bawaan laptop klien
                     webcamStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
                     vid.srcObject = webcamStream;
                     await vid.play();
                 } catch (errFallback) {
-                    alert("❌ Kamera gagal diakses: " + errFallback.message + "\nPastikan aplikasi lain (Zoom/OBS/Camera) sudah ditutup.");
+                    alert("❌ Webcam gagal diakses: " + errFallback.message + "\nPastikan izin kamera di Windows Settings (Privacy -> Camera) sudah ON dan tidak sedang dipakai aplikasi lain.");
                 }
             }
         }
@@ -2345,7 +2329,219 @@ if (mesinKamera.toLowerCase() !== 'canon') {
         }
         return origFetch.apply(this, arguments);
     };
+   // =========================================================================
+    // 🎥 MASTER CAMERA & DUAL SWITCHER V7 (SUPPORT SEMUA WEBCAM BAWAAN/USB + ANTI BUG TOMBOL)
+    // =========================================================================
+    window.currentCamSlot = 1;
+    window.preferredWebcamDeviceId = "";
+    window.detectedVideoDevices = [];
 
+    // 1. OVERRIDE FUNGSI jalankanWebcam() SECARA GLOBAL AGAR 100% KOMPATIBEL DI SEMUA PC KLIEN
+    window.jalankanWebcam = async function(forceNewDevice = false) {
+        const lv = document.getElementById('liveView');
+        if (lv) lv.style.display = 'none';
+
+        const vid = document.getElementById('webcam-view');
+        if (!vid) return;
+        vid.style.display = 'block';
+        vid.setAttribute('autoplay', '');
+        vid.setAttribute('playsinline', '');
+        vid.muted = true;
+
+        // Jika stream sudah jalan dan tidak diminta ganti kamera, langsung tampilkan kembali
+        if (!forceNewDevice && typeof webcamStream !== 'undefined' && webcamStream && webcamStream.active) {
+            vid.srcObject = webcamStream;
+            vid.play().catch(() => {});
+            return;
+        }
+
+        // Hentikan stream lama sebelum membuka kamera baru
+        if (typeof webcamStream !== 'undefined' && webcamStream) {
+            webcamStream.getTracks().forEach(t => t.stop());
+            webcamStream = null;
+        }
+
+        try {
+            // Langkah 1: Buka izin kamera dasar agar Windows/Electron mengizinkan pembacaan semua webcam (Bawaan & USB)
+            let tempStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            const allDevices = await navigator.mediaDevices.enumerateDevices();
+            
+            // Saring hanya kamera video asli (abaikan IR Camera Windows Hello jika ada kamera lain)
+            let videoInputs = allDevices.filter(d => d.kind === 'videoinput');
+            const nonIrInputs = videoInputs.filter(d => !/ir camera|infrared|depth/i.test(d.label || ''));
+            if (nonIrInputs.length > 0) videoInputs = nonIrInputs;
+            window.detectedVideoDevices = videoInputs;
+
+            console.log("🎥 Webcam Terdeteksi di PC Klien:", videoInputs.map((d, i) => `[${i + 1}] ${d.label || 'Webcam'}`));
+
+            // Tentukan kamera mana yang harus dipakai berdasarkan Slot Aktif (Kamera 1 vs Kamera 2)
+            let targetDevId = window.preferredWebcamDeviceId || "";
+            if (!targetDevId && videoInputs.length > 1) {
+                const idx = (window.currentCamSlot === 2) ? 1 : 0;
+                targetDevId = videoInputs[idx]?.deviceId || videoInputs[0].deviceId;
+            } else if (!targetDevId && videoInputs.length === 1) {
+                targetDevId = videoInputs[0].deviceId;
+            }
+
+            const currentTrackId = tempStream.getVideoTracks()[0]?.getSettings()?.deviceId;
+
+            // Jika stream awal belum sesuai dengan kamera target, matikan lalu buka kamera target dengan fallback resolusi aman
+            if (targetDevId && currentTrackId !== targetDevId) {
+                tempStream.getTracks().forEach(t => t.stop());
+                try {
+                    // Coba HD 720p terlebih dahulu
+                    tempStream = await navigator.mediaDevices.getUserMedia({
+                        video: { deviceId: { exact: targetDevId }, width: { ideal: 1280 }, height: { ideal: 720 } },
+                        audio: false
+                    });
+                } catch (e1) {
+                    // Fallback: Terima resolusi berapapun dari webcam tersebut
+                    tempStream = await navigator.mediaDevices.getUserMedia({
+                        video: { deviceId: { exact: targetDevId } },
+                        audio: false
+                    });
+                }
+            }
+
+            webcamStream = tempStream;
+            vid.srcObject = webcamStream;
+            await vid.play();
+
+            if (typeof terapkanVisualKamera === 'function') terapkanVisualKamera();
+            if (typeof updateTransformKamera === 'function') updateTransformKamera();
+        } catch (err) {
+            console.error("❌ Gagal membuka webcam utama, mencoba kamera cadangan:", err);
+            try {
+                webcamStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                vid.srcObject = webcamStream;
+                await vid.play();
+            } catch (errFinal) {
+                alert("❌ Kamera/Webcam tidak dapat diakses!\nPastikan webcam terpasang dan tidak sedang digunakan aplikasi lain.");
+            }
+        }
+    };
+
+    // 2. RAPIIKAN POSISI TOMBOL CERMIN & TOMBOL ALIH KAMERA AGAR TIDAK KETUTUP TIMER DAN TIDAK TERTIMPA TEKSNYA
+    function pasangTombolSwitchKameraRapi(allowLiveSwitch) {
+        const navBar = document.querySelector('#kamera-container .nav-bar, #panel-kamera .nav-bar');
+        if (!navBar) return;
+
+        // Pastikan ada grup kanan (.nav-right-group) sebagai rumah bagi tombol Cermin & Switch Kamera
+        let rightGroup = navBar.querySelector('.nav-right-group');
+        const btnMirror = navBar.querySelector('.btn-mirror, #btn-mirror');
+
+        if (!rightGroup) {
+            rightGroup = document.createElement('div');
+            rightGroup.className = 'nav-right-group';
+            rightGroup.style.cssText = 'display: flex; align-items: center; gap: 10px; pointer-events: auto;';
+            
+            // Jika tombol Cermin sebelumnya berdiri sendiri di dalam nav-bar, pindahkan ke dalam rightGroup!
+            if (btnMirror && btnMirror.parentElement === navBar) {
+                rightGroup.appendChild(btnMirror);
+            }
+            navBar.appendChild(rightGroup);
+        }
+
+        let btnSwitch = document.getElementById('btn-live-switch-cam');
+        if (allowLiveSwitch) {
+            if (!btnSwitch) {
+                btnSwitch = document.createElement('button');
+                btnSwitch.id = 'btn-live-switch-cam';
+                btnSwitch.type = 'button';
+                // JANGAN gunakan class 'btn-mirror' agar tulisannya tidak pernah diubah menjadi "🪞 Cermin: ON"!
+                btnSwitch.className = 'btn-doodle';
+                btnSwitch.style.cssText = 'pointer-events: auto !important; background: #ffffff !important; color: #0f766e !important; border: 2px solid #99f6e4 !important; padding: 10px 20px !important; font-size: 0.98rem !important; cursor: pointer !important; border-radius: 50px !important; font-weight: 700 !important; font-family: "Fredoka", sans-serif !important; box-shadow: 0 6px 15px rgba(15, 118, 110, 0.15) !important; display: flex !important; align-items: center !important; gap: 6px !important;';
+                btnSwitch.onclick = () => window.alihkanKameraLiveView();
+                rightGroup.insertBefore(btnSwitch, rightGroup.firstChild);
+            }
+            btnSwitch.style.display = 'flex';
+            btnSwitch.innerHTML = `📷 Kamera ${window.currentCamSlot} ⇄`;
+        } else if (btnSwitch) {
+            btnSwitch.style.display = 'none';
+        }
+    }
+
+    async function sinkronKonfigurasiDualKamera() {
+        try {
+            const res = await fetch('/api/settings?t=' + Date.now());
+            const data = await res.json();
+            const g = data.global || {};
+            const isDualOn = g.dualCameraEnabled === true;
+            const allowLiveSwitch = isDualOn && (g.allowLiveCameraSwitch !== false);
+            window.currentCamSlot = parseInt(g.activeCameraSlot) || 1;
+
+            const activeEng = isDualOn
+                ? ((window.currentCamSlot === 1) ? (g.cameraEngine || 'canon') : (g.cameraEngine2 || 'webcam'))
+                : (g.cameraEngine || 'canon');
+
+            window.preferredWebcamDeviceId = (window.currentCamSlot === 1) ? (g.webcamDeviceId1 || '') : (g.webcamDeviceId2 || '');
+
+            if (typeof activeCameraMode !== 'undefined') {
+                activeCameraMode = (activeEng.toLowerCase() === 'canon') ? 'canon' : 'webcam';
+            }
+
+            pasangTombolSwitchKameraRapi(allowLiveSwitch);
+        } catch (e) {}
+    }
+
+    window.alihkanKameraLiveView = async function() {
+        const btn = document.getElementById('btn-live-switch-cam');
+        if (btn) { btn.disabled = true; btn.innerHTML = `⏳ Mengalihkan...`; }
+        try {
+            const res = await fetch('/api/switch-camera', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            const data = await res.json();
+            if (data.success) {
+                await terapkanPerpindahanStreamKamera(data.activeSlot, data.engine, data.webcamDeviceId);
+            }
+        } catch (e) {}
+        if (btn) btn.disabled = false;
+    };
+
+    async function terapkanPerpindahanStreamKamera(slotBaru, engineBaru, deviceIdTarget) {
+        window.currentCamSlot = slotBaru;
+        window.preferredWebcamDeviceId = deviceIdTarget || "";
+        const btn = document.getElementById('btn-live-switch-cam');
+        if (btn) btn.innerHTML = `📷 Kamera ${window.currentCamSlot} ⇄`;
+
+        const kamBox = document.getElementById('kamera-container') || document.getElementById('panel-kamera');
+        if (!kamBox) return;
+        const isKameraVisible = kamBox.style.display === 'flex' || kamBox.classList.contains('active-panel');
+        if (!isKameraVisible) return;
+
+        if (typeof matikanWebcam === 'function') matikanWebcam();
+        if (typeof isLiveViewRunning !== 'undefined') isLiveViewRunning = false;
+        if (typeof isLiveViewActive !== 'undefined') isLiveViewActive = false;
+
+        if ((engineBaru || '').toLowerCase() === 'canon') {
+            if (typeof activeCameraMode !== 'undefined') activeCameraMode = 'canon';
+            document.getElementById('webcam-view').style.display = 'none';
+            const lv = document.getElementById('liveView');
+            if (lv) lv.style.display = 'block';
+            await fetch('/toggle-liveview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: true }) });
+            if (typeof isLiveViewRunning !== 'undefined') isLiveViewRunning = true;
+            if (typeof isLiveViewActive !== 'undefined') isLiveViewActive = true;
+            if (typeof jalankanLiveViewAman === 'function') jalankanLiveViewAman();
+            if (typeof updateLiveView === 'function') updateLiveView();
+        } else {
+            if (typeof activeCameraMode !== 'undefined') activeCameraMode = 'webcam';
+            await fetch('/toggle-liveview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: false }) });
+            await window.jalankanWebcam(true);
+        }
+        if (typeof terapkanVisualKamera === 'function') terapkanVisualKamera();
+        if (typeof updateTransformKamera === 'function') updateTransformKamera();
+    }
+
+    if (typeof socket !== 'undefined') {
+        socket.on('camera-switched', (data) => {
+            terapkanPerpindahanStreamKamera(data.activeSlot, data.engine, data.webcamDeviceId);
+        });
+    }
+
+    sinkronKonfigurasiDualKamera();
     setInterval(ensureToolbarAndEffectsInjected, 350);
 })();
 </script>

@@ -317,6 +317,14 @@
                             <p>Tamu foto berurutan sesuai frame kolase.</p>
                         </div>
                     </label>
+                    <label class="radio-label" onclick="selectRadio('mode', this)" id="opt-fastbooth">
+                        <input type="radio" name="modeData" value="fastbooth">
+                        <div class="radio-icon">⚡</div>
+                        <div class="radio-text">
+                            <h4>Fastbooth Mode</h4>
+                            <p>Mode kilat! Tanpa pilih efek & langsung kembali ke Live View setiap selesai sesi.</p>
+                        </div>
+                    </label>
                     <label class="radio-label" onclick="selectRadio('mode', this)" id="opt-news">
                         <input type="radio" name="modeData" value="newspaper">
                         <div class="radio-icon">📰</div>
@@ -553,48 +561,56 @@ import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signO
         }
     });
 
-    // ==== [DIPERBARUI] CEK LISENSI & HARDWARE BINDING ====
+    // ==== [DIPERBARUI] CEK LISENSI & HARDWARE BINDING (AMAN SAAT OFFLINE) ====
     async function checkUserLicense(user) {
         const currentDeviceId = window.getHardwareId(); 
-        const userRef = doc(db, "users", user.uid);
-        const userSnap = await getDoc(userRef);
-        let tier = "free";
+        let tier = localStorage.getItem('saas_user_tier') || "free";
 
-        if (!userSnap.exists()) {
-            // User baru, langsung kunci ke perangkat ini
-            await setDoc(userRef, { email: user.email, name: user.displayName || "Client", tier: "free", deviceId: currentDeviceId, createdAt: new Date() });
-        } else { 
-            const userData = userSnap.data();
-            
-            if (!userData.deviceId) {
-                // User lama yang belum punya data deviceId, kunci sekarang
-                await setDoc(userRef, { deviceId: currentDeviceId }, { merge: true });
-            } else if (userData.deviceId !== currentDeviceId) {
-                // Beda perangkat -> Tolak akses dan Logout
-                window.alert("❌ AKSES DITOLAK!\nAkun Google ini sudah tertaut dengan komputer lain.\nSatu akun hanya berlaku untuk satu perangkat.");
-                await signOut(auth);
-                localStorage.removeItem('saas_user_tier');
-                window.location.reload();
-                return; 
+        try {
+            if (!navigator.onLine) throw new Error("Mode Offline");
+
+            const userRef = doc(db, "users", user.uid);
+            const userSnap = await getDoc(userRef);
+
+            if (!userSnap.exists()) {
+                tier = "free";
+                await setDoc(userRef, { email: user.email, name: user.displayName || "Client", tier: "free", deviceId: currentDeviceId, createdAt: new Date() });
+            } else { 
+                const userData = userSnap.data();
+                if (!userData.deviceId) {
+                    await setDoc(userRef, { deviceId: currentDeviceId }, { merge: true });
+                } else if (userData.deviceId !== currentDeviceId) {
+                    window.alert("❌ AKSES DITOLAK!\nAkun Google ini sudah tertaut dengan komputer lain.\nSatu akun hanya berlaku untuk satu perangkat.");
+                    await signOut(auth);
+                    localStorage.removeItem('saas_user_tier');
+                    window.location.reload();
+                    return; 
+                }
+                tier = userData.tier || "free"; 
+                if (userData.expiredAt && new Date() > userData.expiredAt.toDate()) {
+                    tier = "free";
+                }
             }
-            tier = userData.tier || "free"; 
+            localStorage.setItem('saas_user_tier', tier);
+        } catch (err) {
+            console.warn("⚠️ [OFFLINE SHIELD] Event Manager menggunakan lisensi tersimpan:", tier);
         }
         
         terapkanKunciEvent(tier);
-        localStorage.setItem('saas_user_tier', window.userTier);
     }
 
-    // --- 3 TIER SYSTEM LOCK ---
+    // --- 3 TIER SYSTEM LOCK (TERMASUK FASTBOOTH KHUSUS PRIME) ---
     function terapkanKunciEvent(tier) {
         window.userTier = tier;
         
         const optCollage = document.getElementById('opt-collage');
+        const optFastbooth = document.getElementById('opt-fastbooth');
         const optNews = document.getElementById('opt-news');
         const optAibooth = document.getElementById('opt-aibooth'); 
         const optPaid = document.getElementById('opt-pay-paid');
 
         // Hapus Kunci (Reset) di Modal
-        [optCollage, optNews, optAibooth, optPaid].forEach(el => {
+        [optCollage, optFastbooth, optNews, optAibooth, optPaid].forEach(el => {
             if (el) {
                 el.style.opacity = '1'; 
                 el.style.pointerEvents = 'auto';
@@ -603,35 +619,31 @@ import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signO
             }
         });
 
-        // Modifikasi fungsi getBadge agar bisa ganti warna (Default: Merah)
         const getBadge = (teks, warna = '#ef4444') => `<div class="lock-badge" style="position:absolute; top:-10px; right:-10px; background:${warna}; color:white; font-size:0.75rem; padding:4px 10px; border-radius:10px; border:2px solid var(--ink); font-weight:bold; box-shadow:2px 2px 0px var(--ink); z-index:10;">${teks}</div>`;
 
         if (tier === 'free') {
             if(optCollage) { optCollage.style.opacity = '0.5'; optCollage.style.pointerEvents = 'none'; optCollage.insertAdjacentHTML('beforeend', getBadge('🔒 BUKA DI PLUS')); }
+            if(optFastbooth) { optFastbooth.style.opacity = '0.5'; optFastbooth.style.pointerEvents = 'none'; optFastbooth.insertAdjacentHTML('beforeend', getBadge('🔒 BUKA DI PRIME')); }
             if(optNews) { optNews.style.opacity = '0.5'; optNews.style.pointerEvents = 'none'; optNews.insertAdjacentHTML('beforeend', getBadge('🔒 BUKA DI PRIME')); }
             if(optPaid) { optPaid.style.opacity = '0.5'; optPaid.style.pointerEvents = 'none'; optPaid.insertAdjacentHTML('beforeend', getBadge('🔒 BUKA DI PLUS')); }
         } else if (tier === 'plus' || tier === 'basic') {
+            if(optFastbooth) { optFastbooth.style.opacity = '0.5'; optFastbooth.style.pointerEvents = 'none'; optFastbooth.insertAdjacentHTML('beforeend', getBadge('🔒 BUKA DI PRIME')); }
             if(optNews) { optNews.style.opacity = '0.5'; optNews.style.pointerEvents = 'none'; optNews.insertAdjacentHTML('beforeend', getBadge('🔒 BUKA DI PRIME')); }
         } 
 
-        // 🚧 KUNCI SEMENTARA MODE AI BOOTH (KECUALI ADMIN) 🚧
         const isAdmin = auth.currentUser && auth.currentUser.email === 'adenakbar455@gmail.com';
-        
         if(optAibooth) { 
             if (isAdmin) {
-                // Jika yang login adalah Admin: Buka kunci & beri label DEV MODE (Warna Hijau)
                 optAibooth.style.opacity = '1'; 
                 optAibooth.style.pointerEvents = 'auto'; 
                 optAibooth.insertAdjacentHTML('beforeend', getBadge('🛠️ DEV MODE', '#10b981')); 
             } else {
-                // Jika klien biasa: Kunci & beri label SEGERA HADIR (Warna Biru)
                 optAibooth.style.opacity = '0.6'; 
                 optAibooth.style.pointerEvents = 'none'; 
                 optAibooth.insertAdjacentHTML('beforeend', getBadge('🚧 SEGERA HADIR', '#3b82f6')); 
             }
         }
 
-        // Render ulang daftar event
         muatDaftarEvent();
     }
 </script>
@@ -729,16 +741,24 @@ import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signO
                 if (data.success && data.events && data.events.length > 0) {
                    const tier = window.userTier || localStorage.getItem('saas_user_tier') || 'free';
                     data.events.reverse().forEach(evt => {
-                        let modeTeks = evt.mode === 'collage' ? '🖼️ Kolase' : evt.mode === 'photobox' ? '⏱️ Self Studio' : evt.mode === 'aibooth' ? '✨ AI Booth' : '📰 Newspaper';
+                        let modeTeks = evt.mode === 'collage' ? '🖼️ Kolase' 
+                                     : evt.mode === 'photobox' ? '⏱️ Self Studio' 
+                                     : evt.mode === 'fastbooth' ? '⚡ Fastbooth'
+                                     : evt.mode === 'aibooth' ? '✨ AI Booth' 
+                                     : '📰 Newspaper';
                         let payTeks = evt.payment === 'with_payment' ? '💳 Berbayar' : '🆓 Gratis';
-                        let badgeModeColor = evt.mode === 'collage' ? 'var(--blue)' : evt.mode === 'photobox' ? 'var(--pink)' : evt.mode === 'aibooth' ? '#a855f7' : 'var(--yellow)';
+                        let badgeModeColor = evt.mode === 'collage' ? 'var(--blue)' 
+                                           : evt.mode === 'photobox' ? 'var(--pink)' 
+                                           : evt.mode === 'fastbooth' ? 'var(--green)'
+                                           : evt.mode === 'aibooth' ? '#a855f7' 
+                                           : 'var(--yellow)';
                         let badgePayColor = evt.payment === 'with_payment' ? 'var(--green)' : 'var(--paper-white)';
                         
                         let isLocked = false;
                         let badgeText = "";
                         let alertText = "";
                         
-                       const isAdmin = window.auth && window.auth.currentUser && window.auth.currentUser.email === 'adenakbar455@gmail.com';
+                        const isAdmin = window.auth && window.auth.currentUser && window.auth.currentUser.email === 'adenakbar455@gmail.com';
                        
                         if (evt.mode === 'aibooth' && !isAdmin) {
                             isLocked = true;
@@ -746,13 +766,12 @@ import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signO
                             alertText = "Fitur AI Booth sedang dalam tahap perbaikan dan pengembangan. Segera hadir kembali!";
                         } 
                         else if (tier === 'free') {
-                            if (evt.mode === 'newspaper') { isLocked = true; badgeText = '🔒 BUTUH PRIME'; alertText = 'Silakan upgrade ke lisensi PRIME.'; }
+                            if (evt.mode === 'newspaper' || evt.mode === 'fastbooth') { isLocked = true; badgeText = '🔒 BUTUH PRIME'; alertText = 'Silakan upgrade ke lisensi PRIME.'; }
                             else if (evt.mode === 'collage') { isLocked = true; badgeText = '🔒 BUTUH PLUS'; alertText = 'Silakan upgrade ke lisensi PLUS.'; }
                             else if (evt.payment === 'with_payment') { isLocked = true; badgeText = '🔒 BUTUH PLUS'; alertText = 'Silakan upgrade ke lisensi PLUS.'; }
                         } else if (tier === 'plus' || tier === 'basic') {
-                            if (evt.mode === 'newspaper') { isLocked = true; badgeText = '🔒 BUTUH PRIME'; alertText = 'Silakan upgrade ke lisensi PRIME.'; }
+                            if (evt.mode === 'newspaper' || evt.mode === 'fastbooth') { isLocked = true; badgeText = '🔒 BUTUH PRIME'; alertText = 'Silakan upgrade ke lisensi PRIME.'; }
                         }
-                        
                         const card = document.createElement('div'); 
                         card.className = 'card-event';
                         

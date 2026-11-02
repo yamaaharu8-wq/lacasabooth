@@ -317,10 +317,11 @@
                 
                 if (data.success) {
                     eventMode = data.event.mode; 
-                    let modeTeks = "Photobooth";
+                   let modeTeks = "Photobooth";
                     if (eventMode === 'collage') modeTeks = "Photo Collage";
                     if (eventMode === 'photobox') modeTeks = "Self Studio";
                     if (eventMode === 'newspaper') modeTeks = "Newspaper";
+                    if (eventMode === 'fastbooth') modeTeks = "Fastbooth";
                     document.getElementById('lbl-mode').innerText = modeTeks;
                 } else {
                     window.location.href = '/event-manager.html';

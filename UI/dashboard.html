@@ -452,7 +452,7 @@
             </div>
             <div class="grid-2">
                 <div class="card">
-                    <div class="card-header">Mode Collage & Newspaper</div>
+                   <div class="card-header">Mode Collage, Newspaper & Fastbooth ⚡</div>
                     <div class="form-group">
                         <label>Durasi Sesi Bebas (Detik)</label>
                         <input type="number" id="clg-sessionTimer" placeholder="300">
@@ -488,18 +488,49 @@
                 <div class="card">
                     <div class="card-header">Layar & Mesin Kamera</div>
                     <div class="form-group">
-                        <label>Mesin / SDK Kamera Aktif</label>
-                        <select id="sys-cameraEngine" onchange=" ubahEngineKameraUI(); ">
+                        <label>Mesin / SDK Kamera Utama</label>
+                        <select id="sys-cameraEngine" onchange="ubahEngineKameraUI();">
                             <option value="canon">📸 Canon EOS (Native EDSDK)</option>
                             <option value="sony">📷 Sony Alpha (Native CrSDK USB)</option>
                             <option value="fujifilm">🎞️ Fujifilm X-Series (Native USB)</option>
                             <option value="nikon">🔭 Nikon DSLR / Z (Native USB)</option>
                             <option value="webcam">📹 Webcam / Capture Card (UVC)</option>
                         </select>
+                        <select id="sys-webcamDeviceId1" style="margin-top: 6px; font-size: 0.82rem; display: none;"></select>
                         <p id="info-status-kamera-sdk" style="font-size: 0.8rem; color: #0f766e; font-weight: 700; margin-top: 6px;">
-                            🔌 Pilih merk kamera yang terhubung via USB.
+                            🔌 Pilih merk kamera yang terhubung.
                         </p>
                     </div>
+
+                    <!-- 🎥 FITUR DUAL CAMERA (HANYA MUNCULKAN DROPDOWN KE-2 JIKA DICENTANG) -->
+                    <div class="form-group" style="background: #fdf2f8; padding: 12px; border-radius: 12px; border: 2px solid var(--ink); margin-bottom: 12px;">
+                        <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; margin: 0; font-weight: 700; color: var(--ink);">
+                            <span>🎥 Aktifkan Mode 2 Kamera (Multi-Angle)</span>
+                            <input type="checkbox" id="sys-dualCameraEnabled" style="width: 22px; height: 22px; accent-color: #db7093; cursor: pointer;" onchange="toggleDualCameraUI()">
+                        </label>
+
+                        <div id="box-dual-camera-settings" style="display: none; margin-top: 12px; border-top: 1.5px dashed #eeb4c7; padding-top: 10px;">
+                            <label style="font-size: 0.85rem; color: #9e4261;">Pilih Kamera ke-2 (Sudut Kedua):</label>
+                            <select id="sys-cameraEngine2" style="font-weight: bold; margin-bottom: 10px;">
+                                <option value="webcam">📹 Webcam / Capture Card 2 (UVC)</option>
+                                <option value="canon">📸 Canon EOS Kedua (USB #2)</option>
+                                <option value="sony">📷 Sony Alpha (USB / UVC)</option>
+                                <option value="fujifilm">🎞️ Fujifilm X-Series (USB / UVC)</option>
+                            </select>
+                            <select id="sys-webcamDeviceId2" style="display: none;"></select>
+
+                            <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; background: #fff; padding: 8px 10px; border-radius: 8px; border: 1.5px solid #f5d0dc; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 10px;">
+                                <span>🔄 Izinkan Tamu Pindah Kamera Saat Live View</span>
+                                <input type="checkbox" id="sys-allowLiveCameraSwitch" style="width: 18px; height: 18px; accent-color: #10b981; cursor: pointer;">
+                            </label>
+
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; background: #fff; padding: 8px 10px; border-radius: 10px; border: 1.5px solid var(--ink);">
+                                <span id="badge-active-cam-slot" style="font-size: 0.82rem; font-weight: 700; color: #0f766e;">🎥 Aktif: Kamera 1</span>
+                                <button type="button" onclick="gantiKameraDariDashboard()" style="background: var(--ink); color: #fff; border: none; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 0.8rem; cursor: pointer;">⇄ Alihkan Kamera</button>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="form-group">
                         <label>Orientasi Tampilan Kamera</label>
                         <select id="sys-cameraOrientation" onchange="cekPeringatanPotret(this.value, true)">
@@ -535,7 +566,6 @@
                         </select>
                     </div>
                 </div>
-
                 <div class="card">
                     <div class="card-header">🎥 Video Panduan Pose (PIP)</div>
                     <div class="guide-box" style="background: var(--yellow);">
@@ -1085,33 +1115,38 @@
             </div>
             <div class="grid-2">
                 <div class="card" style="background: var(--yellow);">
-                    <div class="card-header" style="border-bottom-color: var(--ink);">📡 Mode Penyimpanan Utama</div>
+                    <div class="card-header" style="border-bottom-color: var(--ink);">📡 Mode Penyimpanan & Struktur Folder</div>
                     <div class="guide-box" style="background: #fff;">
-                        <h4>Penjelasan Mode:</h4>
+                        <h4>Penjelasan Mode Folder G-Drive:</h4>
                         <ul style="font-size: 0.8rem;">
-                            <li><b>ONLINE:</b> Hasil foto (GIF/Video/Collage) dikirim ke G-Drive, dapat QR Code (Butuh internet).</li>
-                            <li><b>OFFLINE:</b> Data hanya disimpan di laptop. QR Code mati. Mempercepat proses cetak.</li>
+                            <li><b>1 Sesi = 1 Folder Baru:</b> Setiap tamu mendapat 1 folder khusus berisi Foto Cetak, Live Photo, GIF, dan Mentahan mereka sendiri.</li>
+                            <li><b>1 Folder Campur (Terbaru Paling Atas):</b> Semua foto dari setiap sesi langsung masuk ke 1 folder yang sama (tanpa sub-folder). Nama file diformat khusus agar <b>foto terbaru otomatis selalu berada di urutan paling atas</b> saat dibuka di HP klien!</li>
                         </ul>
                     </div>
                     <div class="form-group">
-                        <select id="sys-cloudStorage" style="font-size: 1.1rem; font-weight: bold; padding: 15px;">
+                        <label>Status Cloud Storage:</label>
+                        <select id="sys-cloudStorage" style="font-size: 1rem; font-weight: bold; padding: 12px;">
                             <option value="true">🟢 ONLINE (Kirim ke Google Drive)</option>
                             <option value="false">🔴 OFFLINE MURNI (Simpan di Laptop Saja)</option>
                         </select>
                     </div>
-                    <button class="btn-primary" style="background:var(--ink); color:white;" onclick="simpanPengaturan()">💾 Terapkan Mode Penyimpanan</button>
+                    <div class="form-group" style="background: rgba(255,255,255,0.75); padding: 12px; border-radius: 12px; border: 2px dashed var(--ink);">
+                        <label>📂 Pilih Mode Pengiriman Google Drive:</label>
+                        <select id="sys-driveFolderMode" style="font-size: 1rem; font-weight: bold; padding: 12px;" onchange="toggleDriveFolderModeUI()">
+                            <option value="per_session">📁 Buat Folder Baru Per Sesi (1 Tamu = 1 Folder)</option>
+                            <option value="single_mixed">🗂️ Gabung di 1 Folder Campur (Terbaru Paling Atas)</option>
+                        </select>
+                    </div>
                 </div>
                 
                 <div class="card">
-                    <div class="card-header">🔑 Koneksi Akun Google Drive</div>
+                    <div class="card-header">🔑 Koneksi Akun & ID Folder Google Drive</div>
                     <div class="guide-box">
-                        <h4>Cara Tepat Menghubungkan Folder G-Drive:</h4>
+                        <h4>Cara Menghubungkan Folder G-Drive:</h4>
                         <ol style="font-size:0.8rem;">
-                            <li>Klik tombol <b>🔑 Login G-Drive</b>, izinkan akses.</li>
-                            <li>Buka situs G-Drive, buat folder (Misal: "Photobooth Sesi").</li>
-                            <li>Share folder menjadi <b>"Siapa saja memiliki link"</b>.</li>
-                            <li>Buka folder, ambil <b>ID Folder</b> dari URL browser. (Kodenya saja!)</li>
-                            <li>Tempel di form bawah, klik Simpan.</li>
+                            <li>Klik tombol <b>🔑 Login G-Drive</b>, lalu izinkan akses.</li>
+                            <li>Buat folder di Google Drive Anda, klik kanan &rarr; <b>Bagikan (Share)</b> &rarr; ubah ke <b>"Siapa saja yang memiliki link"</b>.</li>
+                            <li>Salin <b>ID Folder</b> dari URL browser, lalu tempel pada kolom di bawah sesuai mode yang Anda gunakan.</li>
                         </ol>
                     </div>
                     
@@ -1123,15 +1158,22 @@
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label>ID Folder Utama Drive Anda</label>
+                    <!-- KOLOM 1: ID FOLDER UNTUK MODE PER SESI -->
+                    <div class="form-group" id="box-drive-folder-session" style="background: #f8fafc; padding: 12px; border-radius: 12px; border: 2px solid var(--ink);">
+                        <label>📁 ID Folder Utama (Untuk Mode Folder Per Sesi)</label>
                         <input type="text" id="driveParentFolderId" placeholder="Contoh: 1A2b3C4d5E6f7G8h9I0j">
+                        <p style="font-size: 0.76rem; color: #64748b; margin-top: 5px;">*Sistem akan membuat sub-folder rapi (contoh: <b>Sesi_31Okt_09-15</b>) di dalam folder ini.</p>
                     </div>
-                    <button type="button" onclick="simpanPengaturan()" class="btn-primary" style="background: var(--ink); color: white;">💾 Simpan ID Folder</button>
+
+                    <!-- KOLOM 2: ID FOLDER KHUSUS MODE 1 FOLDER CAMPUR -->
+                    <div class="form-group" id="box-drive-folder-mixed" style="background: #f0fdf4; padding: 12px; border-radius: 12px; border: 2px solid #16a34a;">
+                        <label style="color: #166534;">🗂️ ID Folder Khusus (Untuk Mode 1 Folder Campur)</label>
+                        <input type="text" id="driveMixedFolderId" placeholder="Contoh: 1Z9y8X7w6V5u4T3s2R1q" style="border-color: #16a34a;">
+                        <p style="font-size: 0.76rem; color: #15803d; margin-top: 5px;">*Semua foto langsung masuk ke folder ini dengan urutan <b>Foto Terbaru Paling Atas</b> di HP klien.</p>
+                    </div>
                 </div>
             </div>
         </div>
-
         <div id="tab-whatsapp" class="tab-panel">
             <div class="top-bar">
                 <h2>Bot WhatsApp 🤖</h2>
@@ -1840,6 +1882,12 @@ document.getElementById('sys-brightness').value = data.global?.liveViewBrightnes
                 }
                 document.getElementById('sys-cloudStorage').value = data.global?.cloudStorage !== false ? "true" : "false";
                 document.getElementById('driveParentFolderId').value = data.global?.driveParentFolderId || "";
+                if (document.getElementById('sys-driveFolderMode')) {
+    document.getElementById('sys-driveFolderMode').value = data.global?.driveFolderMode || "per_session";
+}
+if (document.getElementById('driveMixedFolderId')) {
+    document.getElementById('driveMixedFolderId').value = data.global?.driveMixedFolderId || "";
+}
                 if (document.getElementById('input-cf-token')) document.getElementById('input-cf-token').value = data.global?.cloudflareToken || "";
                 
                 if (document.getElementById('sys-extraPrintPriceStatic')) {
@@ -1851,6 +1899,21 @@ document.getElementById('sys-brightness').value = data.global?.liveViewBrightnes
                 if (document.getElementById('sys-discountEnabled')) {
     document.getElementById('sys-discountEnabled').value = data.global?.discountEnabled ? "true" : "false";
 }
+if (document.getElementById('sys-dualCameraEnabled')) {
+        document.getElementById('sys-dualCameraEnabled').checked = data.global?.dualCameraEnabled === true;
+        const boxCam2 = document.getElementById('box-dual-camera-settings');
+        if (boxCam2) boxCam2.style.display = data.global?.dualCameraEnabled ? 'block' : 'none';
+    }
+    if (document.getElementById('sys-cameraEngine2')) {
+        document.getElementById('sys-cameraEngine2').value = data.global?.cameraEngine2 || 'webcam';
+    }
+    if (document.getElementById('sys-allowLiveCameraSwitch')) {
+        document.getElementById('sys-allowLiveCameraSwitch').checked = data.global?.allowLiveCameraSwitch !== false;
+    }
+    if (document.getElementById('badge-active-cam-slot')) {
+        const slotAktif = data.global?.activeCameraSlot || 1;
+        document.getElementById('badge-active-cam-slot').innerText = `🎥 Aktif: Kamera ${slotAktif}`;
+    }
 
                 document.getElementById('wa-message-text').value = data.waMessage || "Halo dari Lacasaphoto! 📸\n\nTerima kasih sudah berfoto ria bersama kami. Berikut link foto kamu:\n\n🔗 {link}";
 
@@ -1937,6 +2000,11 @@ if (document.getElementById('sys-printerA4')) localStorage.setItem('backup_print
                     },
                     global: { 
                         ...(currentData.global || {}), 
+                        dualCameraEnabled: getCheck('sys-dualCameraEnabled', currentData.global?.dualCameraEnabled || false),
+cameraEngine2: getVal('sys-cameraEngine2', currentData.global?.cameraEngine2 || 'webcam'),
+allowLiveCameraSwitch: getCheck('sys-allowLiveCameraSwitch', currentData.global?.allowLiveCameraSwitch !== false),
+webcamDeviceId1: getVal('sys-webcamDeviceId1', currentData.global?.webcamDeviceId1 || ''),
+webcamDeviceId2: getVal('sys-webcamDeviceId2', currentData.global?.webcamDeviceId2 || ''),
                         cameraOrientation: getVal('sys-cameraOrientation', currentData.global?.cameraOrientation || 'landscape'),
                         mirrorCamera: getVal('sys-mirrorCamera', currentData.global?.mirrorCamera ? 'true' : 'false') === "true",
                         takeFromRemote: getVal('sys-takeFromRemote', currentData.global?.takeFromRemote ? 'true' : 'false') === "true",
@@ -1962,7 +2030,8 @@ printer4R_2: document.getElementById('sys-printer4R_2') ? document.getElementByI
 canonTv: getVal('sys-canonTv', currentData.global?.canonTv || 'auto'),
 canonAv: getVal('sys-canonAv', currentData.global?.canonAv || 'auto'),
 discountEnabled: getVal('sys-discountEnabled', currentData.global?.discountEnabled ? 'true' : 'false') === "true",
-idlePreset: currentData.global?.idlePreset || 'style-1',
+idlePreset: currentData.global?.idlePreset || 'style-1',driveFolderMode: getVal('sys-driveFolderMode', currentData.global?.driveFolderMode || 'per_session'),
+driveMixedFolderId: getVal('driveMixedFolderId', currentData.global?.driveMixedFolderId || ''),
                         cloudflareToken: getVal('input-cf-token', currentData.global?.cloudflareToken || '')
                          
                         
@@ -2965,6 +3034,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+let paymentWindow = null;
+
 window.bukaPayment = function(tier) {
     const user = window.auth ? window.auth.currentUser : null;
     if (!user) return alert("⚠️ Silakan login menggunakan akun Google terlebih dahulu!");
@@ -3562,16 +3633,28 @@ document.addEventListener('DOMContentLoaded', loadQrisSettings);
             }
         };
 
-       async function checkUserLicense(user) {
-            let tier = "free"; 
-            let expiredAt = null;
+    async function checkUserLicense(user) {
+            // Ambil cadangan lisensi terakhir dari memori lokal PC
+            let cachedTier = localStorage.getItem('saas_user_tier') || "free";
+            let cachedExpRaw = localStorage.getItem('saas_user_expiry');
+            let tier = cachedTier;
+            let expiredAt = cachedExpRaw ? new Date(parseInt(cachedExpRaw)) : null;
+            let isVerifiedOnline = false;
+            let isTrulyExpired = false;
 
-            // 1. BUNGKUS DENGAN TRY-CATCH AGAR KEBAL ERROR FIREBASE
             try {
+                // Jika browser mendeteksi sedang offline total, langsung gunakan cache tanpa merusak settingan!
+                if (!navigator.onLine) {
+                    throw new Error("PC sedang tidak terhubung ke internet (Offline Mode).");
+                }
+
                 const userRef = doc(db, "users", user.uid);
                 const userSnap = await getDoc(userRef);
+                isVerifiedOnline = true; // Berhasil terhubung ke server Firebase
 
                 if (!userSnap.exists()) {
+                    tier = "free";
+                    expiredAt = null;
                     await setDoc(userRef, {
                         email: user.email, name: user.displayName, tier: "free", createdAt: new Date()
                     });
@@ -3579,43 +3662,62 @@ document.addEventListener('DOMContentLoaded', loadQrisSettings);
                     const data = userSnap.data();
                     tier = data.tier || "free";
                     
-                    if(data.expiredAt) {
+                    if (data.expiredAt) {
                         expiredAt = data.expiredAt.toDate(); 
-                        if(new Date() > expiredAt) {
+                        if (new Date() > expiredAt) {
+                            // BENAR-BENAR SUDAH HABIS MASA AKTIFNYA DI SERVER
                             tier = "free";
+                            isTrulyExpired = true;
                             await updateDoc(userRef, { tier: "free", expiredAt: null });
                             expiredAt = null;
                             alert("⚠️ Masa langganan Anda telah habis, akun dialihkan ke paket Free.");
                         }
                     }
                 }
+
+                // Simpan status terbaru yang sah dari server ke localStorage
+                localStorage.setItem('saas_user_tier', tier);
+                if (expiredAt) {
+                    localStorage.setItem('saas_user_expiry', expiredAt.getTime().toString());
+                } else {
+                    localStorage.removeItem('saas_user_expiry');
+                }
+
             } catch (error) {
-                console.error("Error Firebase Firestore:", error);
-                // Jika error (misal: Rules Firebase belum disetting / Internet mati), jangan macet!
-                console.log("Gagal memuat data dari server, menggunakan status lisensi darurat (FREE).");
+                console.warn("⚠️ [OFFLINE SHIELD] Gagal menghubungi Firebase, mempertahankan lisensi & pengaturan terakhir:", error.message);
+                isVerifiedOnline = false;
+
+                // Cek apakah cache lokal sudah melewati tanggal kadaluarsa
+                if (expiredAt && new Date() > expiredAt) {
+                    tier = "free";
+                    isTrulyExpired = true;
+                    localStorage.setItem('saas_user_tier', 'free');
+                    localStorage.removeItem('saas_user_expiry');
+                }
             }
+
+            // Simpan flag global apakah boleh menjalankan Silent Killer (HANYA jika online & benar-benar Free/Expired!)
+            window.allowSilentKiller = (isVerifiedOnline && tier === 'free') || isTrulyExpired;
             
-            // 2. UPDATE UI (Teks Langganan)
+            // UPDATE UI (Teks Langganan)
             const statusTextUI = document.getElementById('status-lisensi-teks');
             const statusTglUI = document.getElementById('status-lisensi-tgl');
             
-            if(tier === 'free') {
+            if (tier === 'free') {
                 statusTextUI.innerText = "FREE (Gratis)";
                 statusTextUI.style.color = "white";
                 statusTglUI.innerText = "Berlaku selamanya";
                 document.getElementById('btn-tier-free').innerText = "Paket Saat Ini Aktif";
             } else {
-                statusTextUI.innerText = "Aktif (" + tier.toUpperCase() + ")";
+                statusTextUI.innerText = "Aktif (" + tier.toUpperCase() + ")" + (!isVerifiedOnline ? " [Mode Offline]" : "");
                 statusTextUI.style.color = "var(--yellow)";
                 
-                if(expiredAt) {
+                if (expiredAt) {
                     const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-                    
-                    const hariIni = new Date();
-                    const selisihWaktu = expiredAt.getTime() - hariIni.getTime();
+                    const selisihWaktu = expiredAt.getTime() - new Date().getTime();
                     const sisaHari = Math.ceil(selisihWaktu / (1000 * 3600 * 24)); 
                     
-                    if(sisaHari > 0) {
+                    if (sisaHari > 0) {
                         statusTglUI.innerText = `Berlaku hingga: ${expiredAt.toLocaleDateString('id-ID', options)} (Sisa ${sisaHari} hari)`;
                     } else {
                         statusTglUI.innerText = `Berlaku hingga: ${expiredAt.toLocaleDateString('id-ID', options)} (Berakhir hari ini)`;
@@ -3624,17 +3726,14 @@ document.addEventListener('DOMContentLoaded', loadQrisSettings);
                 document.getElementById('btn-tier-free').innerText = "Paket Dasar (Free)";
             }
 
-            // 3. TAMPILKAN PANEL ADMIN (Kini Aman dari Error)
-            // Tambahkan toLowerCase() agar aman dari perbedaan huruf besar/kecil
             if (user && user.email && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
                 const adminPanel = document.getElementById('admin-panel-keys');
-                if(adminPanel) adminPanel.style.display = 'block'; // Tampilkan panelnya
+                if (adminPanel) adminPanel.style.display = 'block';
             } else {
                 const adminPanel = document.getElementById('admin-panel-keys');
-                if(adminPanel) adminPanel.style.display = 'none'; // Sembunyikan untuk orang lain
+                if (adminPanel) adminPanel.style.display = 'none';
             }
             
-            // 4. TERAPKAN FITUR
             terapkanFiturBerdasarkanLisensi(tier);
         }
 
@@ -3708,42 +3807,43 @@ document.addEventListener('DOMContentLoaded', loadQrisSettings);
                     `;
                 }
 
-                // --- SILENT KILLER (PAKSA MATIKAN MESIN BACKEND & BERSIHKAN FITUR) ---
-                try {
-                    fetch('/api/settings').then(res => res.json()).then(data => {
-                        let butuhUpdate = false;
-                        if (data.global && data.global.cloudStorage !== false) { data.global.cloudStorage = false; butuhUpdate = true; }
-                        if (data.global && data.global.livePhotoEnabled !== false) { data.global.livePhotoEnabled = false; butuhUpdate = true; }
-                        if (data.global && data.global.photoGifEnabled !== false) { data.global.photoGifEnabled = false; butuhUpdate = true; }
-                        if (data.global && data.global.customIdleScreen !== null) {
-                            data.global.customIdleScreen = null; butuhUpdate = true;
-                            const statusIdle = document.getElementById('status-idle-screen');
-                            if (statusIdle) statusIdle.innerHTML = "Bawaan Tema (Default)";
-                        }
-                        if (butuhUpdate) {
-                            fetch('/api/settings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
-                        }
-                    }).catch(e => console.log(e));
-                    
-                    fetch('/api/wa-logout', { method: 'POST' }).catch(e => console.log(e));
+                // --- SILENT KILLER (HANYA JALAN JIKA BENAR-BENAR EXPIRED / FREE TERVERIFIKASI, BUKAN KARENA LUPA NYALAKAN WIFI!) ---
+                if (window.allowSilentKiller) {
+                    try {
+                        fetch('/api/settings').then(res => res.json()).then(data => {
+                            let butuhUpdate = false;
+                            if (data.global && data.global.cloudStorage !== false) { data.global.cloudStorage = false; butuhUpdate = true; }
+                            if (data.global && data.global.livePhotoEnabled !== false) { data.global.livePhotoEnabled = false; butuhUpdate = true; }
+                            if (data.global && data.global.photoGifEnabled !== false) { data.global.photoGifEnabled = false; butuhUpdate = true; }
+                            if (data.global && data.global.customIdleScreen !== null) {
+                                data.global.customIdleScreen = null; butuhUpdate = true;
+                                const statusIdle = document.getElementById('status-idle-screen');
+                                if (statusIdle) statusIdle.innerHTML = "Bawaan Tema (Default)";
+                            }
+                            if (butuhUpdate) {
+                                fetch('/api/settings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+                            }
+                        }).catch(e => console.log(e));
+                        
+                        fetch('/api/wa-logout', { method: 'POST' }).catch(e => console.log(e));
 
-                    fetch('/api/frames?all=true').then(res => res.json()).then(framesData => {
-                        for (const format in framesData) {
-                            framesData[format].forEach(template => {
-                                const isBawaan = template.id.toLowerCase().includes('default') || template.id.toLowerCase().includes('bawaan');
-                                if (!isBawaan && template.isHidden !== true) {
-                                    fetch('/api/toggle-template', { 
-                                        method: 'POST', headers: {'Content-Type': 'application/json'}, 
-                                        body: JSON.stringify({ format: format, idTemplate: template.id, isHidden: true }) 
-                                    }).then(() => {
-                                        if (typeof fetchTemplateData === "function") fetchTemplateData();
-                                    });
-                                }
-                            });
-                        }
-                    }).catch(e => console.log(e));
-                } catch(e) {}
-                
+                        fetch('/api/frames?all=true').then(res => res.json()).then(framesData => {
+                            for (const format in framesData) {
+                                framesData[format].forEach(template => {
+                                    const isBawaan = template.id.toLowerCase().includes('default') || template.id.toLowerCase().includes('bawaan');
+                                    if (!isBawaan && template.isHidden !== true) {
+                                        fetch('/api/toggle-template', { 
+                                            method: 'POST', headers: {'Content-Type': 'application/json'}, 
+                                            body: JSON.stringify({ format: format, idTemplate: template.id, isHidden: true }) 
+                                        }).then(() => {
+                                            if (typeof fetchTemplateData === "function") fetchTemplateData();
+                                        });
+                                    }
+                                });
+                            }
+                        }).catch(e => console.log(e));
+                    } catch(e) {}
+                }
                 // CEGAH KEBOCORAN TOMBOL
                 window.toggleVisibility = async function(format, idTemplate, isHiddenTarget) {
                     const isBawaan = idTemplate.toLowerCase().includes('default') || idTemplate.toLowerCase().includes('bawaan');
@@ -4028,6 +4128,46 @@ document.addEventListener('DOMContentLoaded', loadQrisSettings);
         if (pillTimeout) clearTimeout(pillTimeout);
         pillTimeout = setTimeout(() => pill.classList.remove('show'), 2000);
     }
+    window.toggleDualCameraUI = function() {
+        const isDualCam = document.getElementById('sys-dualCameraEnabled')?.checked;
+        const box = document.getElementById('box-dual-camera-settings');
+        if (box) box.style.display = isDualCam ? 'block' : 'none';
+        if (window.simpanPengaturanSilent) window.simpanPengaturanSilent();
+    };
+
+    window.gantiKameraDariDashboard = async function() {
+        try {
+            const res = await fetch('/api/switch-camera', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({}) });
+            const data = await res.json();
+            if (data.success) {
+                const badge = document.getElementById('badge-active-cam-slot');
+                if (badge) badge.innerText = `🎥 Aktif: Kamera ${data.activeSlot} (${data.engine.toUpperCase()})`;
+                alert(`✅ Kamera aktif dialihkan ke Kamera ${data.activeSlot}!`);
+            } else {
+                alert("⚠️ " + data.message);
+            }
+        } catch (e) {}
+    };
+
+    // Muat daftar perangkat kamera video (UVC/Webcam/Capture Card) agar Kamera 1 & Kamera 2 bisa memilih device spesifik
+    async function muatDaftarDeviceWebcam() {
+        try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const cams = devices.filter(d => d.kind === 'videoinput');
+            const sel1 = document.getElementById('sys-webcamDeviceId1');
+            const sel2 = document.getElementById('sys-webcamDeviceId2');
+            if (sel1 && sel2) {
+                sel1.innerHTML = '<option value="">-- Otomatis (Default Kamera 1) --</option>';
+                sel2.innerHTML = '<option value="">-- Otomatis (Kamera Kedua) --</option>';
+                cams.forEach((c, idx) => {
+                    const lbl = c.label || `Kamera USB #${idx + 1}`;
+                    sel1.innerHTML += `<option value="${c.deviceId}">${lbl}</option>`;
+                    sel2.innerHTML += `<option value="${c.deviceId}">${lbl}</option>`;
+                });
+            }
+        } catch (e) {}
+    }
+    muatDaftarDeviceWebcam();
 
     // Fungsi saat Dropdown Mesin Kamera diubah: Simpan dulu ke server, baru scan ulang kamera!
     window.ubahEngineKameraUI = async function() {
@@ -4035,7 +4175,7 @@ document.addEventListener('DOMContentLoaded', loadQrisSettings);
         if (typeof scanKameraUSB === 'function') scanKameraUSB();
     };
 
-    // Simpan Pengaturan Utama secara Hening (Sudah Termasuk Dual Printer & Printer 2)
+// Simpan Pengaturan Utama secara Hening (LENGKAP SEMUA VARIABEL BARU)
     window.simpanPengaturanSilent = async function() {
         try {
             tampilkanIndikatorAutoSave("⏳ Menyimpan...", "#3b82f6");
@@ -4043,12 +4183,13 @@ document.addEventListener('DOMContentLoaded', loadQrisSettings);
             if (document.getElementById('sys-printer4R')) localStorage.setItem('backup_printer4R', document.getElementById('sys-printer4R').value);
             if (document.getElementById('sys-printer4R_2')) localStorage.setItem('backup_printer4R_2', document.getElementById('sys-printer4R_2').value);
             if (document.getElementById('sys-printerA4')) localStorage.setItem('backup_printerA4', document.getElementById('sys-printerA4').value);
+            if (document.getElementById('sys-printerA4_2')) localStorage.setItem('backup_printerA4_2', document.getElementById('sys-printerA4_2').value);
             const currentData = await resSettings.json().catch(() => ({}));
 
             const getVal = (id, fallback) => {
                 const el = document.getElementById(id);
                 if (!el) return fallback;
-                if (el.tagName === 'SELECT' && (id === 'sys-printer4R' || id === 'sys-printer4R_2' || id === 'sys-printerA4')) {
+                if (el.tagName === 'SELECT' && ['sys-printer4R', 'sys-printer4R_2', 'sys-printerA4', 'sys-printerA4_2'].includes(id)) {
                     return el.value;
                 }
                 if (el.tagName === 'SELECT' && el.value === "" && fallback) return fallback;
@@ -4087,18 +4228,34 @@ document.addEventListener('DOMContentLoaded', loadQrisSettings);
                     customIdleScreen: currentData.global?.customIdleScreen || null,
                     extraPrintPriceStatic: parseInt(getVal('sys-extraPrintPriceStatic', currentData.global?.extraPrintPriceStatic)) || 15000,
                     qrisPriceStatic: parseInt(getVal('sys-qrisPriceStatic', currentData.global?.qrisPriceStatic)) || 35000,
+                    
+                    // ✅ PENGATURAN KAMERA UTAMA & DUAL KAMERA (TERSIMPAN PERMANEN)
                     cameraEngine: getVal('sys-cameraEngine', currentData.global?.cameraEngine || 'canon'),
+                    dualCameraEnabled: getCheck('sys-dualCameraEnabled', currentData.global?.dualCameraEnabled || false),
+                    cameraEngine2: getVal('sys-cameraEngine2', currentData.global?.cameraEngine2 || 'webcam'),
+                    allowLiveCameraSwitch: getCheck('sys-allowLiveCameraSwitch', currentData.global?.allowLiveCameraSwitch !== false),
+                    webcamDeviceId1: getVal('sys-webcamDeviceId1', currentData.global?.webcamDeviceId1 || ''),
+                    webcamDeviceId2: getVal('sys-webcamDeviceId2', currentData.global?.webcamDeviceId2 || ''),
+                    
                     cameraPort: getVal('sys-cameraPort', currentData.global?.cameraPort || ''),
                     liveViewBrightness: parseInt(getVal('sys-brightness', currentData.global?.liveViewBrightness)) || 100,
                     flashWorkaround: getVal('sys-flashWorkaround', currentData.global?.flashWorkaround !== false ? 'true' : 'false') === "true",
                     livePhotoEnabled: getVal('sys-livePhoto', currentData.global?.livePhotoEnabled ? 'true' : 'false') === "true",
                     photoGifEnabled: getVal('sys-photoGif', currentData.global?.photoGifEnabled ? 'true' : 'false') === "true",
+                    
+                    // ✅ PENGATURAN GOOGLE DRIVE PER SESI & 1 FOLDER CAMPUR (TERSIMPAN PERMANEN)
                     cloudStorage: getVal('sys-cloudStorage', currentData.global?.cloudStorage !== false ? 'true' : 'false') === "true",
+                    driveFolderMode: getVal('sys-driveFolderMode', currentData.global?.driveFolderMode || 'per_session'),
                     driveParentFolderId: getVal('driveParentFolderId', currentData.global?.driveParentFolderId || ''),
+                    driveMixedFolderId: getVal('driveMixedFolderId', currentData.global?.driveMixedFolderId || ''),
+                    
+                    // ✅ PENGATURAN PRINTER & DUAL PRINTER (TERSIMPAN PERMANEN)
                     printer4R: document.getElementById('sys-printer4R') ? document.getElementById('sys-printer4R').value : (currentData.global?.printer4R || ''),
                     printer4R_2: document.getElementById('sys-printer4R_2') ? document.getElementById('sys-printer4R_2').value : (currentData.global?.printer4R_2 || ''),
                     dualPrinterEnabled: getCheck('sys-dualPrinterEnabled', currentData.global?.dualPrinterEnabled || false),
                     printerA4: document.getElementById('sys-printerA4') ? document.getElementById('sys-printerA4').value : (currentData.global?.printerA4 || ''),
+                    printerA4_2: document.getElementById('sys-printerA4_2') ? document.getElementById('sys-printerA4_2').value : (currentData.global?.printerA4_2 || ''),
+                    
                     canonIso: getVal('sys-canonIso', currentData.global?.canonIso || 'auto'),
                     canonTv: getVal('sys-canonTv', currentData.global?.canonTv || 'auto'),
                     canonAv: getVal('sys-canonAv', currentData.global?.canonAv || 'auto'),
@@ -4120,6 +4277,9 @@ document.addEventListener('DOMContentLoaded', loadQrisSettings);
         }
     };
 
+    window.toggleDriveFolderModeUI = function() {
+        if (window.simpanPengaturanSilent) window.simpanPengaturanSilent();
+    };
     // Pastikan tombol stepper +/- Kamera Pro juga langsung Auto-Save ke file JSON selain menembak kamera
     const origStepExposure = window.stepExposure;
     if (typeof origStepExposure === 'function') {
@@ -4133,7 +4293,7 @@ document.addEventListener('DOMContentLoaded', loadQrisSettings);
     const generalSettingIds = [
         'sys-usePin', 'sys-adminPin',
         'clg-sessionTimer', 'clg-timer', 'clg-maxRetake', 'pb-sessionTimer',
-        'sys-cameraEngine', 'sys-cameraOrientation', 'sys-mirrorCamera', 'sys-takeFromRemote',
+        'sys-cameraEngine', 'sys-cameraOrientation', 'sys-mirrorCamera', 'sys-takeFromRemote','sys-driveFolderMode','driveMixedFolderId',
         'sys-brightness', 'sys-flashWorkaround', 'sys-printer4R', 'sys-printerA4',
         'sys-livePhoto', 'sys-photoGif',
         'sys-canonIso', 'sys-canonTv', 'sys-canonAv',
@@ -4142,7 +4302,7 @@ document.addEventListener('DOMContentLoaded', loadQrisSettings);
         'sys-dualPrinterEnabled',
         'sys-printer4R_2',
         'sys-qrisPriceStatic', 'sys-extraPrintPriceStatic',
-        'sys-discountEnabled'
+        'sys-discountEnabled','sys-dualCameraEnabled', 'sys-cameraEngine2', 'sys-allowLiveCameraSwitch', 'sys-webcamDeviceId1', 'sys-webcamDeviceId2'
     ];
 
     // Daftar seluruh ID input pengaturan QRIS Dinamis
