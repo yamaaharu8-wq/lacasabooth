@@ -561,9 +561,8 @@ import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signO
         }
     });
 
-    // ==== [DIPERBARUI] CEK LISENSI & HARDWARE BINDING (AMAN SAAT OFFLINE) ====
+   // ==== [DARURAT - BEBAS KUNCI PERANGKAT] CEK LISENSI TANPA LOGOUT PAKSA ====
     async function checkUserLicense(user) {
-        const currentDeviceId = window.getHardwareId(); 
         let tier = localStorage.getItem('saas_user_tier') || "free";
 
         try {
@@ -574,18 +573,15 @@ import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signO
 
             if (!userSnap.exists()) {
                 tier = "free";
-                await setDoc(userRef, { email: user.email, name: user.displayName || "Client", tier: "free", deviceId: currentDeviceId, createdAt: new Date() });
+                await setDoc(userRef, {
+                    email: user.email,
+                    name: user.displayName || "Client",
+                    tier: "free",
+                    createdAt: new Date()
+                });
             } else { 
                 const userData = userSnap.data();
-                if (!userData.deviceId) {
-                    await setDoc(userRef, { deviceId: currentDeviceId }, { merge: true });
-                } else if (userData.deviceId !== currentDeviceId) {
-                    window.alert("❌ AKSES DITOLAK!\nAkun Google ini sudah tertaut dengan komputer lain.\nSatu akun hanya berlaku untuk satu perangkat.");
-                    await signOut(auth);
-                    localStorage.removeItem('saas_user_tier');
-                    window.location.reload();
-                    return; 
-                }
+                // ✅ KUNCI 1 PERANGKAT 1 AKUN DINONAKTIFKAN SEPENUHNYA AGAR TIDAK PERNAH MENTAL!
                 tier = userData.tier || "free"; 
                 if (userData.expiredAt && new Date() > userData.expiredAt.toDate()) {
                     tier = "free";

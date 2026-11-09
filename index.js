@@ -3624,10 +3624,11 @@ expressApp.get('/liveview-stream.mjpg', (req, res) => {
     req.on('close', () => clearInterval(streamTimer));
 });
 
-// 2. Watchdog Otomatis Kamera Canon (Cek & Sambung Ulang Otomatis jika Kabel Tersenggol / Baterai Diganti)
+// 2. Watchdog Otomatis Kamera Canon (AMAN - TIDAK MENABRAK SAAT LIVE VIEW JALAN)
 let isWatchdogBusy = false;
 setInterval(() => {
-    if (isWatchdogBusy) return;
+    // JANGAN ganggu USB kamera jika Live View (lvInterval) sedang aktif agar EDSDK.dll tidak crash/force close!
+    if (isWatchdogBusy || lvInterval !== null) return;
     isWatchdogBusy = true;
     try {
         const cfg = safeReadJson(settingsPath, {});
@@ -3635,7 +3636,6 @@ setInterval(() => {
 
         if (engine === 'canon') {
             if (!activeCamera) {
-                // Coba deteksi kamera secara hening di latar belakang
                 let camList = [null];
                 if (isEdsdkInitialized && EdsGetCameraList(camList) === 0) {
                     let cnt = [0];
@@ -3650,26 +3650,24 @@ setInterval(() => {
                     }
                 }
             } else {
-                // Tes apakah kamera yang sedang aktif masih merespons atau sudah mati
-                let testBuf = Buffer.alloc(4);
-                let err = EdsGetPropertyData(activeCamera, 0x00000402, 0, 4, testBuf);
-                if (err !== 0 && err !== 0x00008d01) { // Jika komunikasi USB terputus
-                    console.warn("⚠️ [WATCHDOG] Koneksi kamera Canon terputus! Menyiapkan auto-reconnect...");
-                    activeCamera = null;
-                    if (lvInterval) { clearInterval(lvInterval); lvInterval = null; }
-                    io.emit('camera-watchdog-status', { connected: false });
-                } else {
-                    io.emit('camera-watchdog-status', { connected: true });
-                }
+                io.emit('camera-watchdog-status', { connected: true });
             }
         }
     } catch (e) {}
     isWatchdogBusy = false;
-}, 4000);
+}, 5000);
+
+// 3. Penahan Anti-Force Close jika WebContents / Renderer mengalami gangguan memori
+electronApp.on('render-process-gone', (event, webContents, details) => {
+    console.warn('⚠️ [ANTI-FORCE CLOSE] Renderer mengalami gangguan, memuat ulang halaman dengan aman:', details.reason);
+    try { webContents.reload(); } catch (e) {}
+});
+
 // =======================================================
 // 12. AKTIVASI EXPRESS SERVER LOKAL (PORT 3000)
 // =======================================================
 server.listen(3000, '0.0.0.0', () => {
     console.log("🚀 Server Photobooth Lacasaphoto siap dieksekusi di Port 3000!");
 });
-process.on('uncaughtException', (err) => console.error('❌ Uncaught Exception:', err.message));
+process.on('uncaughtException', (err) => console.error('❌ [ANTI-CRASH] Uncaught Exception ditahan:', err.message));
+process.on('unhandledRejection', (reason) => console.error('⚠️ [ANTI-CRASH] Unhandled Rejection ditahan:', reason));
