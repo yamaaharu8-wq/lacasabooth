@@ -724,15 +724,23 @@ autoUpdater.on('download-progress', (progressObj) => {
     });
 });
 
-// 6. Otomatis restart jika unduhan selesai (ada jeda 3 detik)
+// 6. Otomatis bersihkan semua pengunci file sebelum memasang pembaruan (Mencegah app.asar corrupt!)
 autoUpdater.on('update-downloaded', () => {
-    console.log('✅ Update selesai diunduh. Memulai ulang aplikasi untuk memasang pembaruan...');
+    console.log('✅ Update selesai diunduh. Membersihkan proses sebelum memasang pembaruan...');
     BrowserWindow.getAllWindows().forEach(win => {
         win.webContents.send('update-ready');
     });
-    setTimeout(() => {
-        autoUpdater.quitAndInstall(); 
-    }, 3000); 
+
+    setTimeout(async () => {
+        try { stopLiveView(); } catch (e) {}
+        try { if (isEdsdkInitialized) EdsTerminateSDK(); } catch (e) {}
+        try { if (waClient) await waClient.destroy(); } catch (e) {}
+        try { if (cfTunnelProcess) cfTunnelProcess.kill(); } catch (e) {}
+        try { server.close(); } catch (e) {}
+
+        // Parameter (isSilent = false, isForceRunAfter = true) memastikan installer menutup proses lama 100% sebelum menimpa app.asar
+        autoUpdater.quitAndInstall(false, true);
+    }, 3000);
 });
 
 
@@ -1960,6 +1968,85 @@ expressApp.post('/api/generate-ai', async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
+// =======================================================
+// 🏃‍♂️ API KHUSUS SPORT BOOTH (SIMPAN BATCH GRADED PHOTOS & UPLOAD G-DRIVE)
+// =======================================================
+expressApp.post('/api/generate-sportbooth', async (req, res) => {
+    try {
+        const { sessionId, imagesBase64 } = req.body;
+        const lockedSessionId = sessionId || activeSessionId;
+        if (!imagesBase64 || !Array.isArray(imagesBase64) || imagesBase64.length === 0) {
+            return res.status(400).json({ success: false, message: "Tidak ada foto untuk diproses." });
+        }
+
+        const sessionDir = path.join(uploadDir, lockedSessionId);
+        if (!fs.existsSync(sessionDir)) fs.mkdirSync(sessionDir, { recursive: true });
+
+        const savedFileUrls = [];
+        const savedFilePaths = [];
+
+        for (let i = 0; i < imagesBase64.length; i++) {
+            const b64 = imagesBase64[i].replace(/^data:image\/\w+;base64,/, "");
+            const buf = Buffer.from(b64, 'base64');
+            const outName = `sport_${lockedSessionId}_${i + 1}.jpg`;
+            const outPath = path.join(sessionDir, outName);
+            fs.writeFileSync(outPath, buf);
+            savedFileUrls.push(`/uploads/${lockedSessionId}/${outName}`);
+            savedFilePaths.push(outPath);
+        }
+
+        res.json({
+            success: true,
+            files: savedFileUrls,
+            driveLink: "processing"
+        });
+
+        // Upload ke Google Drive di Latar Belakang (Mendukung Mode Per Sesi & Mode 1 Folder Campur)
+        (async () => {
+            try {
+                const settings = safeReadJson(settingsPath, {});
+                const isOnlineMode = settings.global?.cloudStorage !== false;
+                const driveFolderMode = settings.global?.driveFolderMode || "per_session";
+                const parentFolderId = (settings.global?.driveParentFolderId || "").trim();
+                const mixedFolderId = (settings.global?.driveMixedFolderId || "").trim();
+                const isMixedMode = (driveFolderMode === 'single_mixed');
+                const targetRootId = isMixedMode ? (mixedFolderId || parentFolderId) : (parentFolderId || mixedFolderId);
+
+                if (isOnlineMode && typeof uploadToDrive === 'function' && targetRootId) {
+                    const now = new Date();
+                    const namaBulan = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+                    const tglSingkat = `${String(now.getDate()).padStart(2, '0')}${namaBulan[now.getMonth()]}`;
+                    const jamSingkat = `${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
+                    const detikSingkat = String(now.getSeconds()).padStart(2, '0');
+                    const driveFolderName = `Sport_${tglSingkat}_${jamSingkat}_${detikSingkat}`;
+                    const reverseKey = String(99999999 - Math.floor((Date.now() - 1735689600000) / 1000)).padStart(8, '0');
+
+                    let finalFolderLink = `https://drive.google.com/drive/folders/${targetRootId}`;
+
+                    for (let i = 0; i < savedFilePaths.length; i++) {
+                        const cleanName = isMixedMode
+                            ? `${reverseKey}_${tglSingkat}_${jamSingkat}-${detikSingkat}_SPORT_${i + 1}.jpg`
+                            : `Sport_Foto_${i + 1}_${jamSingkat}.jpg`;
+                        const tempCleanPath = path.join(tempDir, cleanName);
+                        fs.copyFileSync(savedFilePaths[i], tempCleanPath);
+                        const link = await uploadToDrive(tempCleanPath, isMixedMode ? null : driveFolderName, targetRootId);
+                        if (link) finalFolderLink = link;
+                        if (fs.existsSync(tempCleanPath)) try { fs.unlinkSync(tempCleanPath); } catch (_) {}
+                    }
+
+                    io.emit('qr-ready', { sessionId: lockedSessionId, url: finalFolderLink });
+                } else {
+                    const ipLokal = getLocalIP();
+                    io.emit('qr-ready', { sessionId: lockedSessionId, url: `http://${ipLokal}:3000${savedFileUrls[0]}` });
+                }
+            } catch (err) {
+                console.error("Error upload Sportbooth ke G-Drive:", err.message);
+            }
+        })();
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
 
 expressApp.post('/api/generate-photobox', async (req, res) => {
     try {
@@ -2772,7 +2859,7 @@ expressApp.get('/api/rescan-camera', async (req, res) => {
 // =========================================================================
 // 🌟 SISTEM PEMBAYARAN LANGGANAN SAAS OTOMATIS (NEETPAY DEVELOPER)
 // =========================================================================
-const SAAS_NEETPAY_API_KEY = "np_live_73d260aa38b81a2500bd38a6ecb8f94b6970377752f57763";
+const SAAS_NEETPAY_API_KEY = "np_live_0fa03962e0cffdf20183d425d8566fd2e6485955e9c019ab";
 
 expressApp.post('/api/saas/create-invoice', async (req, res) => {
     try {
@@ -2808,9 +2895,17 @@ expressApp.post('/api/saas/create-invoice', async (req, res) => {
         const npData = await npRes.json().catch(() => ({}));
         if (!npRes.ok || npData.success === false) {
             const errDetail = npData?.error?.details ? JSON.stringify(npData.error.details) : (npData.message || 'Gagal membuat tagihan NeetPay');
+            
+            // JARING PENGAMAN: Jika sesi GoBiz di NeetPay sedang kadaluarsa, berikan pesan ramah & arahkan ke WA Admin
+            if (errDetail.toLowerCase().includes('no active payment account') || errDetail.toLowerCase().includes('gobiz')) {
+                return res.status(400).json({ 
+                    success: false, 
+                    isMaintenance: true,
+                    message: "Server QRIS Otomatis sedang sinkronisasi berkala. Silakan klik tombol di bawah untuk aktivasi instan via WhatsApp Admin." 
+                });
+            }
             return res.status(400).json({ success: false, message: `NeetPay: ${errDetail}` });
         }
-
         const d = npData.data || npData;
         const qrString = d.qrString || d.qr_string || d.qrContent || d.qr_content || d.qrisString || d.qris_string || d.qrCode || d.qr_code;
         if (!qrString) {

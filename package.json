@@ -1,6 +1,6 @@
 {
   "name": "lacasabooth.id",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "Aplikasi Photobooth by Lacasaphoto",
   "main": "start.js",
   "scripts": {
@@ -22,7 +22,7 @@
     "extraResources": [
       "oauth_credentials.json"
     ],
-    "directories": {
+   "directories": {
       "output": "dist"
     },
     "files": [
@@ -38,6 +38,10 @@
     ],
     "asar": true,
     "asarUnpack": [
+      "**/node_modules/sharp/**/*",
+      "**/node_modules/@img/**/*",
+      "**/node_modules/koffi/**/*",
+      "**/node_modules/bytenode/**/*",
       "sdk/**/*",
       "IrfanView/**/*",
       "cloudflared.exe",
@@ -49,11 +53,12 @@
     },
     "nsis": {
       "oneClick": false,
+      "perMachine": true,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Lacasabooth.id",
-      "artifactName": "Lacasabooth-Setup V1.2.4.exe",
+      "artifactName": "Lacasabooth-Setup-V${version}.${ext}",
       "installerIcon": "UI/assets/setup-icon.ico",
       "uninstallerIcon": "UI/assets/setup-icon.ico",
       "installerHeaderIcon": "UI/assets/setup-icon.ico",

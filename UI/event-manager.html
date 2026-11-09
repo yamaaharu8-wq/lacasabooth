@@ -333,6 +333,14 @@
                             <p>Cetak eksklusif dengan gaya koran estetik.</p>
                         </div>
                     </label>
+                    <label class="radio-label" onclick="selectRadio('mode', this)" id="opt-sportbooth">
+                     <input type="radio" name="modeData" value="sportbooth">
+                     <div class="radio-icon">🏃‍♂️</div>
+                     <div class="radio-text">
+                         <h4>Sport Booth (Lightroom)</h4>
+                         <p>Tethering langsung dari shutter kamera + Color Grading & Preset .XMP.</p>
+                     </div>
+                 </label>
                     <label class="radio-label" onclick="selectRadio('mode', this)" id="opt-aibooth">
                         <input type="radio" name="modeData" value="aibooth">
                         <div class="radio-icon">✨</div>
@@ -737,11 +745,12 @@ import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signO
                 if (data.success && data.events && data.events.length > 0) {
                    const tier = window.userTier || localStorage.getItem('saas_user_tier') || 'free';
                     data.events.reverse().forEach(evt => {
-                        let modeTeks = evt.mode === 'collage' ? '🖼️ Kolase' 
-                                     : evt.mode === 'photobox' ? '⏱️ Self Studio' 
-                                     : evt.mode === 'fastbooth' ? '⚡ Fastbooth'
-                                     : evt.mode === 'aibooth' ? '✨ AI Booth' 
-                                     : '📰 Newspaper';
+              let modeTeks = evt.mode === 'collage' ? '🖼️ Kolase' 
+             : evt.mode === 'photobox' ? '⏱️ Self Studio' 
+             : evt.mode === 'fastbooth' ? '⚡ Fastbooth'
+             : evt.mode === 'sportbooth' ? '🏃‍♂️ Sport Booth'
+             : evt.mode === 'aibooth' ? '✨ AI Booth' 
+             : '📰 Newspaper';
                         let payTeks = evt.payment === 'with_payment' ? '💳 Berbayar' : '🆓 Gratis';
                         let badgeModeColor = evt.mode === 'collage' ? 'var(--blue)' 
                                            : evt.mode === 'photobox' ? 'var(--pink)' 

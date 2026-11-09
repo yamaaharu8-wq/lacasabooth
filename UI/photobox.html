@@ -868,37 +868,44 @@ if (mesinKamera.toLowerCase() !== 'canon') {
 
        function updateTransformKamera() {
             let w = "100vw", h = "100vh";
-            
-            let transformCSSBase = "translate(-50%, -50%) "; 
             if (orientasiKamera === 'potret') {
-                transformCSSBase += "rotate(90deg) ";
                 w = "100vh"; h = "100vw"; 
-            } 
-            
+            }
+
+            // PENTING: rotate(90deg) WAJIB ditulis SEBELUM scaleX(-1) agar cermin Canon & Webcam tidak terbalik atas-bawah!
             let transformCSSLive = "translate(-50%, -50%) ";
-            if (isMirror) transformCSSLive += "scaleX(-1) ";
             if (orientasiKamera === 'potret') transformCSSLive += "rotate(90deg) ";
+            if (isMirror) transformCSSLive += "scaleX(-1) ";
 
             ['liveView', 'webcam-view'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) {
                     el.classList.remove('mirrored');
-                    el.style.position = "absolute"; el.style.top = "50%"; el.style.left = "50%" ;        
-                    el.style.width = w; el.style.height = h; el.style.objectFit = "cover";  
-                    el.style.imageOrientation = "none"; el.style.transform = transformCSSLive ;
+                    el.style.position = "absolute";
+                    el.style.top = "50%";
+                    el.style.left = "50%";
+                    el.style.width = w;
+                    el.style.height = h;
+                    el.style.objectFit = "cover";
+                    el.style.imageOrientation = "none";
+                    el.style.transform = transformCSSLive;
                 }
             });
 
             const previewEl = document.getElementById('previewImageOverlay');
             if (previewEl) {
-                previewEl.style.position = "absolute"; previewEl.style.top = "50%"; previewEl.style.left = "50%";
-                // Paksa width 100vw dan height 100vh tanpa mengikuti variabel w/h yang terbalik
-                previewEl.style.width = "100vw"; previewEl.style.height = "100vh"; 
-                previewEl.style.objectFit = "cover"; previewEl.style.imageOrientation = "none"; 
-                
-                // Hapus rotasi CSS karena fisik gambar sudah tegak
-                previewEl.style.transform = "translate(-50%, -50%)"; 
+                previewEl.style.position = "absolute";
+                previewEl.style.top = "50%";
+                previewEl.style.left = "50%";
+                previewEl.style.width = "100vw";
+                previewEl.style.height = "100vh";
+                previewEl.style.objectFit = "cover";
+                previewEl.style.imageOrientation = "none";
+                previewEl.style.transform = "translate(-50%, -50%)";
             }
+
+            const btnMirror = document.getElementById('btn-mirror');
+            if (btnMirror) btnMirror.innerText = isMirror ? "🪞 Cermin: ON" : "🪞 Cermin: OFF";
         }
 
         function toggleMirror() {
@@ -2333,7 +2340,7 @@ if (mesinKamera.toLowerCase() !== 'canon') {
     window.preferredWebcamDeviceId = "";
     window.detectedVideoDevices = [];
 
-    // 1. OVERRIDE FUNGSI jalankanWebcam() SECARA GLOBAL AGAR 100% KOMPATIBEL DI SEMUA PC KLIEN
+    // 1. OVERRIDE FUNGSI jalankanWebcam() DENGAN PENGUNCI RESOLUSI LUMIX / CAPTURE CARD / WEBCAM
     window.jalankanWebcam = async function(forceNewDevice = false) {
         const lv = document.getElementById('liveView');
         if (lv) lv.style.display = 'none';
@@ -2345,98 +2352,112 @@ if (mesinKamera.toLowerCase() !== 'canon') {
         vid.setAttribute('playsinline', '');
         vid.muted = true;
 
-        // Jika stream sudah jalan dan tidak diminta ganti kamera, langsung tampilkan kembali
         if (!forceNewDevice && typeof webcamStream !== 'undefined' && webcamStream && webcamStream.active) {
             vid.srcObject = webcamStream;
             vid.play().catch(() => {});
             return;
         }
 
-        // Hentikan stream lama sebelum membuka kamera baru
         if (typeof webcamStream !== 'undefined' && webcamStream) {
             webcamStream.getTracks().forEach(t => t.stop());
             webcamStream = null;
         }
 
+        // Baca target resolusi dari pengaturan Dashboard (Default: Full HD 1920x1080 agar Lumix tidak turun ke 640x480!)
+        let targetW = 1920, targetH = 1080;
         try {
-            // Langkah 1: Buka izin kamera dasar agar Windows/Electron mengizinkan pembacaan semua webcam (Bawaan & USB)
-            let tempStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            const resCfg = await fetch('/api/settings?t=' + Date.now());
+            const cfgData = await resCfg.json();
+            const resMode = cfgData.global?.webcamResolution || '1080p';
+            if (resMode === '4k')   { targetW = 3840; targetH = 2160; }
+            else if (resMode === '3:2')  { targetW = 1620; targetH = 1080; }
+            else if (resMode === '720p') { targetW = 1280; targetH = 720; }
+            else if (resMode === '4:3')  { targetW = 1280; targetH = 960; }
+            else { targetW = 1920; targetH = 1080; } // Default 1080p
+        } catch (e) {}
+
+        try {
+            // Langkah 1: Buka stream pancingan untuk mendapatkan daftar deviceId semua kamera
+            let initStream = await navigator.mediaDevices.getUserMedia({
+                video: { width: { ideal: targetW }, height: { ideal: targetH } },
+                audio: false
+            });
+
             const allDevices = await navigator.mediaDevices.enumerateDevices();
-            
-            // Saring hanya kamera video asli (abaikan IR Camera Windows Hello jika ada kamera lain)
             let videoInputs = allDevices.filter(d => d.kind === 'videoinput');
             const nonIrInputs = videoInputs.filter(d => !/ir camera|infrared|depth/i.test(d.label || ''));
             if (nonIrInputs.length > 0) videoInputs = nonIrInputs;
             window.detectedVideoDevices = videoInputs;
 
-            console.log("🎥 Webcam Terdeteksi di PC Klien:", videoInputs.map((d, i) => `[${i + 1}] ${d.label || 'Webcam'}`));
-
-            // Tentukan kamera mana yang harus dipakai berdasarkan Slot Aktif (Kamera 1 vs Kamera 2)
+            // Prioritaskan kamera eksternal / Lumix / Capture Card jika klien belum mengunci deviceId tertentu
             let targetDevId = window.preferredWebcamDeviceId || "";
             if (!targetDevId && videoInputs.length > 1) {
-                const idx = (window.currentCamSlot === 2) ? 1 : 0;
-                targetDevId = videoInputs[idx]?.deviceId || videoInputs[0].deviceId;
+                if (window.currentCamSlot === 2) {
+                    targetDevId = videoInputs[1]?.deviceId || videoInputs[0].deviceId;
+                } else {
+                    // Cari apakah ada kamera bernama LUMIX / USB Video / Cam Link / Capture
+                    const extCam = videoInputs.find(d => /lumix|capture|cam link|usb video|hdmi|elgato|sony|fuji|eos/i.test(d.label || ''));
+                    targetDevId = extCam ? extCam.deviceId : videoInputs[0].deviceId;
+                }
             } else if (!targetDevId && videoInputs.length === 1) {
                 targetDevId = videoInputs[0].deviceId;
             }
 
-            const currentTrackId = tempStream.getVideoTracks()[0]?.getSettings()?.deviceId;
+            // Matikan initStream sebentar lalu buka kembali dengan mengunci deviceId + Resolusi Ideal Target!
+            initStream.getTracks().forEach(t => t.stop());
 
-            // Jika stream awal belum sesuai dengan kamera target, matikan lalu buka kamera target dengan fallback resolusi aman
-            if (targetDevId && currentTrackId !== targetDevId) {
-                tempStream.getTracks().forEach(t => t.stop());
+            let finalStream = null;
+            const constraintList = [
+                // Prioritas 1: Sesuai resolusi yang dipilih di Dashboard (misal 1920x1080)
+                targetDevId
+                    ? { video: { deviceId: { exact: targetDevId }, width: { ideal: targetW }, height: { ideal: targetH } }, audio: false }
+                    : { video: { width: { ideal: targetW }, height: { ideal: targetH } }, audio: false },
+                // Prioritas 2: Fallback 720p (1280x720) khusus untuk LUMIX Webcam Software USB yang terkunci di 720p
+                targetDevId
+                    ? { video: { deviceId: { exact: targetDevId }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false }
+                    : { video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
+                // Prioritas 3: Fallback universal (terima resolusi berapapun dari kamera tersebut)
+                targetDevId
+                    ? { video: { deviceId: { exact: targetDevId } }, audio: false }
+                    : { video: true, audio: false }
+            ];
+
+            for (const c of constraintList) {
                 try {
-                    // Coba HD 720p terlebih dahulu
-                    tempStream = await navigator.mediaDevices.getUserMedia({
-                        video: { deviceId: { exact: targetDevId }, width: { ideal: 1280 }, height: { ideal: 720 } },
-                        audio: false
-                    });
-                } catch (e1) {
-                    // Fallback: Terima resolusi berapapun dari webcam tersebut
-                    tempStream = await navigator.mediaDevices.getUserMedia({
-                        video: { deviceId: { exact: targetDevId } },
-                        audio: false
-                    });
-                }
+                    finalStream = await navigator.mediaDevices.getUserMedia(c);
+                    if (finalStream) break;
+                } catch (errTry) {}
             }
 
-            webcamStream = tempStream;
+            if (!finalStream) {
+                finalStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            }
+
+            webcamStream = finalStream;
             vid.srcObject = webcamStream;
             await vid.play();
+
+            const trackSettings = webcamStream.getVideoTracks()[0]?.getSettings() || {};
+            console.log(`✅ Kamera Aktif: ${webcamStream.getVideoTracks()[0]?.label} | Resolusi: ${trackSettings.width}x${trackSettings.height}`);
 
             if (typeof terapkanVisualKamera === 'function') terapkanVisualKamera();
             if (typeof updateTransformKamera === 'function') updateTransformKamera();
         } catch (err) {
-            console.error("❌ Gagal membuka webcam utama, mencoba kamera cadangan:", err);
-            try {
-                webcamStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-                vid.srcObject = webcamStream;
-                await vid.play();
-            } catch (errFinal) {
-                alert("❌ Kamera/Webcam tidak dapat diakses!\nPastikan webcam terpasang dan tidak sedang digunakan aplikasi lain.");
-            }
+            console.error("❌ Gagal membuka kamera:", err);
+            alert("❌ Kamera tidak dapat diakses! Pastikan tidak sedang digunakan oleh aplikasi lain.");
         }
     };
-
-    // 2. RAPIIKAN POSISI TOMBOL CERMIN & TOMBOL ALIH KAMERA AGAR TIDAK KETUTUP TIMER DAN TIDAK TERTIMPA TEKSNYA
+    // 2. RAPIIKAN POSISI TOMBOL DI SELF STUDIO AGAR TIDAK MENUMPUK DENGAN TIMER TENGAH
     function pasangTombolSwitchKameraRapi(allowLiveSwitch) {
-        const navBar = document.querySelector('#kamera-container .nav-bar, #panel-kamera .nav-bar');
+        const navBar = document.querySelector('#panel-kamera .nav-bar');
         if (!navBar) return;
 
-        // Pastikan ada grup kanan (.nav-right-group) sebagai rumah bagi tombol Cermin & Switch Kamera
-        let rightGroup = navBar.querySelector('.nav-right-group');
-        const btnMirror = navBar.querySelector('.btn-mirror, #btn-mirror');
-
-        if (!rightGroup) {
-            rightGroup = document.createElement('div');
-            rightGroup.className = 'nav-right-group';
-            rightGroup.style.cssText = 'display: flex; align-items: center; gap: 10px; pointer-events: auto;';
-            
-            // Jika tombol Cermin sebelumnya berdiri sendiri di dalam nav-bar, pindahkan ke dalam rightGroup!
-            if (btnMirror && btnMirror.parentElement === navBar) {
-                rightGroup.appendChild(btnMirror);
-            }
-            navBar.appendChild(rightGroup);
+        // Di photobox.html, elemen pertama di navBar adalah <div style="display:flex..."> (berisi Cermin & Timer Jepret)
+        // dan elemen kedua adalah tombol "SELESAI FOTO ›" di sebelah kanan.
+        // Masukkan tombol Switch Kamera ke dalam div pertama (Grup Kiri) agar hanya ada Kiri & Kanan (Tengah tetap kosong untuk Timer Sesi!)
+        let leftGroup = navBar.querySelector('div');
+        if (!leftGroup) {
+            leftGroup = navBar;
         }
 
         let btnSwitch = document.getElementById('btn-live-switch-cam');
@@ -2445,11 +2466,10 @@ if (mesinKamera.toLowerCase() !== 'canon') {
                 btnSwitch = document.createElement('button');
                 btnSwitch.id = 'btn-live-switch-cam';
                 btnSwitch.type = 'button';
-                // JANGAN gunakan class 'btn-mirror' agar tulisannya tidak pernah diubah menjadi "🪞 Cermin: ON"!
                 btnSwitch.className = 'btn-doodle';
-                btnSwitch.style.cssText = 'pointer-events: auto !important; background: #ffffff !important; color: #0f766e !important; border: 2px solid #99f6e4 !important; padding: 10px 20px !important; font-size: 0.98rem !important; cursor: pointer !important; border-radius: 50px !important; font-weight: 700 !important; font-family: "Fredoka", sans-serif !important; box-shadow: 0 6px 15px rgba(15, 118, 110, 0.15) !important; display: flex !important; align-items: center !important; gap: 6px !important;';
+                btnSwitch.style.cssText = 'pointer-events: auto !important; background: #ffffff !important; color: #0f766e !important; border: 2px solid #99f6e4 !important; padding: 10px 18px !important; font-size: 0.95rem !important; cursor: pointer !important; border-radius: 50px !important; font-weight: 700 !important; font-family: "Fredoka", sans-serif !important; box-shadow: 0 6px 15px rgba(15, 118, 110, 0.15) !important; display: flex !important; align-items: center !important; gap: 6px !important;';
                 btnSwitch.onclick = () => window.alihkanKameraLiveView();
-                rightGroup.insertBefore(btnSwitch, rightGroup.firstChild);
+                leftGroup.insertBefore(btnSwitch, leftGroup.firstChild);
             }
             btnSwitch.style.display = 'flex';
             btnSwitch.innerHTML = `📷 Kamera ${window.currentCamSlot} ⇄`;

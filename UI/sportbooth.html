@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lacasaphoto - Sport Booth & Lightroom Grading</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/theme.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+        html, body {
+            width: 100vw; height: 100vh; overflow: hidden;
+            font-family: 'Fredoka', 'Poppins', sans-serif;
+            background-color: #0f172a; color: #f8fafc;
+        }
+
+        .secret-back-btn { position: fixed; top: 0; left: 0; width: 85px; height: 85px; z-index: 9999999; cursor: pointer; background: transparent; }
+
+        .panel { display: none; width: 100vw; height: 100vh; flex-direction: column; overflow: hidden; position: relative; }
+        .active-panel { display: flex !important; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.99); } to { opacity: 1; transform: scale(1); } }
+
+        /* ========================================================= */
+        /* 🏁 PANEL 1: PILIH BINGKAI ATAU TANPA BINGKAI              */
+        /* ========================================================= */
+        #panel-template {
+            background: radial-gradient(circle at 20% 20%, #1e293b 0%, #0f172a 100%);
+            padding: 30px 40px; align-items: center;
+        }
+        .sport-header { text-align: center; margin-bottom: 22px; }
+        .sport-header h1 { font-size: 2.5rem; font-weight: 700; color: #38bdf8; letter-spacing: 0.5px; }
+        .sport-header p { color: #94a3b8; font-size: 1rem; margin-top: 4px; }
+
+        .template-layout {
+            display: flex; width: 100%; max-width: 1360px; gap: 28px;
+            height: calc(100vh - 140px);
+        }
+        .format-sidebar {
+            width: 250px; display: flex; flex-direction: column; gap: 10px;
+            overflow-y: auto; padding-right: 8px; flex-shrink: 0;
+        }
+        .format-tab {
+            background: #1e293b; border: 2px solid #334155; color: #cbd5e1;
+            padding: 13px 16px; border-radius: 16px; font-weight: 600; font-size: 1.02rem;
+            cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 12px;
+            font-family: 'Fredoka', sans-serif;
+        }
+        .format-tab span {
+            font-size: 1.3rem; background: #0f172a; width: 38px; height: 38px;
+            border-radius: 10px; display: flex; align-items: center; justify-content: center;
+        }
+        .format-tab.active {
+            background: #0284c7; border-color: #38bdf8; color: #ffffff;
+            box-shadow: 0 8px 20px rgba(2, 132, 199, 0.35); transform: translateX(6px);
+        }
+        .template-content {
+            flex: 1; overflow-y: auto; display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px; align-content: start; padding: 6px;
+        }
+        .card-frame {
+            background: #1e293b; border: 2px solid #334155; border-radius: 20px;
+            padding: 14px; cursor: pointer; transition: 0.25s; text-align: center;
+            display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+        }
+        .card-frame:hover { transform: translateY(-6px); border-color: #38bdf8; box-shadow: 0 12px 28px rgba(56, 189, 248, 0.2); }
+        .card-frame img { width: 100%; aspect-ratio: 2/3; object-fit: contain; background: #0f172a; border-radius: 12px; }
+        .card-frame h3 { margin-top: 12px; font-size: 1.05rem; color: #f8fafc; }
+
+        .card-noframe {
+            background: linear-gradient(135deg, #0284c7 0%, #0f766e 100%);
+            border: 2.5px dashed #7dd3fc;
+        }
+        .card-noframe .noframe-box {
+            width: 100%; aspect-ratio: 2/3; border-radius: 12px;
+            background: rgba(15, 23, 42, 0.45); display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 10px; padding: 15px;
+        }
+
+        /* ========================================================= */
+        /* 🎨 PANEL 2: TETHERING PREVIEW & LIGHTROOM COLOR GRADING   */
+        /* ========================================================= */
+        #panel-lightroom { background: #0b0f19; flex-direction: column; }
+
+        .lr-topbar {
+            height: 64px; background: #111827; border-bottom: 1px solid #1f2937;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 24px; flex-shrink: 0;
+        }
+        .lr-status-pill {
+            background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1.5px solid #10b981;
+            padding: 6px 16px; border-radius: 50px; font-size: 0.9rem; font-weight: 600;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .btn-top {
+            background: #1f2937; color: #f8fafc; border: 1.5px solid #374151;
+            padding: 9px 18px; border-radius: 50px; font-weight: 600; font-size: 0.92rem;
+            cursor: pointer; transition: 0.2s; font-family: 'Fredoka', sans-serif;
+            display: inline-flex; align-items: center; gap: 8px;
+        }
+        .btn-top:hover { background: #374151; border-color: #60a5fa; }
+        .btn-finish-lr {
+            background: linear-gradient(135deg, #10b981, #059669); border: none;
+            color: #ffffff; padding: 10px 26px; font-size: 1rem; font-weight: 700;
+            box-shadow: 0 6px 18px rgba(16, 185, 129, 0.35);
+        }
+        .btn-finish-lr:hover { transform: translateY(-2px); }
+
+        .lr-workspace {
+            flex: 1; display: grid; grid-template-columns: 240px 1fr 340px;
+            height: calc(100vh - 64px); overflow: hidden;
+        }
+
+        /* Kolom Kiri: Daftar Preset & Import .XMP / .LRTEMPLATE */
+        .lr-sidebar-left {
+            background: #111827; border-right: 1px solid #1f2937;
+            padding: 16px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto;
+        }
+        .lr-section-title {
+            font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;
+            color: #94a3b8; font-weight: 700; margin-bottom: 4px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .preset-list { display: flex; flex-direction: column; gap: 7px; }
+        .preset-btn {
+            background: #1f2937; border: 1.5px solid #374151; color: #e2e8f0;
+            padding: 10px 12px; border-radius: 12px; text-align: left; font-weight: 600;
+            font-size: 0.88rem; cursor: pointer; transition: 0.15s;
+            display: flex; align-items: center; justify-content: space-between;
+            font-family: 'Fredoka', sans-serif;
+        }
+        .preset-btn:hover { background: #374151; }
+        .preset-btn.active { background: rgba(56, 189, 248, 0.18); border-color: #38bdf8; color: #38bdf8; }
+
+        .btn-import-xmp {
+            background: rgba(56, 189, 248, 0.12); border: 1.5px dashed #38bdf8;
+            color: #38bdf8; padding: 11px; border-radius: 12px; font-weight: 700;
+            font-size: 0.85rem; cursor: pointer; text-align: center; transition: 0.2s;
+        }
+        .btn-import-xmp:hover { background: #0284c7; color: #fff; border-style: solid; }
+
+        /* Kolom Tengah: Canvas Preview Besar + Filmstrip Jepretan Masuk */
+        .lr-center-stage {
+            display: flex; flex-direction: column; justify-content: space-between;
+            background: #090d16; padding: 18px; overflow: hidden; position: relative;
+        }
+        .lr-main-preview-box {
+            flex: 1; display: flex; align-items: center; justify-content: center;
+            position: relative; overflow: hidden; min-height: 0;
+        }
+        #lrPreviewCanvas {
+            max-width: 100%; max-height: 100%; width: auto; height: auto;
+            object-fit: contain; border-radius: 10px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.65); border: 1px solid #1e293b;
+            display: none;
+        }
+        .waiting-shutter-state {
+            text-align: center; color: #64748b; max-width: 460px; padding: 30px;
+            border: 2px dashed #1e293b; border-radius: 24px; background: rgba(17, 24, 39, 0.6);
+        }
+        .waiting-shutter-state .icon-big { font-size: 4rem; margin-bottom: 12px; display: block; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 0.85; } 50% { transform: scale(1.08); opacity: 1; } }
+
+        .lr-filmstrip {
+            height: 118px; background: #111827; border: 1px solid #1f2937;
+            border-radius: 16px; padding: 10px 14px; display: flex; align-items: center;
+            gap: 12px; overflow-x: auto; flex-shrink: 0; margin-top: 14px;
+        }
+        .thumb-item {
+            width: 92px; height: 92px; border-radius: 10px; border: 2.5px solid #374151;
+            overflow: hidden; position: relative; cursor: pointer; flex-shrink: 0;
+            background: #0f172a; transition: 0.2s;
+        }
+        .thumb-item.active { border-color: #38bdf8; transform: scale(1.05); box-shadow: 0 0 15px rgba(56, 189, 248, 0.4); }
+        .thumb-item img { width: 100%; height: 100%; object-fit: cover; }
+        .thumb-item .badge-num {
+            position: absolute; top: 4px; left: 4px; background: rgba(15,23,42,0.85);
+            color: #fff; font-size: 0.7rem; font-weight: 700; padding: 2px 7px; border-radius: 6px;
+        }
+        .thumb-item .btn-del-photo {
+            position: absolute; top: 4px; right: 4px; background: rgba(239,68,68,0.9);
+            color: #fff; border: none; width: 22px; height: 22px; border-radius: 50%;
+            font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+
+        /* Kolom Kanan: Slider Lightroom Color Grading */
+        .lr-sidebar-right {
+            background: #111827; border-left: 1px solid #1f2937;
+            padding: 18px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto;
+        }
+        .slider-group {
+            background: #1f2937; padding: 12px 14px; border-radius: 14px; border: 1px solid #374151;
+        }
+        .slider-row { margin-bottom: 10px; }
+        .slider-row:last-child { margin-bottom: 0; }
+        .slider-header {
+            display: flex; justify-content: space-between; font-size: 0.82rem;
+            color: #cbd5e1; font-weight: 600; margin-bottom: 4px;
+        }
+        .slider-row input[type="range"] {
+            width: 100%; accent-color: #38bdf8; cursor: pointer; height: 6px;
+        }
+        .sync-actions {
+            display: flex; flex-direction: column; gap: 8px; margin-top: auto;
+        }
+        .btn-sync-all {
+            background: #0284c7; color: #ffffff; border: none; padding: 11px;
+            border-radius: 12px; font-weight: 700; font-size: 0.9rem; cursor: pointer;
+            transition: 0.2s; font-family: 'Fredoka', sans-serif;
+        }
+        .btn-sync-all:hover { background: #0369a1; }
+
+        /* ========================================================= */
+        /* 📲 PANEL 3: HASIL AKHIR, QR CODE GOOGLE DRIVE & WHATSAPP  */
+        /* ========================================================= */
+        #panel-hasil {
+            background: radial-gradient(circle at 50% 20%, #1e293b 0%, #0f172a 100%);
+            align-items: center; justify-content: center; padding: 25px;
+        }
+        .sport-result-wrapper {
+            display: grid; grid-template-columns: 1fr 370px; gap: 30px;
+            width: 100%; max-width: 1150px; height: 78vh; max-height: 620px;
+        }
+        .sport-gallery-result {
+            background: #1e293b; border: 2px solid #334155; border-radius: 26px;
+            padding: 20px; display: flex; flex-direction: column; overflow: hidden;
+        }
+        .result-photos-scroll {
+            flex: 1; overflow-y: auto; display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px; padding: 8px; align-items: center; justify-items: center;
+        }
+        .result-photos-scroll img {
+            max-width: 100%; max-height: 440px; object-fit: contain;
+            border-radius: 12px; border: 2px solid #475569; box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+        }
+        .sport-action-card {
+            background: #1e293b; border: 2px solid #334155; border-radius: 26px;
+            padding: 22px; display: flex; flex-direction: column; justify-content: space-between;
+            align-items: center; text-align: center;
+        }
+        #qrCodeContainer {
+            width: 140px; height: 140px; background: #ffffff; padding: 10px;
+            border-radius: 16px; display: flex; align-items: center; justify-content: center;
+            margin: 8px auto;
+        }
+        #qrCodeContainer img { display: none !important; }
+        #qrCodeContainer canvas { width: 100% !important; height: 100% !important; object-fit: contain; }
+
+        /* Virtual Numpad WA */
+        #virtual-numpad {
+            position: fixed; background: #1e293b; padding: 20px; border-radius: 24px;
+            border: 2px solid #38bdf8; box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+            z-index: 9999999; width: 280px; display: none; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        }
+        .numpad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+        .numpad-grid button {
+            height: 48px; font-size: 1.2rem; font-weight: 700; border-radius: 12px;
+            border: 1px solid #334155; background: #0f172a; color: #fff; cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="secret-back-btn" id="btn-rahasia" title="Tahan 2 detik untuk kembali ke Idle"></div>
+
+    <!-- ========================================================= -->
+    <!-- 🏁 PANEL 1: PILIH BINGKAI ATAU TANPA BINGKAI              -->
+    <!-- ========================================================= -->
+    <div id="panel-template" class="panel active-panel">
+        <div class="sport-header">
+            <h1>🏃‍♂️ Sport Booth — Pilih Mode Bingkai</h1>
+            <p>Pilih "Tanpa Bingkai" untuk foto olahraga murni, atau pilih Frame/Watermark Event di bawah.</p>
+        </div>
+
+        <div class="template-layout">
+            <div class="format-sidebar" id="format-sidebar"></div>
+            <div class="template-content" id="template-list"></div>
+        </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- 🎨 PANEL 2: TETHERING SHUTTER & LIGHTROOM COLOR GRADING   -->
+    <!-- ========================================================= -->
+    <div id="panel-lightroom" class="panel">
+        <div class="lr-topbar">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <button class="btn-top" onclick="kembaliKePilihBingkai()">‹ Ganti Bingkai</button>
+                <div class="lr-status-pill">
+                    <span>📸</span>
+                    <span id="lbl-tether-status">Siap Menjepret! Tekan Tombol Shutter di Kamera</span>
+                </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <button class="btn-top" onclick="picuJepretDariLayar()" title="Jepret via USB">📷 Trigger Jepret</button>
+                <button id="btn-proses-final" class="btn-top btn-finish-lr" onclick="selesaiDanUploadSemua()">
+                    ✅ Selesai & Upload G-Drive (<span id="lbl-count-photos">0</span> Foto) ›
+                </button>
+            </div>
+        </div>
+
+        <div class="lr-workspace">
+            <!-- KIRI: PRESET LIGHTROOM & IMPORT .XMP / .LRTEMPLATE -->
+            <div class="lr-sidebar-left">
+                <div class="lr-section-title">
+                    <span>🎛️ Preset Warna</span>
+                </div>
+
+                <label class="btn-import-xmp">
+                    📂 Import Preset (.xmp / .lrtemplate)
+                    <input type="file" id="input-xmp-file" accept=".xmp,.lrtemplate,.json" multiple style="display: none;" onchange="importFilePresetLightroom(event)">
+                </label>
+
+                <div class="preset-list" id="preset-list-container"></div>
+            </div>
+
+            <!-- TENGAH: PREVIEW BESAR REAL-TIME & FILMSTRIP BAWAH -->
+            <div class="lr-center-stage">
+                <div class="lr-main-preview-box">
+                    <div id="empty-tether-box" class="waiting-shutter-state">
+                        <span class="icon-big">🏃‍♂️📸</span>
+                        <h2 style="color: #f8fafc; margin-bottom: 8px;">Menunggu Jepretan Kamera...</h2>
+                        <p style="font-size: 0.92rem; line-height: 1.5;">
+                            Tekan tombol <b>Shutter Fisik di bodi kamera</b> Anda (atau tombol Trigger di atas). Setiap foto yang dijepret akan langsung tampil otomatis di layar ini untuk di-grading!
+                        </p>
+                    </div>
+                    <canvas id="lrPreviewCanvas"></canvas>
+                </div>
+
+                <div class="lr-filmstrip" id="lr-filmstrip">
+                    <span style="color: #64748b; font-size: 0.88rem; margin: 0 auto;">Belum ada foto yang masuk di sesi ini.</span>
+                </div>
+            </div>
+
+            <!-- KANAN: PANEL LIGHTROOM SLIDERS -->
+            <div class="lr-sidebar-right">
+                <div class="lr-section-title">
+                    <span>☀️ Light (Pencahayaan)</span>
+                    <a href="javascript:void(0)" onclick="resetGradingAktif()" style="color: #38bdf8; text-decoration: none; font-size: 0.75rem;">↺ Reset</a>
+                </div>
+                <div class="slider-group">
+                    <div class="slider-row">
+                        <div class="slider-header"><span>Exposure</span><span id="val-exposure">0</span></div>
+                        <input type="range" id="sl-exposure" min="-100" max="100" value="0" oninput="ubahSliderGrading()">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-header"><span>Contrast</span><span id="val-contrast">0</span></div>
+                        <input type="range" id="sl-contrast" min="-100" max="100" value="0" oninput="ubahSliderGrading()">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-header"><span>Highlights</span><span id="val-highlights">0</span></div>
+                        <input type="range" id="sl-highlights" min="-100" max="100" value="0" oninput="ubahSliderGrading()">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-header"><span>Shadows</span><span id="val-shadows">0</span></div>
+                        <input type="range" id="sl-shadows" min="-100" max="100" value="0" oninput="ubahSliderGrading()">
+                    </div>
+                </div>
+
+                <div class="lr-section-title"><span>🌡️ Color & Detail</span></div>
+                <div class="slider-group">
+                    <div class="slider-row">
+                        <div class="slider-header"><span>Temp (Warm/Cool)</span><span id="val-temp">0</span></div>
+                        <input type="range" id="sl-temp" min="-100" max="100" value="0" oninput="ubahSliderGrading()">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-header"><span>Tint (Green/Magenta)</span><span id="val-tint">0</span></div>
+                        <input type="range" id="sl-tint" min="-100" max="100" value="0" oninput="ubahSliderGrading()">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-header"><span>Vibrance</span><span id="val-vibrance">0</span></div>
+                        <input type="range" id="sl-vibrance" min="-100" max="100" value="0" oninput="ubahSliderGrading()">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-header"><span>Saturation</span><span id="val-saturation">0</span></div>
+                        <input type="range" id="sl-saturation" min="-100" max="100" value="0" oninput="ubahSliderGrading()">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-header"><span>Sharpness</span><span id="val-sharpness">0</span></div>
+                        <input type="range" id="sl-sharpness" min="0" max="100" value="0" oninput="ubahSliderGrading()">
+                    </div>
+                </div>
+
+                <div class="sync-actions">
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 0.84rem; color: #cbd5e1; cursor: pointer; background: #1f2937; padding: 10px 12px; border-radius: 10px; border: 1px solid #374151;">
+                        <input type="checkbox" id="chk-auto-sync" checked style="width: 18px; height: 18px; accent-color: #10b981;">
+                        <span>⚡ Otomatis Terapkan Grading Ini ke Semua Foto Baru</span>
+                    </label>
+                    <button type="button" class="btn-sync-all" onclick="terapkanGradingKeSemuaFoto()">
+                        ✨ Samakan Grading ke Semua Foto Sesi Ini
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- 📲 PANEL 3: HASIL AKHIR, QR CODE G-DRIVE & WHATSAPP       -->
+    <!-- ========================================================= -->
+    <div id="panel-hasil" class="panel">
+        <div class="sport-header" style="margin-bottom: 15px;">
+            <h1>🏆 Foto Sport Selesai Diproses!</h1>
+            <p>Scan QR Code untuk mengunduh seluruh foto HD atau kirim link melalui WhatsApp.</p>
+        </div>
+
+        <div class="sport-result-wrapper">
+            <div class="sport-gallery-result">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span style="font-weight: 700; color: #38bdf8;">🖼️ Hasil Foto (<span id="lbl-total-final">0</span> File)</span>
+                    <button class="btn-top" onclick="cetakFotoSportTerpilih()" id="btn-cetak-sport" style="background: #0284c7; border: none;">🖨️ Cetak Foto</button>
+                </div>
+                <div class="result-photos-scroll" id="result-photos-container"></div>
+            </div>
+
+            <div class="sport-action-card">
+                <div style="width: 100%;">
+                    <h3 style="color: #f8fafc; font-size: 1.2rem; margin-bottom: 4px;">📲 Unduh Softfile HD</h3>
+                    <p id="status-upload-sport" style="font-size: 0.82rem; color: #38bdf8; margin-bottom: 6px;">⏳ Mengunggah ke Google Drive...</p>
+                    <div id="qrCodeContainer">
+                        <span style="font-size: 2rem; color: #0f172a;">⏳</span>
+                    </div>
+                </div>
+
+                <div style="width: 100%; background: #0f172a; padding: 14px; border-radius: 18px; border: 1px solid #334155;">
+                    <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 8px; font-weight: 600;">Kirim Link Google Drive ke WhatsApp:</p>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="inputWA" readonly placeholder="0812xxxx..." onclick="bukaNumpadWA(event)" style="flex: 1; padding: 11px 12px; border-radius: 10px; border: 2px solid #22c55e; background: #fff; color: #0f172a; font-weight: 700; font-size: 0.95rem; cursor: pointer; outline: none;">
+                        <button id="btnKirimWA" onclick="kirimWaSport()" class="btn-top" style="background: #10b981; border: none; padding: 0 18px; border-radius: 10px; font-weight: 700;">📤 Kirim</button>
+                    </div>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
+                    <button onclick="mulaiSesiPelariBaru()" class="btn-top btn-finish-lr" style="width: 100%; justify-content: center; padding: 13px;">
+                        🏃‍♂️ Lanjut Sesi Pelari Berikutnya ›
+                    </button>
+                    <button onclick="window.location.href='/idle.html'" class="btn-top" style="width: 100%; justify-content: center; background: #ef4444; border: none;">
+                        🏠 Selesai & Kembali ke Layar Utama (Idle)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIRTUAL NUMPAD WA -->
+    <div id="virtual-numpad">
+        <div style="color: #38bdf8; font-weight: 700; text-align: center;">🔢 Masukkan Nomor WA</div>
+        <div class="numpad-grid">
+            <button onclick="tekanAngka('1')">1</button><button onclick="tekanAngka('2')">2</button><button onclick="tekanAngka('3')">3</button>
+            <button onclick="tekanAngka('4')">4</button><button onclick="tekanAngka('5')">5</button><button onclick="tekanAngka('6')">6</button>
+            <button onclick="tekanAngka('7')">7</button><button onclick="tekanAngka('8')">8</button><button onclick="tekanAngka('9')">9</button>
+            <button onclick="hapusAngka()" style="background:#ef4444;">DEL</button>
+            <button onclick="tekanAngka('0')">0</button>
+            <button onclick="tutupNumpad()" style="background:#10b981;">OK</button>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        let currentSessionId = 'SPORT-' + Date.now();
+        let databaseTemplate = {};
+        let selectedFrameMode = 'NO_FRAME'; // 'NO_FRAME' atau ID template
+        let selectedFrameLayout = null;
+        let frameOverlayImg = null;
+
+        // Daftar Foto yang Masuk dari Shutter Kamera
+        let capturedPhotos = []; // [{ name, url, imgObj, grading: {...} }]
+        let activePhotoIndex = -1;
+        let finalRenderedFiles = [];
+        let linkGoogleDriveUnik = "processing";
+
+        // Default Parameter Grading
+        const defaultGrading = () => ({
+            exposure: 0, contrast: 0, highlights: 0, shadows: 0,
+            temp: 0, tint: 0, vibrance: 0, saturation: 0, sharpness: 0
+        });
+        let currentGlobalGrading = defaultGrading();
+
+        // Daftar Preset Bawaan + Preset .XMP / .LRTEMPLATE yang Di-import
+        let savedPresets = [
+            { name: "🔵 Original (Reset)", settings: defaultGrading() },
+            { name: "🏃 Sport Crisp HD", settings: { exposure: 8, contrast: 22, highlights: -15, shadows: 18, temp: 4, tint: 0, vibrance: 25, saturation: 10, sharpness: 35 } },
+            { name: "☀️ Marathon Golden", settings: { exposure: 10, contrast: 15, highlights: -10, shadows: 20, temp: 28, tint: 5, vibrance: 22, saturation: 12, sharpness: 20 } },
+            { name: "❄️ Stadium Cool", settings: { exposure: 5, contrast: 28, highlights: -20, shadows: 10, temp: -22, tint: -4, vibrance: 18, saturation: 5, sharpness: 30 } },
+            { name: "🎬 High-Contrast B&W", settings: { exposure: 5, contrast: 45, highlights: -15, shadows: 15, temp: 0, tint: 0, vibrance: 0, saturation: -100, sharpness: 40 } }
+        ];
+
+        // Muat Preset Custom yang pernah di-import ke localStorage
+        try {
+            const customSaved = JSON.parse(localStorage.getItem('sportbooth_custom_presets') || '[]');
+            if (Array.isArray(customSaved) && customSaved.length > 0) {
+                savedPresets = [...savedPresets, ...customSaved];
+            }
+        } catch (e) {}
+
+        // 1. INISIALISASI AWAL & PANEL PILIH BINGKAI
+        async function inisialisasiSportBooth() {
+            await fetch('/api/start-session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sessionId: currentSessionId })
+            });
+            // Pastikan Live View Canon dimatikan agar shutter fisik di bodi kamera bisa ditekan kapan saja!
+            fetch('/toggle-liveview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: false }) }).catch(() => {});
+
+            const resTpl = await fetch('/api/frames');
+            databaseTemplate = await resTpl.json();
+            renderSidebarFormat();
+            renderDaftarPreset();
+        }
+        inisialisasiSportBooth();
+
+        function renderSidebarFormat() {
+            const sidebar = document.getElementById('format-sidebar');
+            let html = `<button class="format-tab active" id="tab-sport-all" onclick="tampilkanPilihanFrame('all')"><span>⚡</span> Tanpa Bingkai & 1 Foto</button>`;
+            ['1', '2', '3', '4', '6'].forEach(f => {
+                const list = (databaseTemplate[f] || []).filter(t => !t.isHidden);
+                if (list.length > 0) {
+                    html += `<button class="format-tab" id="tab-sport-${f}" onclick="tampilkanPilihanFrame('${f}')"><span>🖼️</span> Frame ${f} Slot (${list.length})</button>`;
+                }
+            });
+            sidebar.innerHTML = html;
+            tampilkanPilihanFrame('all');
+        }
+
+        function tampilkanPilihanFrame(kategori) {
+            document.querySelectorAll('.format-tab').forEach(b => b.classList.remove('active'));
+            const btnTab = document.getElementById(`tab-sport-${kategori}`);
+            if (btnTab) btnTab.classList.add('active');
+
+            const container = document.getElementById('template-list');
+            let html = `
+                <div class="card-frame card-noframe" onclick="mulaiTetheringSport('NO_FRAME', null)">
+                    <div class="noframe-box">
+                        <span style="font-size: 3.5rem;">⚡</span>
+                        <b style="font-size: 1.15rem; color: #fff;">TANPA BINGKAI</b>
+                        <span style="font-size: 0.8rem; color: #bae6fd;">Foto Murni Full Resolusi + Lightroom Grading</span>
+                    </div>
+                    <h3>⚡ Tanpa Bingkai (Rekomendasi)</h3>
+                </div>
+            `;
+
+            const formatsToLoad = (kategori === 'all') ? ['1'] : [kategori];
+            formatsToLoad.forEach(f => {
+                const list = (databaseTemplate[f] || []).filter(t => !t.isHidden);
+                list.forEach(t => {
+                    html += `
+                        <div class="card-frame" onclick="mulaiTetheringSport('${t.id}', '${f}')">
+                            <img src="${t.img}" alt="${t.nama}">
+                            <h3>${t.nama}</h3>
+                        </div>
+                    `;
+                });
+            });
+            container.innerHTML = html;
+        }
+
+        function mulaiTetheringSport(frameId, formatKey) {
+            selectedFrameMode = frameId;
+            selectedFrameLayout = null;
+            frameOverlayImg = null;
+
+            if (frameId !== 'NO_FRAME' && formatKey && databaseTemplate[formatKey]) {
+                const found = databaseTemplate[formatKey].find(t => t.id === frameId);
+                if (found) {
+                    selectedFrameLayout = found.layout;
+                    const img = new Image();
+                    img.src = `/frames/${frameId}.png`;
+                    img.onload = () => { frameOverlayImg = img; renderPreviewLightroom(); };
+                }
+            }
+
+            document.getElementById('panel-template').classList.remove('active-panel');
+            document.getElementById('panel-lightroom').classList.add('active-panel');
+        }
+
+        function kembaliKePilihBingkai() {
+            document.getElementById('panel-lightroom').classList.remove('active-panel');
+            document.getElementById('panel-template').classList.add('active-panel');
+        }
+
+        // =========================================================
+        // 📸 2. TANGKAP JEPRETAN LANGSUNG DARI SHUTTER KAMERA
+        // =========================================================
+        socket.on('foto-baru', async (data) => {
+            if (!data || !data.namaFile) return;
+            await tambahkanFotoBaruKeLightroom(data.namaFile);
+        });
+
+        try {
+            const { ipcRenderer } = require('electron');
+            ipcRenderer.on('shutter-fisik-ditekan', async (event, data) => {
+                if (data && data.namaFile) {
+                    await tambahkanFotoBaruKeLightroom(data.namaFile);
+                }
+            });
+        } catch (e) {}
+
+        async function picuJepretDariLayar() {
+            document.getElementById('lbl-tether-status').innerText = "⏳ Menjepret dari kamera...";
+            await fetch('/capture', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mode: 'sportbooth', mirror: false, lvActive: false })
+            });
+        }
+
+        async function tambahkanFotoBaruKeLightroom(namaFile) {
+            if (capturedPhotos.some(p => p.name === namaFile)) return;
+            const fileUrl = `/uploads/${currentSessionId}/${namaFile}?t=${Date.now()}`;
+
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.onload = () => {
+                const autoSync = document.getElementById('chk-auto-sync')?.checked;
+                const initialGrading = autoSync ? { ...currentGlobalGrading } : defaultGrading();
+
+                capturedPhotos.push({
+                    name: namaFile,
+                    url: fileUrl,
+                    imgObj: img,
+                    grading: initialGrading
+                });
+
+                activePhotoIndex = capturedPhotos.length - 1;
+                document.getElementById('lbl-tether-status').innerText = `✅ Foto #${capturedPhotos.length} Masuk! (${namaFile})`;
+                document.getElementById('lbl-count-photos').innerText = capturedPhotos.length;
+
+                sinkronSliderDariFotoAktif();
+                renderFilmstrip();
+                renderPreviewLightroom();
+            };
+            img.src = fileUrl;
+        }
+
+        function pilihFotoDiFilmstrip(idx) {
+            if (idx < 0 || idx >= capturedPhotos.length) return;
+            activePhotoIndex = idx;
+            sinkronSliderDariFotoAktif();
+            renderFilmstrip();
+            renderPreviewLightroom();
+        }
+
+        function hapusFotoDariSesi(idx, e) {
+            if (e) e.stopPropagation();
+            capturedPhotos.splice(idx, 1);
+            if (activePhotoIndex >= capturedPhotos.length) activePhotoIndex = capturedPhotos.length - 1;
+            document.getElementById('lbl-count-photos').innerText = capturedPhotos.length;
+            renderFilmstrip();
+            renderPreviewLightroom();
+        }
+
+        function renderFilmstrip() {
+            const strip = document.getElementById('lr-filmstrip');
+            if (capturedPhotos.length === 0) {
+                strip.innerHTML = `<span style="color: #64748b; font-size: 0.88rem; margin: 0 auto;">Belum ada foto yang masuk di sesi ini.</span>`;
+                return;
+            }
+            strip.innerHTML = capturedPhotos.map((p, idx) => `
+                <div class="thumb-item ${idx === activePhotoIndex ? 'active' : ''}" onclick="pilihFotoDiFilmstrip(${idx})">
+                    <img src="${p.url}">
+                    <span class="badge-num">#${idx + 1}</span>
+                    <button class="btn-del-photo" onclick="hapusFotoDariSesi(${idx}, event)" title="Hapus">✕</button>
+                </div>
+            `).join('');
+        }
+
+        // =========================================================
+        // 🎛️ 3. ENGINE LIGHTROOM COLOR GRADING & PARSER .XMP / .LRTEMPLATE
+        // =========================================================
+        function renderDaftarPreset(activeIdx = 0) {
+            const box = document.getElementById('preset-list-container');
+            box.innerHTML = savedPresets.map((pr, idx) => `
+                <button type="button" class="preset-btn ${idx === activeIdx ? 'active' : ''}" onclick="terapkanPreset(${idx})">
+                    <span>${pr.name}</span>
+                </button>
+            `).join('');
+        }
+
+        function terapkanPreset(idx) {
+            const pr = savedPresets[idx];
+            if (!pr) return;
+            currentGlobalGrading = { ...pr.settings };
+
+            if (activePhotoIndex >= 0 && capturedPhotos[activePhotoIndex]) {
+                capturedPhotos[activePhotoIndex].grading = { ...pr.settings };
+            }
+            if (document.getElementById('chk-auto-sync')?.checked) {
+                capturedPhotos.forEach(p => { p.grading = { ...pr.settings }; });
+            }
+
+            renderDaftarPreset(idx);
+            perbaruiTampilanSliderUI(pr.settings);
+            renderPreviewLightroom();
+        }
+
+        // PARSER ASLI FILE ADOBE LIGHTROOM (.XMP & .LRTEMPLATE)
+        async function importFilePresetLightroom(event) {
+            const files = event.target.files;
+            if (!files || files.length === 0) return;
+
+            let importedCount = 0;
+            for (const file of files) {
+                const text = await file.text();
+                const cleanName = "🎨 " + file.name.replace(/\.(xmp|lrtemplate|json)$/i, '');
+                const parsed = parseLightroomTextToGrading(text);
+                savedPresets.push({ name: cleanName, settings: parsed });
+                importedCount++;
+            }
+
+            // Simpan ke localStorage agar permanen
+            const customOnly = savedPresets.slice(5);
+            localStorage.setItem('sportbooth_custom_presets', JSON.stringify(customOnly));
+
+            renderDaftarPreset(savedPresets.length - 1);
+            terapkanPreset(savedPresets.length - 1);
+            alert(`✅ Berhasil mengimpor ${importedCount} Preset Lightroom (${files[0].name})!`);
+            event.target.value = '';
+        }
+
+        function parseLightroomTextToGrading(rawText) {
+            const g = defaultGrading();
+            const getNum = (regex) => {
+                const m = rawText.match(regex);
+                return m ? parseFloat(m[1]) : null;
+            };
+
+            // 1. Deteksi tag XML .xmp (crs:Exposure2012, crs:Contrast2012, dll) maupun .lrtemplate
+            const exp = getNum(/Exposure(?:2012)?\s*[=:]\s*"?([+-]?\d+(?:\.\d+)?)"?/i);
+            if (exp !== null) g.exposure = Math.max(-100, Math.min(100, Math.round(exp * 25)));
+
+            const con = getNum(/Contrast(?:2012)?\s*[=:]\s*"?([+-]?\d+(?:\.\d+)?)"?/i);
+            if (con !== null) g.contrast = Math.max(-100, Math.min(100, Math.round(con)));
+
+            const hi = getNum(/Highlights(?:2012)?\s*[=:]\s*"?([+-]?\d+(?:\.\d+)?)"?/i);
+            if (hi !== null) g.highlights = Math.max(-100, Math.min(100, Math.round(hi)));
+
+            const sh = getNum(/Shadows(?:2012)?\s*[=:]\s*"?([+-]?\d+(?:\.\d+)?)"?/i);
+            if (sh !== null) g.shadows = Math.max(-100, Math.min(100, Math.round(sh)));
+
+            const sat = getNum(/Saturation\s*[=:]\s*"?([+-]?\d+(?:\.\d+)?)"?/i);
+            if (sat !== null) g.saturation = Math.max(-100, Math.min(100, Math.round(sat)));
+
+            const vib = getNum(/Vibrance\s*[=:]\s*"?([+-]?\d+(?:\.\d+)?)"?/i);
+            if (vib !== null) g.vibrance = Math.max(-100, Math.min(100, Math.round(vib)));
+
+            const tp = getNum(/IncrementalTemperature\s*[=:]\s*"?([+-]?\d+(?:\.\d+)?)"?/i) ?? getNum(/Temperature\s*[=:]\s*"?([+-]?\d+(?:\.\d+)?)"?/i);
+            if (tp !== null) {
+                // Jika dalam Kelvin (misal 5500 -> konversi ke skala -100..100)
+                g.temp = (Math.abs(tp) > 200) ? Math.max(-100, Math.min(100, Math.round((tp - 5500) / 40))) : Math.max(-100, Math.min(100, Math.round(tp)));
+            }
+
+            const tn = getNum(/IncrementalTint\s*[=:]\s*"?([+-]?\d+(?:\.\d+)?)"?/i) ?? getNum(/Tint\s*[=:]\s*"?([+-]?\d+(?:\.\d+)?)"?/i);
+            if (tn !== null) g.tint = Math.max(-100, Math.min(100, Math.round(tn)));
+
+            const shp = getNum(/Sharpness\s*[=:]\s*"?([+-]?\d+(?:\.\d+)?)"?/i);
+            if (shp !== null) g.sharpness = Math.max(0, Math.min(100, Math.round(shp)));
+
+            return g;
+        }
+
+        function sinkronSliderDariFotoAktif() {
+            const g = (activePhotoIndex >= 0 && capturedPhotos[activePhotoIndex])
+                ? capturedPhotos[activePhotoIndex].grading
+                : currentGlobalGrading;
+            perbaruiTampilanSliderUI(g);
+        }
+
+        function perbaruiTampilanSliderUI(g) {
+            ['exposure', 'contrast', 'highlights', 'shadows', 'temp', 'tint', 'vibrance', 'saturation', 'sharpness'].forEach(k => {
+                const sl = document.getElementById(`sl-${k}`);
+                const vl = document.getElementById(`val-${k}`);
+                if (sl) sl.value = g[k] || 0;
+                if (vl) vl.innerText = (g[k] > 0 ? `+${g[k]}` : g[k]);
+            });
+        }
+
+        function ubahSliderGrading() {
+            const g = {};
+            ['exposure', 'contrast', 'highlights', 'shadows', 'temp', 'tint', 'vibrance', 'saturation', 'sharpness'].forEach(k => {
+                const val = parseInt(document.getElementById(`sl-${k}`).value) || 0;
+                g[k] = val;
+                document.getElementById(`val-${k}`).innerText = (val > 0 ? `+${val}` : val);
+            });
+            currentGlobalGrading = { ...g };
+
+            if (activePhotoIndex >= 0 && capturedPhotos[activePhotoIndex]) {
+                capturedPhotos[activePhotoIndex].grading = { ...g };
+            }
+            if (document.getElementById('chk-auto-sync')?.checked) {
+                capturedPhotos.forEach(p => { p.grading = { ...g }; });
+            }
+            renderPreviewLightroom();
+        }
+
+        function resetGradingAktif() {
+            terapkanPreset(0);
+        }
+
+        function terapkanGradingKeSemuaFoto() {
+            capturedPhotos.forEach(p => { p.grading = { ...currentGlobalGrading }; });
+            alert(`✅ Color Grading berhasil disamakan ke seluruh ${capturedPhotos.length} foto!`);
+        }
+
+        // Render Foto + Color Grading + Overlay Frame di Canvas Utama
+        function renderPreviewLightroom() {
+            const canvas = document.getElementById('lrPreviewCanvas');
+            const emptyBox = document.getElementById('empty-tether-box');
+
+            if (activePhotoIndex < 0 || !capturedPhotos[activePhotoIndex]) {
+                canvas.style.display = 'none';
+                emptyBox.style.display = 'block';
+                return;
+            }
+
+            emptyBox.style.display = 'none';
+            canvas.style.display = 'block';
+
+            const item = capturedPhotos[activePhotoIndex];
+            renderFotoDenganGradingKeCanvas(item.imgObj, item.grading, canvas, 1280);
+        }
+
+        function renderFotoDenganGradingKeCanvas(img, g, targetCanvas, maxDim = 1920) {
+            const ctx = targetCanvas.getContext('2d', { willReadFrequently: true });
+
+            // Jika menggunakan Frame / Template, sesuaikan ukuran canvas dengan Frame
+            if (selectedFrameMode !== 'NO_FRAME' && frameOverlayImg && selectedFrameLayout && selectedFrameLayout.coords?.length > 0) {
+                const fW = frameOverlayImg.naturalWidth || 1200;
+                const fH = frameOverlayImg.naturalHeight || 1800;
+                const scale = Math.min(1, maxDim / Math.max(fW, fH));
+                targetCanvas.width = Math.round(fW * scale);
+                targetCanvas.height = Math.round(fH * scale);
+
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, targetCanvas.width, targetCanvas.height);
+
+                // Gambar foto yang sudah di-grading ke setiap lubang slot frame
+                const tempPhotoCanvas = document.createElement('canvas');
+                prosesPikselLightroom(img, g, tempPhotoCanvas, maxDim);
+
+                selectedFrameLayout.coords.forEach((coord) => {
+                    const sx = coord.x * scale;
+                    const sy = coord.y * scale;
+                    const sw = (coord.width || selectedFrameLayout.width) * scale;
+                    const sh = (coord.height || selectedFrameLayout.height) * scale;
+                    drawCoverImage(ctx, tempPhotoCanvas, sx, sy, sw, sh);
+                });
+
+                ctx.drawImage(frameOverlayImg, 0, 0, targetCanvas.width, targetCanvas.height);
+            } else {
+                // Mode TANPA BINGKAI (Foto Murni)
+                prosesPikselLightroom(img, g, targetCanvas, maxDim);
+            }
+        }
+
+        function drawCoverImage(ctx, srcCanvas, x, y, w, h) {
+            const imgRatio = srcCanvas.width / srcCanvas.height;
+            const slotRatio = w / h;
+            let sW, sH, sX, sY;
+            if (imgRatio > slotRatio) {
+                sH = srcCanvas.height;
+                sW = sH * slotRatio;
+                sX = (srcCanvas.width - sW) / 2;
+                sY = 0;
+            } else {
+                sW = srcCanvas.width;
+                sH = sW / slotRatio;
+                sX = 0;
+                sY = (srcCanvas.height - sH) / 2;
+            }
+            ctx.drawImage(srcCanvas, sX, sY, sW, sH, x, y, w, h);
+        }
+
+        function prosesPikselLightroom(img, g, canvas, maxDim) {
+            const scale = Math.min(1, maxDim / Math.max(img.naturalWidth, img.naturalHeight));
+            const w = Math.max(1, Math.round(img.naturalWidth * scale));
+            const h = Math.max(1, Math.round(img.naturalHeight * scale));
+            canvas.width = w;
+            canvas.height = h;
+
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            ctx.drawImage(img, 0, 0, w, h);
+
+            const imgData = ctx.getImageData(0, 0, w, h);
+            const data = imgData.data;
+
+            const expFactor = Math.pow(2, (g.exposure || 0) / 50);
+            const contrastVal = (g.contrast || 0) * 1.8;
+            const contrastFactor = (259 * (contrastVal + 255)) / (255 * (259 - contrastVal));
+            const shadowsLift = (g.shadows || 0) * 0.65;
+            const highlightsDrop = (g.highlights || 0) * 0.65;
+            const tempShift = (g.temp || 0) * 0.7;
+            const tintShift = (g.tint || 0) * 0.5;
+            const satFactor = 1 + ((g.saturation || 0) / 100);
+            const vibFactor = (g.vibrance || 0) / 100;
+
+            for (let i = 0; i < data.length; i += 4) {
+                let r = data[i] * expFactor;
+                let gr = data[i + 1] * expFactor;
+                let b = data[i + 2] * expFactor;
+
+                // Highlights & Shadows
+                const lum = (r + gr + b) / 3;
+                if (shadowsLift !== 0 && lum < 128) {
+                    const weight = (128 - lum) / 128;
+                    r += shadowsLift * weight;
+                    gr += shadowsLift * weight;
+                    b += shadowsLift * weight;
+                }
+                if (highlightsDrop !== 0 && lum > 128) {
+                    const weight = (lum - 128) / 127;
+                    r += highlightsDrop * weight;
+                    gr += highlightsDrop * weight;
+                    b += highlightsDrop * weight;
+                }
+
+                // Contrast
+                r = contrastFactor * (r - 128) + 128;
+                gr = contrastFactor * (gr - 128) + 128;
+                b = contrastFactor * (b - 128) + 128;
+
+                // White Balance (Temp & Tint)
+                r += tempShift;
+                b -= tempShift;
+                gr -= tintShift;
+
+                // Saturation & Vibrance
+                const gray = 0.299 * r + 0.587 * gr + 0.114 * b;
+                const maxChannel = Math.max(r, gr, b);
+                const minChannel = Math.min(r, gr, b);
+                const currentSat = (maxChannel - minChannel) / 255;
+                const dynSat = satFactor + (vibFactor * (1 - currentSat));
+
+                r = gray + (r - gray) * dynSat;
+                gr = gray + (gr - gray) * dynSat;
+                b = gray + (b - gray) * dynSat;
+
+                data[i] = r < 0 ? 0 : (r > 255 ? 255 : r);
+                data[i + 1] = gr < 0 ? 0 : (gr > 255 ? 255 : gr);
+                data[i + 2] = b < 0 ? 0 : (b > 255 ? 255 : b);
+            }
+
+            ctx.putImageData(imgData, 0, 0);
+        }
+
+        // =========================================================
+        // ☁️ 4. SELESAI, SIMPAN SEMUA FOTO & UPLOAD KE GOOGLE DRIVE
+        // =========================================================
+        async function selesaiDanUploadSemua() {
+            if (capturedPhotos.length === 0) {
+                return alert("⚠️ Belum ada foto yang dijepret pada sesi ini!");
+            }
+
+            const btn = document.getElementById('btn-proses-final');
+            btn.disabled = true;
+            btn.innerText = "⏳ Merender & Mengunggah...";
+
+            try {
+                const renderedBase64List = [];
+                const offCanvas = document.createElement('canvas');
+
+                for (let i = 0; i < capturedPhotos.length; i++) {
+                    const item = capturedPhotos[i];
+                    // Render kualitas tinggi (2400px) lengkap dengan Color Grading & Bingkai (jika dipilih)
+                    renderFotoDenganGradingKeCanvas(item.imgObj, item.grading, offCanvas, 2400);
+                    renderedBase64List.push(offCanvas.toDataURL('image/jpeg', 0.92));
+                }
+
+                const res = await fetch('/api/generate-sportbooth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sessionId: currentSessionId,
+                        imagesBase64: renderedBase64List
+                    })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    finalRenderedFiles = data.files || [];
+                    linkGoogleDriveUnik = data.driveLink || "processing";
+                    tampilkanPanelHasilSport();
+                } else {
+                    alert("❌ Gagal memproses foto: " + data.message);
+                }
+            } catch (e) {
+                alert("❌ Kesalahan jaringan saat memproses foto.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `✅ Selesai & Upload G-Drive (<span id="lbl-count-photos">${capturedPhotos.length}</span> Foto) ›`;
+            }
+        }
+
+        function tampilkanPanelHasilSport() {
+            document.getElementById('panel-lightroom').classList.remove('active-panel');
+            document.getElementById('panel-hasil').classList.add('active-panel');
+
+            document.getElementById('lbl-total-final').innerText = finalRenderedFiles.length;
+            const container = document.getElementById('result-photos-container');
+            container.innerHTML = finalRenderedFiles.map(url => `<img src="${url}?t=${Date.now()}">`).join('');
+
+            const qrBox = document.getElementById('qrCodeContainer');
+            qrBox.innerHTML = `<span style="font-size: 2rem; color: #0f172a;">⏳</span>`;
+            if (linkGoogleDriveUnik && linkGoogleDriveUnik !== "processing") {
+                renderQrSport(linkGoogleDriveUnik);
+            }
+        }
+
+        socket.on('qr-ready', (data) => {
+            if (data.sessionId === currentSessionId && data.url) {
+                linkGoogleDriveUnik = data.url;
+                renderQrSport(data.url);
+            }
+        });
+
+        function renderQrSport(url) {
+            const qrBox = document.getElementById('qrCodeContainer');
+            qrBox.innerHTML = '';
+            new QRCode(qrBox, { text: url, width: 120, height: 120, colorDark: "#0f172a", colorLight: "#ffffff" });
+            document.getElementById('status-upload-sport').innerText = "✅ Siap Diunduh! Silakan Scan QR di Bawah";
+        }
+
+        async function cetakFotoSportTerpilih() {
+            if (finalRenderedFiles.length === 0) return;
+            const btn = document.getElementById('btn-cetak-sport');
+            btn.disabled = true; btn.innerText = "⏳ Mencetak...";
+            for (const fileUrl of finalRenderedFiles) {
+                await fetch('/api/print', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fileName: fileUrl, mode: 'collage' })
+                });
+            }
+            btn.innerText = "✅ Dikirim ke Printer!";
+            setTimeout(() => { btn.disabled = false; btn.innerText = "🖨️ Cetak Foto"; }, 3000);
+        }
+
+        async function kirimWaSport() {
+            const inp = document.getElementById('inputWA');
+            const btn = document.getElementById('btnKirimWA');
+            if (inp.value.length < 10) return alert("⚠️ Masukkan nomor WhatsApp yang valid!");
+            btn.disabled = true; btn.innerText = "⏳...";
+            try {
+                const res = await fetch('/api/send-wa', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nomorWa: inp.value, linkFoto: linkGoogleDriveUnik })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    btn.innerText = "✅ Terkirim!";
+                    inp.value = "";
+                } else {
+                    alert("Gagal kirim WA: " + data.message);
+                }
+            } catch (e) {}
+            setTimeout(() => { btn.disabled = false; btn.innerText = "📤 Kirim"; }, 2500);
+        }
+
+        async function mulaiSesiPelariBaru() {
+            capturedPhotos = [];
+            finalRenderedFiles = [];
+            activePhotoIndex = -1;
+            currentSessionId = 'SPORT-' + Date.now();
+            await fetch('/api/start-session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sessionId: currentSessionId })
+            });
+            document.getElementById('lbl-count-photos').innerText = "0";
+            document.getElementById('lbl-tether-status').innerText = "Siap Menjepret! Tekan Tombol Shutter di Kamera";
+            renderFilmstrip();
+            renderPreviewLightroom();
+
+            document.getElementById('panel-hasil').classList.remove('active-panel');
+            document.getElementById('panel-lightroom').classList.add('active-panel');
+        }
+
+        // Virtual Numpad & Tombol Rahasia
+        function bukaNumpadWA(e) { e.stopPropagation(); document.getElementById('virtual-numpad').style.display = 'block'; }
+        function tekanAngka(a) { document.getElementById('inputWA').value += a; }
+        function hapusAngka() { const el = document.getElementById('inputWA'); el.value = el.value.slice(0, -1); }
+        function tutupNumpad() { document.getElementById('virtual-numpad').style.display = 'none'; }
+
+        const btnRahasia = document.getElementById('btn-rahasia');
+        let holdTimer;
+        btnRahasia.addEventListener('mousedown', () => { holdTimer = setTimeout(() => window.location.href = '/idle.html', 2000); });
+        btnRahasia.addEventListener('mouseup', () => clearTimeout(holdTimer));
+        btnRahasia.addEventListener('touchstart', () => { holdTimer = setTimeout(() => window.location.href = '/idle.html', 2000); });
+        btnRahasia.addEventListener('touchend', () => clearTimeout(holdTimer));
+    </script>
+</body>
+</html>

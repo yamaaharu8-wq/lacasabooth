@@ -490,17 +490,31 @@
                     <div class="form-group">
                         <label>Mesin / SDK Kamera Utama</label>
                         <select id="sys-cameraEngine" onchange="ubahEngineKameraUI();">
-                            <option value="canon">📸 Canon EOS (Native EDSDK)</option>
-                            <option value="sony">📷 Sony Alpha (Native CrSDK USB)</option>
-                            <option value="fujifilm">🎞️ Fujifilm X-Series (Native USB)</option>
-                            <option value="nikon">🔭 Nikon DSLR / Z (Native USB)</option>
-                            <option value="webcam">📹 Webcam / Capture Card (UVC)</option>
-                        </select>
+                           <option value="canon">📸 Canon EOS (Native EDSDK)</option>
+<option value="sony">📷 Sony Alpha (Native CrSDK USB)</option>
+<option value="lumix">🎥 Panasonic Lumix (USB Tether / UVC)</option>
+<option value="fujifilm">🎞️ Fujifilm X-Series (Native USB)</option>
+<option value="nikon">🔭 Nikon DSLR / Z (Native USB)</option>
+<option value="webcam">📹 Webcam / Capture Card (UVC)</option>
+</select>
                         <select id="sys-webcamDeviceId1" style="margin-top: 6px; font-size: 0.82rem; display: none;"></select>
                         <p id="info-status-kamera-sdk" style="font-size: 0.8rem; color: #0f766e; font-weight: 700; margin-top: 6px;">
                             🔌 Pilih merk kamera yang terhubung.
                         </p>
                     </div>
+                    <div class="form-group">
+    <label>Resolusi Kamera / Webcam / Capture Card</label>
+    <select id="sys-webcamResolution" onchange="if(window.simpanPengaturanSilent) window.simpanPengaturanSilent();">
+        <option value="1080p">🌟 Full HD — 1920 x 1080 (16:9 - Standar Lumix / Capture Card)</option>
+        <option value="3:2">📸 Rasio Foto DSLR — 1620 x 1080 (3:2 - Proporsional Frame)</option>
+        <option value="720p">⚡ HD Ready — 1280 x 720 (16:9 - Ringan & Cepat / Lumix USB)</option>
+        <option value="4:3">🖥️ Standar — 1280 x 960 / 640 x 480 (4:3 - Webcam Bawaan)</option>
+        <option value="4k">💎 Ultra HD 4K — 3840 x 2160 (Khusus Capture Card 4K)</option>
+    </select>
+    <small style="color: #64748b; font-size: 0.78rem; display: block; margin-top: 4px;">
+        💡 Jika memakai kamera Lumix / Mirrorless via Capture Card atau USB Webcam, pilih <b>Full HD (1920x1080)</b> atau <b>HD (1280x720)</b> agar tidak kembali ke resolusi rendah.
+    </small>
+</div>
 
                     <!-- 🎥 FITUR DUAL CAMERA (HANYA MUNCULKAN DROPDOWN KE-2 JIKA DICENTANG) -->
                     <div class="form-group" style="background: #fdf2f8; padding: 12px; border-radius: 12px; border: 2px solid var(--ink); margin-bottom: 12px;">
@@ -511,12 +525,13 @@
 
                         <div id="box-dual-camera-settings" style="display: none; margin-top: 12px; border-top: 1.5px dashed #eeb4c7; padding-top: 10px;">
                             <label style="font-size: 0.85rem; color: #9e4261;">Pilih Kamera ke-2 (Sudut Kedua):</label>
-                            <select id="sys-cameraEngine2" style="font-weight: bold; margin-bottom: 10px;">
-                                <option value="webcam">📹 Webcam / Capture Card 2 (UVC)</option>
-                                <option value="canon">📸 Canon EOS Kedua (USB #2)</option>
-                                <option value="sony">📷 Sony Alpha (USB / UVC)</option>
-                                <option value="fujifilm">🎞️ Fujifilm X-Series (USB / UVC)</option>
-                            </select>
+                            <option value="canon">📸 Canon EOS (Native EDSDK)</option>
+<option value="sony">📷 Sony Alpha (Native CrSDK USB)</option>
+<option value="lumix">🎥 Panasonic Lumix (USB Tether / UVC)</option>
+<option value="fujifilm">🎞️ Fujifilm X-Series (Native USB)</option>
+<option value="nikon">🔭 Nikon DSLR / Z (Native USB)</option>
+<option value="webcam">📹 Webcam / Capture Card (UVC)</option>
+</select>
                             <select id="sys-webcamDeviceId2" style="display: none;"></select>
 
                             <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; background: #fff; padding: 8px 10px; border-radius: 8px; border: 1.5px solid #f5d0dc; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 10px;">
@@ -1871,6 +1886,9 @@ document.getElementById('sys-canonAv').value = data.global?.canonAv || "auto";
                 if (document.getElementById('sys-mirrorCamera')) {
                     document.getElementById('sys-mirrorCamera').value = data.global?.mirrorCamera ? "true" : "false";
                 }
+                if (document.getElementById('sys-webcamResolution')) {
+    document.getElementById('sys-webcamResolution').value = data.global?.webcamResolution || '1080p';
+}
                 if (document.getElementById('sys-cameraPort')) {
     document.getElementById('sys-cameraPort').value = data.global?.cameraPort || "";
 }
@@ -2031,7 +2049,7 @@ canonTv: getVal('sys-canonTv', currentData.global?.canonTv || 'auto'),
 canonAv: getVal('sys-canonAv', currentData.global?.canonAv || 'auto'),
 discountEnabled: getVal('sys-discountEnabled', currentData.global?.discountEnabled ? 'true' : 'false') === "true",
 idlePreset: currentData.global?.idlePreset || 'style-1',driveFolderMode: getVal('sys-driveFolderMode', currentData.global?.driveFolderMode || 'per_session'),
-driveMixedFolderId: getVal('driveMixedFolderId', currentData.global?.driveMixedFolderId || ''),
+driveMixedFolderId: getVal('driveMixedFolderId', currentData.global?.driveMixedFolderId || ''),webcamResolution: getVal('sys-webcamResolution', currentData.global?.webcamResolution || '1080p'),
                         cloudflareToken: getVal('input-cf-token', currentData.global?.cloudflareToken || '')
                          
                         
@@ -3081,8 +3099,18 @@ window.prosesGenerateInvoice = async function() {
         });
         const data = await res.json();
 
-        if (!data.success) {
-            statusEl.innerHTML = `<span style="color:#ef4444;">❌ ${data.message}</span>`;
+       if (!data.success) {
+            if (data.isMaintenance) {
+                const teksWa = encodeURIComponent(`Halo Admin Lacasabooth, saya ingin mengaktifkan langganan paket ${selectedTier.toUpperCase()} (${durasiTeks} - ${priceText}) untuk akun email: ${user.email}`);
+                statusEl.innerHTML = `
+                    <span style="color:#d97706; display:block; margin-bottom:10px;">⚠️ ${data.message}</span>
+                    <a href="https://wa.me/628131080710?text=${teksWa}" target="_blank" class="btn-primary" style="background:#10b981; color:white; text-decoration:none; padding:10px 15px; border-radius:50px; display:inline-flex; width:auto;">
+                        💬 Aktivasi Instan via WhatsApp Admin
+                    </a>
+                `;
+            } else {
+                statusEl.innerHTML = `<span style="color:#ef4444;">❌ ${data.message}</span>`;
+            }
             return;
         }
 
