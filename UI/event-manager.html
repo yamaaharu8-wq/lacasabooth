@@ -70,32 +70,32 @@
         .empty-state h3 { margin: 0; font-family: 'Caveat', cursive; font-size: 2.2rem; color: var(--ink); line-height: 1.2; }
         .empty-state p { color: var(--ink); opacity: 0.8; font-size: 0.95rem; margin-top: 5px; font-weight: 500; }
 
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); z-index: 999; justify-content: center; align-items: center; }
-        .modal-content { background: var(--paper-white); width: 90%; max-width: 500px; border-radius: 30px; padding: 40px 30px; border: var(--doodle-border); box-shadow: 10px 12px 0px var(--ink); text-align: center; position: relative; z-index: 1000; color: var(--ink); }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); z-index: 999; justify-content: center; align-items: center; padding: 16px; box-sizing: border-box; }
+        .modal-content { background: var(--paper-white); width: 92%; max-width: 520px; max-height: 92vh; overflow-y: auto; border-radius: 28px; padding: 26px 26px 22px 26px; border: var(--doodle-border); box-shadow: 10px 12px 0px var(--ink); text-align: center; position: relative; z-index: 1000; color: var(--ink); box-sizing: border-box; }
         .step-panel { display: none; }
         .step-panel.active { display: block; animation: doodlePop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         @keyframes doodlePop { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 
-        .modal-title { font-family: 'Caveat', cursive; font-size: 3rem; font-weight: 700; margin: 0 0 5px 0; line-height: 1; }
-        .modal-subtitle { color: var(--ink); opacity: 0.8; margin-bottom: 25px; font-size: 0.95rem; }
+        .modal-title { font-family: 'Caveat', cursive; font-size: 2.5rem; font-weight: 700; margin: 0 0 4px 0; line-height: 1; }
+        .modal-subtitle { color: var(--ink); opacity: 0.8; margin-bottom: 16px; font-size: 0.9rem; }
 
-        .form-input { width: 100%; padding: 15px 20px; border: 2px solid var(--ink); border-radius: 15px; font-size: 1rem; margin-bottom: 15px; box-sizing: border-box; font-family: 'Fredoka', sans-serif; background: var(--bg-color); transition: 0.2s; outline: none; color: var(--ink); }
+        .form-input { width: 100%; padding: 14px 18px; border: 2px solid var(--ink); border-radius: 15px; font-size: 1rem; margin-bottom: 14px; box-sizing: border-box; font-family: 'Fredoka', sans-serif; background: var(--bg-color); transition: 0.2s; outline: none; color: var(--ink); }
         .form-input:focus { box-shadow: 4px 4px 0px var(--ink); background: var(--paper-white); }
         
-        .btn-modal { background: var(--ink); color: var(--bg-color); border: 2px solid var(--ink); padding: 14px 24px; border-radius: 50px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 1rem; width: 100%; font-family: 'Fredoka', sans-serif; margin-top: 10px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;}
+        .btn-modal { background: var(--ink); color: var(--bg-color); border: 2px solid var(--ink); padding: 12px 24px; border-radius: 50px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 0.98rem; width: 100%; font-family: 'Fredoka', sans-serif; margin-top: 8px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
         .btn-modal:hover { background: var(--pink); color: var(--ink); box-shadow: 4px 4px 0px var(--ink); transform: translateY(-2px); }
-        .btn-close-modal { position: absolute; top: -15px; right: -15px; background: var(--paper-white); border: 3px solid var(--ink); width: 45px; height: 45px; border-radius: 50%; font-size: 1.5rem; font-weight: bold; cursor: pointer; color: var(--ink); transition: 0.2s; box-shadow: 4px 4px 0px var(--ink); display: flex; align-items: center; justify-content: center; z-index: 1001; }
-        .btn-close-modal:hover { background: #ef4444; color: white; transform: rotate(90deg) scale(1.1); }
+        .btn-close-modal { position: absolute; top: 14px; right: 14px; background: var(--paper-white); border: 2.5px solid var(--ink); width: 38px; height: 38px; border-radius: 50%; font-size: 1.2rem; font-weight: bold; cursor: pointer; color: var(--ink); transition: 0.2s; box-shadow: 3px 3px 0px var(--ink); display: flex; align-items: center; justify-content: center; z-index: 1001; }
+        .btn-close-modal:hover { background: #ef4444; color: white; transform: rotate(90deg) scale(1.08); }
 
-        .radio-grid { display: grid; gap: 15px; text-align: left; margin-bottom: 25px; }
-        .radio-label { display: flex; align-items: center; padding: 15px; border: 2px solid var(--ink); border-radius: 20px; cursor: pointer; transition: 0.2s; background: var(--paper-white); position: relative; z-index: 10; color: var(--ink); }
-        .radio-label:hover { transform: translateY(-3px); box-shadow: 4px 4px 0px rgba(0,0,0,0.1); }
+        .radio-grid { display: grid; gap: 10px; text-align: left; margin-bottom: 16px; max-height: 54vh; overflow-y: auto; padding: 6px 6px 6px 2px; }
+        .radio-label { display: flex; align-items: center; padding: 11px 14px; border: 2px solid var(--ink); border-radius: 16px; cursor: pointer; transition: 0.2s; background: var(--paper-white); position: relative; z-index: 10; color: var(--ink); }
+        .radio-label:hover { transform: translateY(-2px); box-shadow: 3px 3px 0px rgba(0,0,0,0.1); }
         .radio-label input { display: none; }
-        .radio-label.selected { background: var(--green); border-width: 3px; box-shadow: 5px 5px 0px var(--ink); }
+        .radio-label.selected { background: var(--green); border-width: 3px; box-shadow: 4px 4px 0px var(--ink); }
         
-        .radio-icon { font-size: 1.8rem; margin-right: 15px; background: var(--bg-color); border: 2px solid var(--ink); width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; border-radius: 15px; flex-shrink: 0; box-shadow: 2px 2px 0px var(--ink); }
-        .radio-text h4 { margin: 0 0 5px 0; font-size: 1.1rem; }
-        .radio-text p { margin: 0; font-size: 0.85rem; opacity: 0.8; line-height: 1.3; }
+        .radio-icon { font-size: 1.5rem; margin-right: 12px; background: var(--bg-color); border: 2px solid var(--ink); width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; border-radius: 12px; flex-shrink: 0; box-shadow: 2px 2px 0px var(--ink); }
+        .radio-text h4 { margin: 0 0 2px 0; font-size: 1rem; }
+        .radio-text p { margin: 0; font-size: 0.8rem; opacity: 0.8; line-height: 1.25; }
 
         #virtual-keyboard { display: none; position: fixed; bottom: 0; left: 0; width: 100%; background: var(--paper-white); border-top: 4px dashed var(--ink); padding: 15px 10px; box-sizing: border-box; z-index: 10000; box-shadow: 0px -5px 15px rgba(0,0,0,0.2); user-select: none; }
         .vk-row { display: flex; justify-content: center; gap: 5px; margin-bottom: 8px; flex-wrap: wrap; }
@@ -341,14 +341,7 @@
                          <p>Tethering langsung dari shutter kamera + Color Grading & Preset .XMP.</p>
                      </div>
                  </label>
-                    <label class="radio-label" onclick="selectRadio('mode', this)" id="opt-aibooth">
-                        <input type="radio" name="modeData" value="aibooth">
-                        <div class="radio-icon">✨</div>
-                        <div class="radio-text">
-                            <h4>AI Magic Booth</h4>
-                            <p>Ubah foto menjadi gaya Anime 3D / Retro.</p>
-                        </div>
-                    </label>
+            
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
     <a href="#" onclick="nextStep(1); return false;" style="color: var(--ink); font-weight: 600; text-decoration: none; opacity: 0.5; font-size: 0.95rem;">‹ Kembali</a>
@@ -603,18 +596,17 @@ import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signO
         terapkanKunciEvent(tier);
     }
 
-    // --- 3 TIER SYSTEM LOCK (TERMASUK FASTBOOTH KHUSUS PRIME) ---
+// --- 3 TIER SYSTEM LOCK (TANPA AI BOOTH) ---
     function terapkanKunciEvent(tier) {
         window.userTier = tier;
         
         const optCollage = document.getElementById('opt-collage');
         const optFastbooth = document.getElementById('opt-fastbooth');
         const optNews = document.getElementById('opt-news');
-        const optAibooth = document.getElementById('opt-aibooth'); 
         const optPaid = document.getElementById('opt-pay-paid');
 
         // Hapus Kunci (Reset) di Modal
-        [optCollage, optFastbooth, optNews, optAibooth, optPaid].forEach(el => {
+        [optCollage, optFastbooth, optNews, optPaid].forEach(el => {
             if (el) {
                 el.style.opacity = '1'; 
                 el.style.pointerEvents = 'auto';
@@ -634,19 +626,6 @@ import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signO
             if(optFastbooth) { optFastbooth.style.opacity = '0.5'; optFastbooth.style.pointerEvents = 'none'; optFastbooth.insertAdjacentHTML('beforeend', getBadge('🔒 BUKA DI PRIME')); }
             if(optNews) { optNews.style.opacity = '0.5'; optNews.style.pointerEvents = 'none'; optNews.insertAdjacentHTML('beforeend', getBadge('🔒 BUKA DI PRIME')); }
         } 
-
-        const isAdmin = auth.currentUser && auth.currentUser.email === 'adenakbar455@gmail.com';
-        if(optAibooth) { 
-            if (isAdmin) {
-                optAibooth.style.opacity = '1'; 
-                optAibooth.style.pointerEvents = 'auto'; 
-                optAibooth.insertAdjacentHTML('beforeend', getBadge('🛠️ DEV MODE', '#10b981')); 
-            } else {
-                optAibooth.style.opacity = '0.6'; 
-                optAibooth.style.pointerEvents = 'none'; 
-                optAibooth.insertAdjacentHTML('beforeend', getBadge('🚧 SEGERA HADIR', '#3b82f6')); 
-            }
-        }
 
         muatDaftarEvent();
     }
@@ -746,16 +725,15 @@ import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signO
                    const tier = window.userTier || localStorage.getItem('saas_user_tier') || 'free';
                     data.events.reverse().forEach(evt => {
               let modeTeks = evt.mode === 'collage' ? '🖼️ Kolase' 
-             : evt.mode === 'photobox' ? '⏱️ Self Studio' 
-             : evt.mode === 'fastbooth' ? '⚡ Fastbooth'
-             : evt.mode === 'sportbooth' ? '🏃‍♂️ Sport Booth'
-             : evt.mode === 'aibooth' ? '✨ AI Booth' 
-             : '📰 Newspaper';
+                                     : evt.mode === 'photobox' ? '⏱️ Self Studio' 
+                                     : evt.mode === 'fastbooth' ? '⚡ Fastbooth'
+                                     : evt.mode === 'sportbooth' ? '🏃‍♂️ Sport Booth'
+                                     : '📰 Newspaper';
                         let payTeks = evt.payment === 'with_payment' ? '💳 Berbayar' : '🆓 Gratis';
                         let badgeModeColor = evt.mode === 'collage' ? 'var(--blue)' 
                                            : evt.mode === 'photobox' ? 'var(--pink)' 
                                            : evt.mode === 'fastbooth' ? 'var(--green)'
-                                           : evt.mode === 'aibooth' ? '#a855f7' 
+                                           : evt.mode === 'sportbooth' ? '#38bdf8'
                                            : 'var(--yellow)';
                         let badgePayColor = evt.payment === 'with_payment' ? 'var(--green)' : 'var(--paper-white)';
                         
@@ -763,14 +741,7 @@ import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signO
                         let badgeText = "";
                         let alertText = "";
                         
-                        const isAdmin = window.auth && window.auth.currentUser && window.auth.currentUser.email === 'adenakbar455@gmail.com';
-                       
-                        if (evt.mode === 'aibooth' && !isAdmin) {
-                            isLocked = true;
-                            badgeText = "🚧 TAHAP PENGEMBANGAN";
-                            alertText = "Fitur AI Booth sedang dalam tahap perbaikan dan pengembangan. Segera hadir kembali!";
-                        } 
-                        else if (tier === 'free') {
+                        if (tier === 'free') {
                             if (evt.mode === 'newspaper' || evt.mode === 'fastbooth') { isLocked = true; badgeText = '🔒 BUTUH PRIME'; alertText = 'Silakan upgrade ke lisensi PRIME.'; }
                             else if (evt.mode === 'collage') { isLocked = true; badgeText = '🔒 BUTUH PLUS'; alertText = 'Silakan upgrade ke lisensi PLUS.'; }
                             else if (evt.payment === 'with_payment') { isLocked = true; badgeText = '🔒 BUTUH PLUS'; alertText = 'Silakan upgrade ke lisensi PLUS.'; }

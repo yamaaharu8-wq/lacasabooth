@@ -402,10 +402,19 @@ async function nyalakanMesinWa() {
 
 nyalakanMesinWa();
 
-expressApp.get('/api/wa-status', (req, res) => {
-    res.json({ status: waBotStatus, qr: waBotQr });
+expressApp.get('/api/wa-status', async (req, res) => {
+    let realStatus = waBotStatus;
+    try {
+        if (waClient && waBotStatus === 'AUTHENTICATED') {
+            const state = await waClient.getState().catch(() => null);
+            if (state === 'CONNECTED' || waClient.info) {
+                waBotStatus = 'READY';
+                realStatus = 'READY';
+            }
+        }
+    } catch (e) {}
+    res.json({ status: realStatus, qr: waBotQr });
 });
-
 // [FIXED] Logika Reset Bot WA yang membunuh proses Chrome/Edge pengunci folder di .exe sebelum membuat QR baru!
 expressApp.post('/api/wa-logout', async (req, res) => {
     console.log("🔄 Memproses Reset & Pembersihan Total Sesi WA...");
@@ -2695,43 +2704,51 @@ expressApp.post('/api/send-wa', async (req, res) => {
     let { nomorWa, linkFoto } = req.body;
     if (!nomorWa || !linkFoto) return res.status(400).json({ success: false, message: 'Nomor WA atau link kosong!' });
 
-    // 1. Pembersihan Nomor (Logika Anda sudah bagus, ditambah pengaman +62)
-    let nomorFormat = nomorWa.trim().replace(/\D/g, ''); 
+    let nomorFormat = nomorWa.trim().replace(/\D/g, '');
     if (nomorFormat.startsWith('0')) nomorFormat = '62' + nomorFormat.slice(1);
     if (nomorFormat.startsWith('+62')) nomorFormat = '62' + nomorFormat.slice(3);
 
     try {
-        // 2. [VAKSIN] Cek apakah sesi WA mesin benar-benar hidup (menghindari error nyangkut)
-        if (!waClient || !waClient.info) {
-            return res.status(500).json({ success: false, message: 'Sesi WA terputus. Silakan Reset Bot WA di Dashboard.' });
+        if (!waClient) {
+            return res.status(500).json({ success: false, message: 'Mesin Bot WA belum menyala. Silakan cek tab Bot WA di Dashboard.' });
         }
 
-        const isRegistered = await waClient.isRegisteredUser(`${nomorFormat}@c.us`);
-        if (!isRegistered) return res.status(400).json({ success: false, message: 'Nomor tidak terdaftar di WhatsApp!' });
-        
-        const contactId = await waClient.getNumberId(nomorFormat);
-        const chatId = contactId._serialized; 
-        
-        let customPesan = "Halo dari Lacasaphoto! 📸\n\nTerima kasih sudah berfoto ria bersama kami. Berikut link foto kamu:\n\n🔗 {link}"; 
-        
+        // Cek status nyata langsung ke browser Puppeteer (tidak hanya bergantung pada waClient.info)
+        const waState = await waClient.getState().catch(() => null);
+        const isConnected = (waBotStatus === 'READY') || (waState === 'CONNECTED') || Boolean(waClient.info);
+
+        if (!isConnected) {
+            if (waBotStatus === 'AUTHENTICATED' || waBotStatus === 'STARTING') {
+                return res.status(503).json({ success: false, message: 'Bot WA sedang sinkronisasi chat. Tunggu 10-15 detik lalu klik Kirim lagi.' });
+            }
+            return res.status(500).json({ success: false, message: 'Sesi WA terputus. Silakan Reset & Scan ulang Bot WA di Dashboard.' });
+        }
+
+        // Cari ID kontak dengan fallback aman jika WhatsApp Web mengubah struktur internal
+        let chatId = `${nomorFormat}@c.us`;
+        try {
+            const contactId = await waClient.getNumberId(nomorFormat);
+            if (!contactId) {
+                return res.status(400).json({ success: false, message: 'Nomor tidak terdaftar di WhatsApp!' });
+            }
+            chatId = contactId._serialized;
+        } catch (lookupErr) {
+            console.warn("⚠️ [WA] Fallback langsung ke @c.us karena getNumberId error:", lookupErr.message);
+        }
+
+        let customPesan = "Halo dari Lacasaphoto! 📸\n\nTerima kasih sudah berfoto ria bersama kami. Berikut link foto kamu:\n\n🔗 {link}";
         try {
             if (fs.existsSync(settingsPath)) {
-                const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
-                if (settings.waMessage) {
-                    customPesan = settings.waMessage;
-                }
+                const settings = safeReadJson(settingsPath, {});
+                if (settings.waMessage) customPesan = settings.waMessage;
             }
-        } catch (e) {
-            console.error("Gagal membaca pesan WA dari pengaturan:", e);
-        }
+        } catch (e) {}
 
         const pesanAkhir = customPesan.replace('{link}', linkFoto);
-        
         await waClient.sendMessage(chatId, pesanAkhir);
         return res.json({ success: true, message: 'Pesan WhatsApp berhasil dikirim!' });
     } catch (error) {
         console.error("Error Kirim WA:", error);
-        // 3. [VAKSIN] Tampilkan pesan error asli dari mesin ke layar Toast UI
         res.status(500).json({ success: false, message: `Sistem WA: ${error.message}` });
     }
 });
@@ -2859,7 +2876,7 @@ expressApp.get('/api/rescan-camera', async (req, res) => {
 // =========================================================================
 // 🌟 SISTEM PEMBAYARAN LANGGANAN SAAS OTOMATIS (NEETPAY DEVELOPER)
 // =========================================================================
-const SAAS_NEETPAY_API_KEY = "np_live_0fa03962e0cffdf20183d425d8566fd2e6485955e9c019ab";
+const SAAS_NEETPAY_API_KEY = "np_live_b5fffbdfa6d1fae6c2485ba22442a615309379dcfb32a827";
 
 expressApp.post('/api/saas/create-invoice', async (req, res) => {
     try {

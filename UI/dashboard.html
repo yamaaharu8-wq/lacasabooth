@@ -2154,34 +2154,38 @@ driveMixedFolderId: getVal('driveMixedFolderId', currentData.global?.driveMixedF
     }
 
         let lastWaQr = '';
-    async function cekStatusWa() {
-        try {
-            const res = await fetch('/api/wa-status'); 
-            const data = await res.json();
-            const statusText = document.getElementById('wa-status-text'); 
-            const qrContainer = document.getElementById('wa-qr-container');
-            
-            if (data.status === 'READY' || data.status === 'AUTHENTICATED') {
-                statusText.innerHTML = "Status: <b style='color:#10b981;'>✅ Bot Terhubung & Tertaut (Siap)</b>";
-                qrContainer.innerHTML = '<div style="font-size: 4rem;">🤖<br><span style="font-size:0.9rem; color:#10b981; font-weight:bold;">Sesi Aktif Permanen</span></div>'; 
-                qrContainer.style.border = '3px solid #10b981';
-                lastWaQr = '';
-            } else if (data.status === 'QR_READY') {
-                statusText.innerHTML = "Status: <b style='color:#eab308;'>⚠️ Silakan Scan QR di bawah ini</b>";
-                qrContainer.style.border = '3px dashed #cbd5e1';
-                if (data.qr && data.qr !== lastWaQr) { 
-                    qrContainer.innerHTML = ''; 
-                    new QRCode(qrContainer, { text: data.qr, width: 180, height: 180 }); 
-                    lastWaQr = data.qr; 
+        async function cekStatusWa() {
+            try {
+                const res = await fetch('/api/wa-status');
+                const data = await res.json();
+                const statusText = document.getElementById('wa-status-text');
+                const qrContainer = document.getElementById('wa-qr-container');
+
+                if (data.status === 'READY') {
+                    statusText.innerHTML = "Status: <b style='color:#10b981;'>✅ Bot Terhubung & Siap Kirim Pesan</b>";
+                    qrContainer.innerHTML = '<div style="font-size: 4rem;">🤖<br><span style="font-size:0.9rem; color:#10b981; font-weight:bold;">Sesi Aktif & Siap Digunakan</span></div>';
+                    qrContainer.style.border = '3px solid #10b981';
+                    lastWaQr = '';
+                } else if (data.status === 'AUTHENTICATED') {
+                    statusText.innerHTML = "Status: <b style='color:#3b82f6;'>🔄 Login Berhasil! Sedang Sinkronisasi WhatsApp...</b>";
+                    qrContainer.innerHTML = '<div style="display:flex; flex-direction:column; align-items:center; padding:15px;"><div style="font-size: 3rem;">🔄</div><p style="font-size:0.85rem; color:#3b82f6; font-weight:600; margin-top:8px;">Tunggu hingga status berubah menjadi Siap Kirim Pesan...</p></div>';
+                    qrContainer.style.border = '3px dashed #3b82f6';
+                    lastWaQr = '';
+                } else if (data.status === 'QR_READY') {
+                    statusText.innerHTML = "Status: <b style='color:#eab308;'>⚠️ Silakan Scan QR di bawah ini</b>";
+                    qrContainer.style.border = '3px dashed #cbd5e1';
+                    if (data.qr && data.qr !== lastWaQr) {
+                        qrContainer.innerHTML = '';
+                        new QRCode(qrContainer, { text: data.qr, width: 180, height: 180 });
+                        lastWaQr = data.qr;
+                    }
+                } else {
+                    statusText.innerHTML = "Status: <b style='color:#6b7280;'>⏳ Menghubungkan ke WhatsApp... (Tunggu 20-30 Detik)</b>";
+                    qrContainer.innerHTML = '<div style="display:flex; flex-direction:column; align-items:center;"><div style="font-size: 3rem; color: #cbd5e1;">⏳</div><p style="font-size:0.8rem; color:#666; margin-top:10px; text-align:center;">Jika loading terlalu lama tanpa muncul QR, klik tombol <b>Reset Bot WA</b> di bawah.</p></div>';
+                    qrContainer.style.border = '3px dashed #cbd5e1';
                 }
-            } else {
-                statusText.innerHTML = "Status: <b style='color:#6b7280;'>⏳ Menghubungkan ke WhatsApp... (Tunggu 20-30 Detik)</b>";
-                // Beri teks bantuan di bawah jam pasir
-                qrContainer.innerHTML = '<div style="display:flex; flex-direction:column; align-items:center;"><div style="font-size: 3rem; color: #cbd5e1;">⏳</div><p style="font-size:0.8rem; color:#666; margin-top:10px; text-align:center;">Jika loading terlalu lama tanpa muncul QR, klik tombol <b>Reset Bot WA</b> di bawah.</p></div>'; 
-                qrContainer.style.border = '3px dashed #cbd5e1';
-            }
-        } catch (e) {}
-    }
+            } catch (e) {}
+        }
 
         setInterval(cekStatusWa, 3000);
         // === REVISI LOGOUT WHATSAPP (Bebas Bug & Aman) ===
