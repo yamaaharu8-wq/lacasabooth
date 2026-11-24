@@ -288,13 +288,39 @@
         
         .ve-slot {
             position: absolute; border: 3px dashed #ffffff; background: rgba(239, 68, 68, 0.5);
-            resize: both; overflow: hidden; cursor: move; min-width: 30px; min-height: 30px;
+            overflow: visible; cursor: move; min-width: 28px; min-height: 28px;
             display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;
             text-shadow: 1px 1px 2px black; font-size: 2rem; z-index: 10;
-            box-shadow: 0px 0px 10px rgba(0,0,0,0.5); border-radius: 4px;
+            box-shadow: 0px 0px 10px rgba(0,0,0,0.45); border-radius: 4px;
+            box-sizing: border-box;
         }
-        .ve-slot::-webkit-resizer { background-color: var(--yellow); border: 2px solid var(--ink); }
-        
+        .ve-slot.ve-size-matched {
+            border-color: #10b981 !important;
+            box-shadow: 0 0 0 2px #10b981, 0 0 12px rgba(16, 185, 129, 0.65) !important;
+        }
+        .ve-resize-handle {
+            position: absolute; right: -6px; bottom: -6px; width: 18px; height: 18px;
+            background: var(--yellow); border: 2px solid var(--ink); border-radius: 5px;
+            cursor: nwse-resize; z-index: 25; box-shadow: 1px 1px 3px rgba(0,0,0,0.35);
+            touch-action: none;
+        }
+        .ve-snap-badge {
+            position: absolute; top: -24px; left: 50%; transform: translateX(-50%);
+            background: #10b981; color: #ffffff; font-size: 0.68rem; font-weight: 700;
+            padding: 2px 8px; border-radius: 10px; white-space: nowrap; pointer-events: none;
+            text-shadow: none; display: none; z-index: 99; box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+        }
+        /* === GARIS PANDUAN MAGNET (SMART GUIDES) === */
+        .ve-snap-line-v {
+            position: absolute; top: 0; bottom: 0; width: 2px;
+            background: #ec4899; z-index: 95; pointer-events: none;
+            display: none; box-shadow: 0 0 6px rgba(236, 72, 153, 0.8);
+        }
+        .ve-snap-line-h {
+            position: absolute; left: 0; right: 0; height: 2px;
+            background: #ec4899; z-index: 95; pointer-events: none;
+            display: none; box-shadow: 0 0 6px rgba(236, 72, 153, 0.8);
+        }
         .mode-btn { flex: 1; padding: 12px; font-size: 1.1rem; font-weight: 700; border-radius: 15px; cursor: pointer; transition: 0.2s; border: 3px solid var(--ink); text-align: center; }
         .mode-btn.active { background: var(--blue); box-shadow: 4px 4px 0px var(--ink); transform: translateY(-2px); }
         .mode-btn.inactive { background: var(--bg-color); color: #666; border-color: #ccc; }
@@ -524,13 +550,14 @@
                         </label>
 
                         <div id="box-dual-camera-settings" style="display: none; margin-top: 12px; border-top: 1.5px dashed #eeb4c7; padding-top: 10px;">
-                            <label style="font-size: 0.85rem; color: #9e4261;">Pilih Kamera ke-2 (Sudut Kedua):</label>
-                            <option value="canon">📸 Canon EOS (Native EDSDK)</option>
-<option value="sony">📷 Sony Alpha (Native CrSDK USB)</option>
-<option value="lumix">🎥 Panasonic Lumix (USB Tether / UVC)</option>
-<option value="fujifilm">🎞️ Fujifilm X-Series (Native USB)</option>
-<option value="nikon">🔭 Nikon DSLR / Z (Native USB)</option>
-<option value="webcam">📹 Webcam / Capture Card (UVC)</option>
+                          <label style="font-size: 0.85rem; color: #9e4261;">Pilih Kamera ke-2 (Sudut Kedua):</label>
+<select id="sys-cameraEngine2" style="font-weight: bold; margin-bottom: 10px;">
+    <option value="canon">📸 Canon EOS (Native EDSDK)</option>
+    <option value="sony">📷 Sony Alpha (Native CrSDK USB)</option>
+    <option value="lumix">🎥 Panasonic Lumix (USB Tether / UVC)</option>
+    <option value="fujifilm">🎞️ Fujifilm X-Series (Native USB)</option>
+    <option value="nikon">🔭 Nikon DSLR / Z (Native USB)</option>
+    <option value="webcam">📹 Webcam / Capture Card (UVC)</option>
 </select>
                             <select id="sys-webcamDeviceId2" style="display: none;"></select>
 
@@ -1150,6 +1177,13 @@
                         <select id="sys-driveFolderMode" style="font-size: 1rem; font-weight: bold; padding: 12px;" onchange="toggleDriveFolderModeUI()">
                             <option value="per_session">📁 Buat Folder Baru Per Sesi (1 Tamu = 1 Folder)</option>
                             <option value="single_mixed">🗂️ Gabung di 1 Folder Campur (Terbaru Paling Atas)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="background: rgba(255,255,255,0.75); padding: 12px; border-radius: 12px; border: 2px dashed var(--ink); margin-bottom: 0;">
+                        <label>📷 Upload File Foto Mentah (Raw) ke G-Drive:</label>
+                        <select id="sys-uploadRawPhotos" style="font-size: 0.98rem; font-weight: bold; padding: 11px;">
+                            <option value="true">✅ Dengan Foto Mentah (Hasil Template + Live Photo + GIF + Mentahan)</option>
+                            <option value="false">⚡ Tanpa Foto Mentah (Hanya Hasil Template + Live Photo + GIF)</option>
                         </select>
                     </div>
                 </div>
@@ -1906,6 +1940,9 @@ document.getElementById('sys-brightness').value = data.global?.liveViewBrightnes
 if (document.getElementById('driveMixedFolderId')) {
     document.getElementById('driveMixedFolderId').value = data.global?.driveMixedFolderId || "";
 }
+if (document.getElementById('sys-uploadRawPhotos')) {
+    document.getElementById('sys-uploadRawPhotos').value = data.global?.uploadRawPhotos !== false ? "true" : "false";
+}
                 if (document.getElementById('input-cf-token')) document.getElementById('input-cf-token').value = data.global?.cloudflareToken || "";
                 
                 if (document.getElementById('sys-extraPrintPriceStatic')) {
@@ -2049,7 +2086,9 @@ canonTv: getVal('sys-canonTv', currentData.global?.canonTv || 'auto'),
 canonAv: getVal('sys-canonAv', currentData.global?.canonAv || 'auto'),
 discountEnabled: getVal('sys-discountEnabled', currentData.global?.discountEnabled ? 'true' : 'false') === "true",
 idlePreset: currentData.global?.idlePreset || 'style-1',driveFolderMode: getVal('sys-driveFolderMode', currentData.global?.driveFolderMode || 'per_session'),
-driveMixedFolderId: getVal('driveMixedFolderId', currentData.global?.driveMixedFolderId || ''),webcamResolution: getVal('sys-webcamResolution', currentData.global?.webcamResolution || '1080p'),
+driveMixedFolderId: getVal('driveMixedFolderId', currentData.global?.driveMixedFolderId || ''),
+uploadRawPhotos: getVal('sys-uploadRawPhotos', currentData.global?.uploadRawPhotos !== false ? 'true' : 'false') === "true",
+webcamResolution: getVal('sys-webcamResolution', currentData.global?.webcamResolution || '1080p'),
                         cloudflareToken: getVal('input-cf-token', currentData.global?.cloudflareToken || '')
                          
                         
@@ -2172,14 +2211,18 @@ driveMixedFolderId: getVal('driveMixedFolderId', currentData.global?.driveMixedF
                     qrContainer.style.border = '3px dashed #3b82f6';
                     lastWaQr = '';
                 } else if (data.status === 'QR_READY') {
-                    statusText.innerHTML = "Status: <b style='color:#eab308;'>⚠️ Silakan Scan QR di bawah ini</b>";
-                    qrContainer.style.border = '3px dashed #cbd5e1';
-                    if (data.qr && data.qr !== lastWaQr) {
-                        qrContainer.innerHTML = '';
-                        new QRCode(qrContainer, { text: data.qr, width: 180, height: 180 });
-                        lastWaQr = data.qr;
+                statusText.innerHTML = "Status: <b style='color:#eab308;'>⚠️ Silakan Scan QR di bawah ini</b>";
+                qrContainer.style.border = '3px dashed #cbd5e1';
+                if (data.qr && data.qr !== lastWaQr) {
+                    qrContainer.innerHTML = '';
+                    if (data.qrImage) {
+                        qrContainer.innerHTML = `<img src="${data.qrImage}" alt="QR WhatsApp" style="width: 190px; height: 190px; border-radius: 8px; object-fit: contain;">`;
+                    } else {
+                        new QRCode(qrContainer, { text: data.qr, width: 180, height: 180, correctLevel: QRCode.CorrectLevel.L });
                     }
-                } else {
+                    lastWaQr = data.qr;
+                }
+            } else {
                     statusText.innerHTML = "Status: <b style='color:#6b7280;'>⏳ Menghubungkan ke WhatsApp... (Tunggu 20-30 Detik)</b>";
                     qrContainer.innerHTML = '<div style="display:flex; flex-direction:column; align-items:center;"><div style="font-size: 3rem; color: #cbd5e1;">⏳</div><p style="font-size:0.8rem; color:#666; margin-top:10px; text-align:center;">Jika loading terlalu lama tanpa muncul QR, klik tombol <b>Reset Bot WA</b> di bawah.</p></div>';
                     qrContainer.style.border = '3px dashed #cbd5e1';
@@ -2370,32 +2413,60 @@ driveMixedFolderId: getVal('driveMixedFolderId', currentData.global?.driveMixedF
         }
 
         function buatVisualSlot(prefix, i, container, coordData, scaleX, scaleY) {
-            // Ambil jumlah slot dasar dari format yang dipilih
             let formatSelectVal = prefix === 'upload' ? document.getElementById('formatFoto').value : document.getElementById('edit-format').value;
             let baseCount = getJumlahSlot(formatSelectVal);
-            
-            // Rumus melooping angka tampilan di kotak merah
             let displayNum = ((i - 1) % baseCount) + 1;
+
+            const img = document.getElementById(`ve-image-${prefix}`);
+            const maxW = img?.clientWidth || 300;
+            const maxH = img?.clientHeight || 400;
 
             const slot = document.createElement('div');
             slot.className = 've-slot';
             slot.id = `ve-slot-${prefix}-${i}`;
-            slot.innerHTML = `<span>${displayNum}</span>`;
+            slot.innerHTML = `<span>${displayNum}</span><div class="ve-snap-badge"></div><div class="ve-resize-handle" title="Tarik untuk ubah ukuran"></div>`;
+
+            let leftPx, topPx, widthPx, heightPx;
 
             if (coordData) {
-                slot.style.left = (coordData.x * scaleX) + 'px';
-                slot.style.top = (coordData.y * scaleY) + 'px';
-                slot.style.width = (coordData.width * scaleX) + 'px';
-                slot.style.height = (coordData.height * scaleY) + 'px';
+                // Jika data history memakai persentase (format baru 0..1), otomatis proporsional di resolusi apa pun!
+                if (coordData.isPct) {
+                    leftPx = coordData.xPct * maxW;
+                    topPx = coordData.yPct * maxH;
+                    widthPx = coordData.wPct * maxW;
+                    heightPx = coordData.hPct * maxH;
+                } else {
+                    leftPx = coordData.x * scaleX;
+                    topPx = coordData.y * scaleY;
+                    widthPx = coordData.width * scaleX;
+                    heightPx = coordData.height * scaleY;
+                }
+
+                // PENGAMAN ANTI-KELUAR BATAS: Jika kotak meluber (misal dari history lama resolusi besar), paksa masuk kembali ke area kanvas!
+                widthPx = Math.max(30, Math.min(widthPx, maxW));
+                heightPx = Math.max(30, Math.min(heightPx, maxH));
+                leftPx = Math.max(0, Math.min(leftPx, maxW - widthPx));
+                topPx = Math.max(0, Math.min(topPx, maxH - heightPx));
             } else {
-                slot.style.left = '10%'; slot.style.top = (5 + ((i-1) * 10)) + '%'; slot.style.width = '30%'; slot.style.height = '20%';
+                widthPx = Math.round(maxW * 0.35);
+                heightPx = Math.round(maxH * 0.22);
+                leftPx = Math.round(maxW * 0.1);
+                topPx = Math.min(maxH - heightPx, Math.round(maxH * (0.05 + ((i - 1) * 0.1))));
             }
+
+            slot.style.left = Math.round(leftPx) + 'px';
+            slot.style.top = Math.round(topPx) + 'px';
+            slot.style.width = Math.round(widthPx) + 'px';
+            slot.style.height = Math.round(heightPx) + 'px';
 
             slot.dataset.prefix = prefix;
             slot.addEventListener('mousedown', startDrag);
-            slot.addEventListener('touchstart', startDragTouch, {passive: false});
-            slot.addEventListener('mouseup', () => kalkulasiKoordinatKeInput(prefix));
-            slot.addEventListener('mouseout', () => kalkulasiKoordinatKeInput(prefix));
+            slot.addEventListener('touchstart', startDragTouch, { passive: false });
+
+            const handle = slot.querySelector('.ve-resize-handle');
+            handle.addEventListener('mousedown', (e) => startResize(e, slot));
+            handle.addEventListener('touchstart', (e) => startResizeTouch(e, slot), { passive: false });
+
             container.appendChild(slot);
         }
 
@@ -2404,7 +2475,7 @@ driveMixedFolderId: getVal('driveMixedFolderId', currentData.global?.driveMixedF
             let sourceUrl = imageUrl;
             if (prefix === 'upload') {
                 const file = document.getElementById('fileFrameCollage').files[0];
-                if(!file) return;
+                if (!file) return;
                 sourceUrl = URL.createObjectURL(file);
             }
 
@@ -2412,24 +2483,48 @@ driveMixedFolderId: getVal('driveMixedFolderId', currentData.global?.driveMixedF
             img.src = sourceUrl;
             img.onload = () => {
                 document.getElementById(`ve-container-${prefix}`).style.display = 'block';
-                if(prefix === 'upload') document.getElementById('ve-hint-upload').style.display = 'block';
+                if (prefix === 'upload') document.getElementById('ve-hint-upload').style.display = 'block';
                 renderVisualSlots(prefix, existingCoords);
             };
         }
 
         function renderVisualSlots(prefix, existingCoords = null) {
-            const container = document.getElementById(`ve-slots-${prefix}`); container.innerHTML = '';
-            
+            const container = document.getElementById(`ve-slots-${prefix}`);
+            container.innerHTML = '';
+
             let formatSelectVal = prefix === 'upload' ? document.getElementById('formatFoto').value : document.getElementById('edit-format').value;
             let jumlah = getJumlahSlot(formatSelectVal);
-            
+
             const img = document.getElementById(`ve-image-${prefix}`);
-            const scaleX = img.clientWidth / img.naturalWidth; const scaleY = img.clientHeight / img.naturalHeight;
-            
+            const scaleX = img.clientWidth / img.naturalWidth;
+            const scaleY = img.clientHeight / img.naturalHeight;
+
             let memoriKoordinat = null;
             if (prefix === 'upload') {
                 const saved = localStorage.getItem('memori_koordinat_' + formatSelectVal);
-                if (saved) memoriKoordinat = JSON.parse(saved);
+                if (saved) {
+                    try {
+                        const parsed = JSON.parse(saved);
+                        // Jika format lama masih pixel mentah dan ternyata melebihi ukuran frame baru, skalakan ulang secara otomatis
+                        if (Array.isArray(parsed) && parsed.length > 0 && !parsed[0].isPct) {
+                            const maxRight = Math.max(...parsed.map(c => (c.x || 0) + (c.width || 0)));
+                            const maxBottom = Math.max(...parsed.map(c => (c.y || 0) + (c.height || 0)));
+                            if (maxRight > img.naturalWidth || maxBottom > img.naturalHeight) {
+                                const fitRatio = Math.min(img.naturalWidth / maxRight, img.naturalHeight / maxBottom);
+                                memoriKoordinat = parsed.map(c => ({
+                                    x: Math.round(c.x * fitRatio),
+                                    y: Math.round(c.y * fitRatio),
+                                    width: Math.round(c.width * fitRatio),
+                                    height: Math.round(c.height * fitRatio)
+                                }));
+                            } else {
+                                memoriKoordinat = parsed;
+                            }
+                        } else {
+                            memoriKoordinat = parsed;
+                        }
+                    } catch (e) {}
+                }
             }
 
             let sumberCoords = existingCoords ? existingCoords : (memoriKoordinat ? memoriKoordinat : null);
@@ -2437,43 +2532,271 @@ driveMixedFolderId: getVal('driveMixedFolderId', currentData.global?.driveMixedF
                 jumlah = sumberCoords.length;
                 const coordContainer = document.getElementById(`coordContainer-${prefix}`);
                 coordContainer.innerHTML = '';
-                for(let i=1; i<=jumlah; i++) buatBarisKoordinat(prefix, i, coordContainer);
+                for (let i = 1; i <= jumlah; i++) buatBarisKoordinat(prefix, i, coordContainer);
                 coordContainer.innerHTML += `<button type="button" class="btn-tambah" onclick="tambahSlotKoordinat('${prefix}')" style="margin-top:10px; width:100%; padding:10px; border-radius:10px; background:var(--yellow); border:2px dashed var(--ink); font-weight:bold; cursor:pointer; color:var(--ink);">➕ Tambah Kotak (Duplikat)</button>`;
             }
 
-            for(let i=1; i<=jumlah; i++) {
-                buatVisualSlot(prefix, i, container, sumberCoords ? sumberCoords[i-1] : null, scaleX, scaleY);
+            for (let i = 1; i <= jumlah; i++) {
+                buatVisualSlot(prefix, i, container, sumberCoords ? sumberCoords[i - 1] : null, scaleX, scaleY);
             }
-            kalkulasiKoordinatKeInput(prefix); 
+            kalkulasiKoordinatKeInput(prefix);
         }
 
+        const SNAP_THRESHOLD = 8; // Kepekaan magnet posisi & ukuran (pixel)
+        let activeResizeSlot = null;
+        let initialWidth = 0, initialHeight = 0;
+
+        function ambilElemenGarisMagnet(prefix) {
+            const container = document.getElementById(`ve-container-${prefix}`);
+            if (!container) return { lineV: null, lineH: null };
+
+            let lineV = container.querySelector('.ve-snap-line-v');
+            if (!lineV) {
+                lineV = document.createElement('div');
+                lineV.className = 've-snap-line-v';
+                container.appendChild(lineV);
+            }
+            let lineH = container.querySelector('.ve-snap-line-h');
+            if (!lineH) {
+                lineH = document.createElement('div');
+                lineH.className = 've-snap-line-h';
+                container.appendChild(lineH);
+            }
+            return { lineV, lineH };
+        }
+
+        function sembunyikanGarisMagnet(prefix) {
+            const { lineV, lineH } = ambilElemenGarisMagnet(prefix);
+            if (lineV) lineV.style.display = 'none';
+            if (lineH) lineH.style.display = 'none';
+            document.querySelectorAll(`#ve-slots-${prefix} .ve-slot`).forEach(s => {
+                s.classList.remove('ve-size-matched');
+                const b = s.querySelector('.ve-snap-badge');
+                if (b) b.style.display = 'none';
+            });
+        }
+
+        function terapkanMagnetSnapping(slot, rawLeft, rawTop, prefix) {
+            const container = document.getElementById(`ve-container-${prefix}`);
+            if (!container) return { left: rawLeft, top: rawTop };
+
+            const { lineV, lineH } = ambilElemenGarisMagnet(prefix);
+            const w = slot.offsetWidth;
+            const h = slot.offsetHeight;
+            const cW = container.clientWidth;
+            const cH = container.clientHeight;
+
+            // Jaga agar kotak tidak pernah keluar dari area kanvas yang bisa disentuh
+            rawLeft = Math.max(0, Math.min(rawLeft, cW - w));
+            rawTop = Math.max(0, Math.min(rawTop, cH - h));
+
+            const targetX = [cW / 2];
+            const targetY = [cH / 2];
+
+            document.querySelectorAll(`#ve-slots-${prefix} .ve-slot`).forEach(other => {
+                if (other === slot) return;
+                const oL = other.offsetLeft, oT = other.offsetTop, oW = other.offsetWidth, oH = other.offsetHeight;
+                targetX.push(oL, oL + oW / 2, oL + oW);
+                targetY.push(oT, oT + oH / 2, oT + oH);
+            });
+
+            let snappedLeft = rawLeft, bestDiffX = SNAP_THRESHOLD + 1, activeGuideX = null;
+            const selfPointsX = [
+                { val: rawLeft, offset: 0 },
+                { val: rawLeft + w / 2, offset: w / 2 },
+                { val: rawLeft + w, offset: w }
+            ];
+            for (const sp of selfPointsX) {
+                for (const tx of targetX) {
+                    const diff = Math.abs(sp.val - tx);
+                    if (diff < bestDiffX && diff <= SNAP_THRESHOLD) {
+                        bestDiffX = diff; snappedLeft = tx - sp.offset; activeGuideX = tx;
+                    }
+                }
+            }
+
+            let snappedTop = rawTop, bestDiffY = SNAP_THRESHOLD + 1, activeGuideY = null;
+            const selfPointsY = [
+                { val: rawTop, offset: 0 },
+                { val: rawTop + h / 2, offset: h / 2 },
+                { val: rawTop + h, offset: h }
+            ];
+            for (const sp of selfPointsY) {
+                for (const ty of targetY) {
+                    const diff = Math.abs(sp.val - ty);
+                    if (diff < bestDiffY && diff <= SNAP_THRESHOLD) {
+                        bestDiffY = diff; snappedTop = ty - sp.offset; activeGuideY = ty;
+                    }
+                }
+            }
+
+            if (lineV) { lineV.style.left = activeGuideX + 'px'; lineV.style.display = activeGuideX !== null ? 'block' : 'none'; }
+            if (lineH) { lineH.style.top = activeGuideY + 'px'; lineH.style.display = activeGuideY !== null ? 'block' : 'none'; }
+
+            return { left: Math.round(snappedLeft), top: Math.round(snappedTop) };
+        }
+
+        // MAGNET UKURAN (RESIZE): Menempel ke Lebar/Tinggi kotak lain & tepi sejajar!
+        function terapkanMagnetResize(slot, rawW, rawH, prefix) {
+            const container = document.getElementById(`ve-container-${prefix}`);
+            if (!container) return { width: rawW, height: rawH };
+
+            const { lineV, lineH } = ambilElemenGarisMagnet(prefix);
+            const left = slot.offsetLeft;
+            const top = slot.offsetTop;
+            const maxW = container.clientWidth - left;
+            const maxH = container.clientHeight - top;
+
+            rawW = Math.max(28, Math.min(rawW, maxW));
+            rawH = Math.max(28, Math.min(rawH, maxH));
+
+            let snappedW = rawW, bestDiffW = SNAP_THRESHOLD + 1, matchedW = false, guideX = null;
+            let snappedH = rawH, bestDiffH = SNAP_THRESHOLD + 1, matchedH = false, guideY = null;
+
+            const otherSlots = Array.from(document.querySelectorAll(`#ve-slots-${prefix} .ve-slot`)).filter(o => o !== slot);
+            otherSlots.forEach(o => o.classList.remove('ve-size-matched'));
+            slot.classList.remove('ve-size-matched');
+
+            let matchedPartnerW = null, matchedPartnerH = null;
+
+            for (const other of otherSlots) {
+                // 1. Magnet Samakan LEBAR dengan kotak lain
+                const diffSameW = Math.abs(rawW - other.offsetWidth);
+                if (diffSameW < bestDiffW && diffSameW <= SNAP_THRESHOLD) {
+                    bestDiffW = diffSameW; snappedW = other.offsetWidth; matchedW = true; matchedPartnerW = other;
+                }
+                // 2. Magnet Tepi Kanan sejajar dengan tepi kanan kotak lain
+                const diffRight = Math.abs((left + rawW) - (other.offsetLeft + other.offsetWidth));
+                if (diffRight < bestDiffW && diffRight <= SNAP_THRESHOLD) {
+                    bestDiffW = diffRight; snappedW = (other.offsetLeft + other.offsetWidth) - left; guideX = other.offsetLeft + other.offsetWidth;
+                }
+
+                // 3. Magnet Samakan TINGGI dengan kotak lain
+                const diffSameH = Math.abs(rawH - other.offsetHeight);
+                if (diffSameH < bestDiffH && diffSameH <= SNAP_THRESHOLD) {
+                    bestDiffH = diffSameH; snappedH = other.offsetHeight; matchedH = true; matchedPartnerH = other;
+                }
+                // 4. Magnet Tepi Bawah sejajar dengan tepi bawah kotak lain
+                const diffBottom = Math.abs((top + rawH) - (other.offsetTop + other.offsetHeight));
+                if (diffBottom < bestDiffH && diffBottom <= SNAP_THRESHOLD) {
+                    bestDiffH = diffBottom; snappedH = (other.offsetTop + other.offsetHeight) - top; guideY = other.offsetTop + other.offsetHeight;
+                }
+            }
+
+            // Tampilkan indikator hijau saat lebar/tinggi sama persis dengan kotak lain
+            const badge = slot.querySelector('.ve-snap-badge');
+            if (matchedW || matchedH) {
+                slot.classList.add('ve-size-matched');
+                if (matchedPartnerW) matchedPartnerW.classList.add('ve-size-matched');
+                if (matchedPartnerH) matchedPartnerH.classList.add('ve-size-matched');
+                if (badge) {
+                    badge.innerText = (matchedW && matchedH) ? '🧲 Ukuran Sama!' : (matchedW ? '🧲 Lebar Sama' : '🧲 Tinggi Sama');
+                    badge.style.display = 'block';
+                }
+            } else if (badge) {
+                badge.style.display = 'none';
+            }
+
+            if (lineV) { lineV.style.left = guideX + 'px'; lineV.style.display = guideX !== null ? 'block' : 'none'; }
+            if (lineH) { lineH.style.top = guideY + 'px'; lineH.style.display = guideY !== null ? 'block' : 'none'; }
+
+            return { width: Math.round(snappedW), height: Math.round(snappedH) };
+        }
+
+        // --- DRAG PINDAH POSISI (MOUSE & TOUCH) ---
         function startDrag(e) {
-            if (e.offsetX > e.target.clientWidth - 20 && e.offsetY > e.target.clientHeight - 20) return; 
-            activeDragSlot = e.target; currentPrefix = activeDragSlot.dataset.prefix;
-            startX = e.clientX; startY = e.clientY; initialLeft = activeDragSlot.offsetLeft; initialTop = activeDragSlot.offsetTop;
+            if (e.target.classList.contains('ve-resize-handle')) return;
+            activeDragSlot = e.currentTarget; currentPrefix = activeDragSlot.dataset.prefix;
+            startX = e.clientX; startY = e.clientY;
+            initialLeft = activeDragSlot.offsetLeft; initialTop = activeDragSlot.offsetTop;
             document.onmousemove = doDrag; document.onmouseup = stopDrag;
         }
         function doDrag(e) {
-            if(!activeDragSlot) return;
-            let dx = e.clientX - startX; let dy = e.clientY - startY;
-            activeDragSlot.style.left = (initialLeft + dx) + 'px'; activeDragSlot.style.top = (initialTop + dy) + 'px';
+            if (!activeDragSlot) return;
+            const pos = terapkanMagnetSnapping(activeDragSlot, initialLeft + (e.clientX - startX), initialTop + (e.clientY - startY), currentPrefix);
+            activeDragSlot.style.left = pos.left + 'px';
+            activeDragSlot.style.top = pos.top + 'px';
         }
-        function stopDrag() { let pfx = currentPrefix; activeDragSlot = null; document.onmousemove = null; document.onmouseup = null; kalkulasiKoordinatKeInput(pfx); }
+        function stopDrag() {
+            let pfx = currentPrefix;
+            sembunyikanGarisMagnet(pfx);
+            activeDragSlot = null; document.onmousemove = null; document.onmouseup = null;
+            kalkulasiKoordinatKeInput(pfx);
+        }
 
         function startDragTouch(e) {
-            const touch = e.touches[0]; const rect = e.target.getBoundingClientRect();
-            if (touch.clientX - rect.left > rect.width - 25 && touch.clientY - rect.top > rect.height - 25) return;
-            e.preventDefault(); activeDragSlot = e.target; currentPrefix = activeDragSlot.dataset.prefix;
-            startX = touch.clientX; startY = touch.clientY; initialLeft = activeDragSlot.offsetLeft; initialTop = activeDragSlot.offsetTop;
-            document.addEventListener('touchmove', doDragTouch, {passive: false}); document.addEventListener('touchend', stopDragTouch);
+            if (e.target.classList.contains('ve-resize-handle')) return;
+            e.preventDefault();
+            const touch = e.touches[0];
+            activeDragSlot = e.currentTarget; currentPrefix = activeDragSlot.dataset.prefix;
+            startX = touch.clientX; startY = touch.clientY;
+            initialLeft = activeDragSlot.offsetLeft; initialTop = activeDragSlot.offsetTop;
+            document.addEventListener('touchmove', doDragTouch, { passive: false });
+            document.addEventListener('touchend', stopDragTouch);
         }
         function doDragTouch(e) {
-            if(!activeDragSlot) return; e.preventDefault(); const touch = e.touches[0];
-            let dx = touch.clientX - startX; let dy = touch.clientY - startY;
-            activeDragSlot.style.left = (initialLeft + dx) + 'px'; activeDragSlot.style.top = (initialTop + dy) + 'px';
+            if (!activeDragSlot) return;
+            e.preventDefault();
+            const touch = e.touches[0];
+            const pos = terapkanMagnetSnapping(activeDragSlot, initialLeft + (touch.clientX - startX), initialTop + (touch.clientY - startY), currentPrefix);
+            activeDragSlot.style.left = pos.left + 'px';
+            activeDragSlot.style.top = pos.top + 'px';
         }
-        function stopDragTouch() { let pfx = currentPrefix; activeDragSlot = null; document.removeEventListener('touchmove', doDragTouch); document.removeEventListener('touchend', stopDragTouch); kalkulasiKoordinatKeInput(pfx); }
+        function stopDragTouch() {
+            let pfx = currentPrefix;
+            sembunyikanGarisMagnet(pfx);
+            activeDragSlot = null;
+            document.removeEventListener('touchmove', doDragTouch);
+            document.removeEventListener('touchend', stopDragTouch);
+            kalkulasiKoordinatKeInput(pfx);
+        }
 
+        // --- RESIZE DENGAN MAGNET UKURAN (MOUSE & TOUCH) ---
+        function startResize(e, slot) {
+            e.stopPropagation(); e.preventDefault();
+            activeResizeSlot = slot; currentPrefix = slot.dataset.prefix;
+            startX = e.clientX; startY = e.clientY;
+            initialWidth = slot.offsetWidth; initialHeight = slot.offsetHeight;
+            document.onmousemove = doResize; document.onmouseup = stopResize;
+        }
+        function doResize(e) {
+            if (!activeResizeSlot) return;
+            const dim = terapkanMagnetResize(activeResizeSlot, initialWidth + (e.clientX - startX), initialHeight + (e.clientY - startY), currentPrefix);
+            activeResizeSlot.style.width = dim.width + 'px';
+            activeResizeSlot.style.height = dim.height + 'px';
+        }
+        function stopResize() {
+            let pfx = currentPrefix;
+            sembunyikanGarisMagnet(pfx);
+            activeResizeSlot = null; document.onmousemove = null; document.onmouseup = null;
+            kalkulasiKoordinatKeInput(pfx);
+        }
+
+        function startResizeTouch(e, slot) {
+            e.stopPropagation(); e.preventDefault();
+            const touch = e.touches[0];
+            activeResizeSlot = slot; currentPrefix = slot.dataset.prefix;
+            startX = touch.clientX; startY = touch.clientY;
+            initialWidth = slot.offsetWidth; initialHeight = slot.offsetHeight;
+            document.addEventListener('touchmove', doResizeTouch, { passive: false });
+            document.addEventListener('touchend', stopResizeTouch);
+        }
+        function doResizeTouch(e) {
+            if (!activeResizeSlot) return;
+            e.preventDefault();
+            const touch = e.touches[0];
+            const dim = terapkanMagnetResize(activeResizeSlot, initialWidth + (touch.clientX - startX), initialHeight + (touch.clientY - startY), currentPrefix);
+            activeResizeSlot.style.width = dim.width + 'px';
+            activeResizeSlot.style.height = dim.height + 'px';
+        }
+        function stopResizeTouch() {
+            let pfx = currentPrefix;
+            sembunyikanGarisMagnet(pfx);
+            activeResizeSlot = null;
+            document.removeEventListener('touchmove', doResizeTouch);
+            document.removeEventListener('touchend', stopResizeTouch);
+            kalkulasiKoordinatKeInput(pfx);
+        }
         function kalkulasiKoordinatKeInput(prefix) {
             const img = document.getElementById(`ve-image-${prefix}`);
             if(!img || !img.naturalWidth) return;
@@ -2664,7 +2987,17 @@ driveMixedFolderId: getVal('driveMixedFolderId', currentData.global?.driveMixedF
                     height: parseInt(document.getElementById(`upload_posH_${i}`).value) || 0 
                 });
             });
-            localStorage.setItem('memori_koordinat_' + formatFoto, JSON.stringify(koordinat));
+            const imgUpload = document.getElementById('ve-image-upload');
+            const refW = imgUpload?.naturalWidth || 1200;
+            const refH = imgUpload?.naturalHeight || 1800;
+            const memoriPersen = koordinat.map(c => ({
+                isPct: true,
+                xPct: c.x / refW,
+                yPct: c.y / refH,
+                wPct: c.width / refW,
+                hPct: c.height / refH
+            }));
+            localStorage.setItem('memori_koordinat_' + formatFoto, JSON.stringify(memoriPersen));
             const frameFiles = document.getElementById('fileFrameCollage').files;
             const thumbFiles = document.getElementById('fileThumbCollage').files;
             const baseId = document.getElementById('idFrame').value.replace(/\s+/g, '-').toLowerCase();
@@ -4280,7 +4613,10 @@ document.addEventListener('DOMContentLoaded', loadQrisSettings);
                     driveFolderMode: getVal('sys-driveFolderMode', currentData.global?.driveFolderMode || 'per_session'),
                     driveParentFolderId: getVal('driveParentFolderId', currentData.global?.driveParentFolderId || ''),
                     driveMixedFolderId: getVal('driveMixedFolderId', currentData.global?.driveMixedFolderId || ''),
-                    
+                    driveMixedFolderId: getVal('driveMixedFolderId', currentData.global?.driveMixedFolderId || ''),
+uploadRawPhotos: getVal('sys-uploadRawPhotos', currentData.global?.uploadRawPhotos !== false ? 'true' : 'false') === "true",
+webcamResolution: getVal('sys-webcamResolution', currentData.global?.webcamResolution || '1080p'),
+
                     // ✅ PENGATURAN PRINTER & DUAL PRINTER (TERSIMPAN PERMANEN)
                     printer4R: document.getElementById('sys-printer4R') ? document.getElementById('sys-printer4R').value : (currentData.global?.printer4R || ''),
                     printer4R_2: document.getElementById('sys-printer4R_2') ? document.getElementById('sys-printer4R_2').value : (currentData.global?.printer4R_2 || ''),
@@ -4322,19 +4658,19 @@ document.addEventListener('DOMContentLoaded', loadQrisSettings);
     }
 
     // Daftar seluruh ID input pengaturan umum & kamera
-    const generalSettingIds = [
+   const generalSettingIds = [
         'sys-usePin', 'sys-adminPin',
         'clg-sessionTimer', 'clg-timer', 'clg-maxRetake', 'pb-sessionTimer',
-        'sys-cameraEngine', 'sys-cameraOrientation', 'sys-mirrorCamera', 'sys-takeFromRemote','sys-driveFolderMode','driveMixedFolderId',
-        'sys-brightness', 'sys-flashWorkaround', 'sys-printer4R', 'sys-printerA4',
+        'sys-cameraEngine', 'sys-webcamResolution', 'sys-cameraOrientation', 'sys-mirrorCamera', 'sys-takeFromRemote',
+        'sys-brightness', 'sys-flashWorkaround',
+        'sys-dualPrinterEnabled', 'sys-printer4R', 'sys-printer4R_2', 'sys-printerA4',
         'sys-livePhoto', 'sys-photoGif',
         'sys-canonIso', 'sys-canonTv', 'sys-canonAv',
-        'sys-cloudStorage', 'driveParentFolderId',
+        'sys-cloudStorage', 'sys-driveFolderMode', 'driveParentFolderId', 'driveMixedFolderId', 'sys-uploadRawPhotos',
         'wa-message-text',
-        'sys-dualPrinterEnabled',
-        'sys-printer4R_2',
         'sys-qrisPriceStatic', 'sys-extraPrintPriceStatic',
-        'sys-discountEnabled','sys-dualCameraEnabled', 'sys-cameraEngine2', 'sys-allowLiveCameraSwitch', 'sys-webcamDeviceId1', 'sys-webcamDeviceId2'
+        'sys-discountEnabled',
+        'sys-dualCameraEnabled', 'sys-cameraEngine2', 'sys-allowLiveCameraSwitch', 'sys-webcamDeviceId1', 'sys-webcamDeviceId2'
     ];
 
     // Daftar seluruh ID input pengaturan QRIS Dinamis
@@ -4364,6 +4700,13 @@ document.addEventListener('DOMContentLoaded', loadQrisSettings);
                 el.addEventListener('input', () => {
                     if (debounceTimerGeneral) clearTimeout(debounceTimerGeneral);
                     debounceTimerGeneral = setTimeout(() => window.simpanPengaturanSilent(), 600);
+                });
+                el.addEventListener('blur', () => {
+                    if (debounceTimerGeneral) {
+                        clearTimeout(debounceTimerGeneral);
+                        debounceTimerGeneral = null;
+                        window.simpanPengaturanSilent();
+                    }
                 });
             }
         });

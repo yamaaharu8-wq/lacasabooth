@@ -8,6 +8,9 @@ const http = require('http');
 const { Server } = require('socket.io');
 const fs = require('fs');
 const crypto = require('crypto');
+if (!globalThis.crypto && crypto.webcrypto) {
+    globalThis.crypto = crypto.webcrypto;
+}
 const { google } = require('googleapis');
 const { autoUpdater } = require('electron-updater');
 
@@ -94,7 +97,11 @@ if (!fs.existsSync(CREDENTIALS_PATH)) {
 const sharp = require('sharp');
 const multer = require('multer');
 const { exec, spawn } = require('child_process');
-const { Client, LocalAuth } = require('whatsapp-web.js');
+const baileys = require('@whiskeysockets/baileys');
+const makeWASocket = baileys.default || baileys.makeWASocket;
+const { useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = baileys;
+const pino = require('pino');
+const waQrGenerator = require('qrcode');
 const qrcode = require('qrcode-terminal');
 const os = require('os'); 
 const printQueue = [];
@@ -321,134 +328,170 @@ function bersihkanKunciSesiWa() {
 }
 
 // =======================================================
-// 2. 🤖 SISTEM WHATSAPP BOT LOKAL (ANTI-MACET DI VERSI .EXE)
+// 2. 🤖 SISTEM WHATSAPP BOT LOKAL (BAILEYS - TANPA CHROME)
 // =======================================================
-const waSessionPath = path.join(userDataPath, 'wa_session');
+const waSessionPath = path.join(userDataPath, 'wa_baileys_auth');
+const oldWaSessionPath = path.join(userDataPath, 'wa_session'); // Folder bekas whatsapp-web.js
 let waClient = null;
 let waBotStatus = 'STARTING';
 let waBotQr = '';
+let waBotQrImage = '';
 let isWaInitializing = false;
+let isManualWaLogout = false;
+let waReconnectTimer = null;
 
-function buatInstanceWaClient() {
-    return new Client({
-        authStrategy: new LocalAuth({ 
-            clientId: "lacasabooth-bot",
-            dataPath: waSessionPath 
-        }), 
-        puppeteer: {
-            headless: 'new', // Mode Headless modern agar tidak diblokir WhatsApp Web
-            executablePath: getBrowserPath(),
-            args: [
-                '--no-sandbox', 
-                '--disable-setuid-sandbox', 
-                '--disable-dev-shm-usage',
-                '--disable-accelerated-2d-canvas',
-                '--no-first-run',
-                '--disable-gpu',
-                '--disable-extensions',
-                '--disable-software-rasterizer',
-                '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
-            ]
+function matikanBotWaSafely() {
+    isManualWaLogout = true;
+    if (waReconnectTimer) { clearTimeout(waReconnectTimer); waReconnectTimer = null; }
+    try {
+        if (waClient) {
+            waClient.ev.removeAllListeners('connection.update');
+            waClient.end(undefined);
+            waClient = null;
         }
-    });
+    } catch (e) {}
 }
 
 async function nyalakanMesinWa() {
     if (isWaInitializing) return;
     isWaInitializing = true;
-    waBotStatus = 'STARTING';
-    waBotQr = '';
-
-    await bersihkanKunciSesiWa();
-    waClient = buatInstanceWaClient();
-
-    waClient.on('qr', (qr) => {
-        console.log('📲 [WA] QR Code baru tersedia! Silakan scan di Dashboard.');
-        waBotStatus = 'QR_READY';
-        waBotQr = qr;
-    });
-
-    waClient.on('ready', () => {
-        console.log('✅ [WA] Bot WhatsApp Siap Digunakan!');
-        waBotStatus = 'READY';
-        waBotQr = '';
-    });
-
-    waClient.on('authenticated', () => {
-        console.log('🔐 [WA] Autentikasi berhasil!');
-        waBotStatus = 'AUTHENTICATED';
-    });
-
-    waClient.on('auth_failure', (msg) => {
-        console.error('❌ [WA] Autentikasi gagal:', msg);
-        waBotStatus = 'DISCONNECTED';
-    });
-
-    waClient.on('disconnected', async (reason) => {
-        console.log('⚠️ [BOT WA] Sesi terputus:', reason);
-        waBotStatus = 'DISCONNECTED';
-        waBotQr = '';
-        try { await waClient.destroy(); } catch (e) {}
-    });
+    isManualWaLogout = false;
+    if (waReconnectTimer) { clearTimeout(waReconnectTimer); waReconnectTimer = null; }
 
     try {
-        await waClient.initialize();
+        if (!fs.existsSync(waSessionPath)) fs.mkdirSync(waSessionPath, { recursive: true });
+        const { state, saveCreds } = await useMultiFileAuthState(waSessionPath);
+
+        // Ambil versi WhatsApp Web terbaru secara otomatis (dengan fallback aman jika offline)
+        let version = [2, 3000, 1015901307];
+        try {
+            const latest = await fetchLatestBaileysVersion();
+            if (latest && latest.version) version = latest.version;
+        } catch (e) {
+            console.warn("⚠️ [WA] Gagal cek versi WA terbaru, menggunakan versi bawaan.");
+        }
+
+        waClient = makeWASocket({
+            version,
+            auth: state,
+            logger: pino({ level: 'silent' }),
+            browser: ['Lacasabooth', 'Chrome', '124.0.0'],
+            printQRInTerminal: false,
+            syncFullHistory: false,
+            markOnlineOnConnect: false,
+            connectTimeoutMs: 60000,
+            shouldIgnoreJid: (jid) => jid.endsWith('@g.us') || jid === 'status@broadcast' || jid.endsWith('@newsletter')
+        });
+
+        waClient.ev.on('creds.update', saveCreds);
+
+        waClient.ev.on('connection.update', async (update) => {
+            const { connection, lastDisconnect, qr } = update;
+
+            if (qr) {
+                console.log('📲 [WA BAILEYS] QR Code baru tersedia! Silakan scan di Dashboard.');
+                waBotStatus = 'QR_READY';
+                waBotQr = qr;
+                try {
+                    waBotQrImage = await waQrGenerator.toDataURL(qr, {
+                        errorCorrectionLevel: 'M',
+                        margin: 2,
+                        width: 240
+                    });
+                } catch (e) {
+                    waBotQrImage = '';
+                }
+            }
+
+            if (connection === 'open') {
+                console.log('✅ [WA BAILEYS] Bot WhatsApp Terhubung & Siap Digunakan!');
+                waBotStatus = 'READY';
+                waBotQr = '';
+                waBotQrImage = '';
+                waUnknownRetryCount = 0;
+            }
+
+            if (connection === 'close') {
+                if (isManualWaLogout) return;
+
+                const errObj = lastDisconnect?.error;
+                const statusCode = errObj?.output?.statusCode;
+                const errMsg = errObj?.message || (errObj ? String(errObj) : 'Tidak ada detail');
+                const isLoggedOut = statusCode === DisconnectReason.loggedOut; // 401
+                const isRestartRequired = statusCode === DisconnectReason.restartRequired; // 515
+
+                console.log(`⚠️ [WA BAILEYS] Koneksi tertutup (Kode: ${statusCode || 'unknown'}) | Detail: ${errMsg}`);
+
+                if (isLoggedOut) {
+                    waBotStatus = 'STARTING';
+                    waBotQr = '';
+                    waBotQrImage = '';
+                    try { fs.rmSync(waSessionPath, { recursive: true, force: true }); } catch (e) {}
+                    waReconnectTimer = setTimeout(() => nyalakanMesinWa(), 2000);
+                } else if (!statusCode) {
+                    // Jika error sistem (unknown), beri jeda 5 detik dan batasi percobaan agar terminal tidak spam
+                    waUnknownRetryCount = (typeof waUnknownRetryCount === 'number' ? waUnknownRetryCount : 0) + 1;
+                    if (waUnknownRetryCount <= 5) {
+                        waBotStatus = 'STARTING';
+                        waReconnectTimer = setTimeout(() => nyalakanMesinWa(), 5000);
+                    } else {
+                        console.error("❌ [WA BAILEYS] Berhenti mencoba ulang setelah 5x error sistem. Cek pesan Detail di atas.");
+                        waBotStatus = 'ERROR';
+                    }
+                } else {
+                    waUnknownRetryCount = 0;
+                    waBotStatus = isRestartRequired ? 'AUTHENTICATED' : 'STARTING';
+                    waReconnectTimer = setTimeout(() => nyalakanMesinWa(), 2500);
+                }
+            }
+        });
     } catch (err) {
-        console.error("❌ [WA ERROR] Gagal inisialisasi WA:", err.message);
-        await bersihkanKunciSesiWa();
+        console.error("❌ [WA BAILEYS ERROR] Gagal inisialisasi:", err.message);
+        waBotStatus = 'STARTING';
+        waReconnectTimer = setTimeout(() => nyalakanMesinWa(), 5000);
+    } finally {
+        isWaInitializing = false;
     }
-    isWaInitializing = false;
 }
 
 nyalakanMesinWa();
 
-expressApp.get('/api/wa-status', async (req, res) => {
-    let realStatus = waBotStatus;
-    try {
-        if (waClient && waBotStatus === 'AUTHENTICATED') {
-            const state = await waClient.getState().catch(() => null);
-            if (state === 'CONNECTED' || waClient.info) {
-                waBotStatus = 'READY';
-                realStatus = 'READY';
-            }
-        }
-    } catch (e) {}
-    res.json({ status: realStatus, qr: waBotQr });
+expressApp.get('/api/wa-status', (req, res) => {
+    res.json({ status: waBotStatus, qr: waBotQr, qrImage: waBotQrImage });
 });
-// [FIXED] Logika Reset Bot WA yang membunuh proses Chrome/Edge pengunci folder di .exe sebelum membuat QR baru!
+
 expressApp.post('/api/wa-logout', async (req, res) => {
-    console.log("🔄 Memproses Reset & Pembersihan Total Sesi WA...");
+    console.log("🔄 [WA BAILEYS] Memproses Reset & Pembersihan Sesi WA...");
+    isManualWaLogout = true;
     waBotStatus = 'STARTING';
     waBotQr = '';
+    waBotQrImage = '';
+    if (waReconnectTimer) { clearTimeout(waReconnectTimer); waReconnectTimer = null; let waUnknownRetryCount = 0; }
 
     try {
         if (waClient) {
             await waClient.logout().catch(() => {});
-            await waClient.destroy().catch(() => {});
+            waClient.ev.removeAllListeners('connection.update');
+            waClient.end(undefined);
+            waClient = null;
         }
     } catch (e) {}
 
-    // 1. Bunuh paksa proses browser wa_session yang mengunci file di Windows!
-    await bersihkanKunciSesiWa();
-
-    // 2. Hapus folder wa_session sampai benar-benar bersih
-    if (fs.existsSync(waSessionPath)) {
-        try {
-            fs.rmSync(waSessionPath, { recursive: true, force: true });
-            console.log("✅ Folder wa_session berhasil dihapus bersih.");
-        } catch (err) {
-            console.error("⚠️ Percobaan hapus ke-1 gagal, mencoba lagi setelah 1 detik:", err.message);
-            await new Promise(r => setTimeout(r, 1000));
-            try { fs.rmSync(waSessionPath, { recursive: true, force: true }); } catch (e) {}
+    // Hapus folder auth Baileys & sisa folder lama jika ada
+    [waSessionPath, oldWaSessionPath].forEach(dir => {
+        if (fs.existsSync(dir)) {
+            try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {}
         }
-    }
+    });
 
-    // 3. Nyalakan ulang mesin WA dari nol untuk menghasilkan QR baru
-    isWaInitializing = false;
-    nyalakanMesinWa();
+    setTimeout(() => {
+        isManualWaLogout = false;
+        isWaInitializing = false;
+        nyalakanMesinWa();
+    }, 1000);
+
     res.json({ success: true });
 });
-
 // =======================================================
 // 3. 🔌 INISIALISASI MESIN CANON EDSDK & LIVE VIEW
 // =======================================================
@@ -743,7 +786,7 @@ autoUpdater.on('update-downloaded', () => {
     setTimeout(async () => {
         try { stopLiveView(); } catch (e) {}
         try { if (isEdsdkInitialized) EdsTerminateSDK(); } catch (e) {}
-        try { if (waClient) await waClient.destroy(); } catch (e) {}
+       matikanBotWaSafely();
         try { if (cfTunnelProcess) cfTunnelProcess.kill(); } catch (e) {}
         try { server.close(); } catch (e) {}
 
@@ -755,7 +798,7 @@ autoUpdater.on('update-downloaded', () => {
 
 const matikanSistem = async () => {
     console.log("🛑 Mematikan mesin & membersihkan sesi latar belakang...");
-    try { await waClient.destroy(); } catch (e) {} // Matikan bot WA dengan aman
+    matikanBotWaSafely();
     if (cfTunnelProcess) cfTunnelProcess.kill();
     exec('taskkill /f /im cloudflared.exe', () => {});
     electronApp.quit();
@@ -2193,6 +2236,7 @@ const lockedSessionId = req.body.sessionId || activeSessionId;
         let mixedFolderId = "";
         let isLivePhotoOn = false;
         let isPhotoGifOn = false;
+        let uploadRawPhotos = true;
 
         try {
             const settings = safeReadJson(settingsPath, {});
@@ -2208,6 +2252,9 @@ const lockedSessionId = req.body.sessionId || activeSessionId;
                 isLivePhotoOn = dashLive && (req.body.livePhoto !== false);
                 isPhotoGifOn = dashGif && (req.body.photoGif !== false);
             }
+            if (settings.global.uploadRawPhotos !== undefined) {
+    uploadRawPhotos = (settings.global.uploadRawPhotos === true || settings.global.uploadRawPhotos === "true");
+}
         } catch (e) {}
 
         let urlLivePhoto = isLivePhotoOn ? 'processing' : null;
@@ -2433,15 +2480,20 @@ const lockedSessionId = req.body.sessionId || activeSessionId;
                     );
                 }
                 const allRawFiles = fs.readdirSync(sessionDir).filter(f => f.endsWith('_mentah.jpg'));
-                for (let idxRaw = 0; idxRaw < allRawFiles.length; idxRaw++) {
-                    const rawPath = path.join(sessionDir, allRawFiles[idxRaw]);
-                    const nomorUrut = idxRaw + 1;
-                    await uploadFileWithCleanName(
-                        rawPath,
-                        `Foto_Mentah_${nomorUrut}.jpg`,
-                        `${reverseOrderKey}_${tglSingkat}_${jamSingkat}-${detikSingkat}_MENTAH_${nomorUrut}.jpg`
-                    );
-                }
+                if (uploadRawPhotos) {
+                 const allRawFiles = fs.readdirSync(sessionDir).filter(f => f.endsWith('_mentah.jpg'));
+                 for (let idxRaw = 0; idxRaw < allRawFiles.length; idxRaw++) {
+                     const rawPath = path.join(sessionDir, allRawFiles[idxRaw]);
+                     const nomorUrut = idxRaw + 1;
+                     await uploadFileWithCleanName(
+                         rawPath,
+                         `Foto_Mentah_${nomorUrut}.jpg`,
+                         `${reverseOrderKey}_${tglSingkat}_${jamSingkat}-${detikSingkat}_MENTAH_${nomorUrut}.jpg`
+                     );
+                 }
+             } else {
+                 console.log("⏭️ [G-DRIVE] Upload foto mentah dinonaktifkan (Hanya hasil template, Live Photo & GIF yang dikirim).");
+             }
             }
         })();
         
@@ -2709,31 +2761,24 @@ expressApp.post('/api/send-wa', async (req, res) => {
     if (nomorFormat.startsWith('+62')) nomorFormat = '62' + nomorFormat.slice(3);
 
     try {
-        if (!waClient) {
-            return res.status(500).json({ success: false, message: 'Mesin Bot WA belum menyala. Silakan cek tab Bot WA di Dashboard.' });
-        }
-
-        // Cek status nyata langsung ke browser Puppeteer (tidak hanya bergantung pada waClient.info)
-        const waState = await waClient.getState().catch(() => null);
-        const isConnected = (waBotStatus === 'READY') || (waState === 'CONNECTED') || Boolean(waClient.info);
-
-        if (!isConnected) {
+        if (!waClient || waBotStatus !== 'READY') {
             if (waBotStatus === 'AUTHENTICATED' || waBotStatus === 'STARTING') {
-                return res.status(503).json({ success: false, message: 'Bot WA sedang sinkronisasi chat. Tunggu 10-15 detik lalu klik Kirim lagi.' });
+                return res.status(503).json({ success: false, message: 'Bot WA sedang menghubungkan. Tunggu beberapa detik lalu klik Kirim lagi.' });
             }
-            return res.status(500).json({ success: false, message: 'Sesi WA terputus. Silakan Reset & Scan ulang Bot WA di Dashboard.' });
+            return res.status(500).json({ success: false, message: 'Bot WA belum terhubung. Silakan scan QR di Dashboard.' });
         }
 
-        // Cari ID kontak dengan fallback aman jika WhatsApp Web mengubah struktur internal
-        let chatId = `${nomorFormat}@c.us`;
+        const targetJid = `${nomorFormat}@s.whatsapp.net`;
+        let finalJid = targetJid;
+
         try {
-            const contactId = await waClient.getNumberId(nomorFormat);
-            if (!contactId) {
+            const [check] = await waClient.onWhatsApp(targetJid);
+            if (!check || !check.exists) {
                 return res.status(400).json({ success: false, message: 'Nomor tidak terdaftar di WhatsApp!' });
             }
-            chatId = contactId._serialized;
+            finalJid = check.jid || targetJid;
         } catch (lookupErr) {
-            console.warn("⚠️ [WA] Fallback langsung ke @c.us karena getNumberId error:", lookupErr.message);
+            console.warn("⚠️ [WA] Lewati verifikasi nomor, kirim langsung ke:", targetJid);
         }
 
         let customPesan = "Halo dari Lacasaphoto! 📸\n\nTerima kasih sudah berfoto ria bersama kami. Berikut link foto kamu:\n\n🔗 {link}";
@@ -2745,10 +2790,12 @@ expressApp.post('/api/send-wa', async (req, res) => {
         } catch (e) {}
 
         const pesanAkhir = customPesan.replace('{link}', linkFoto);
-        await waClient.sendMessage(chatId, pesanAkhir);
+        await waClient.sendMessage(finalJid, { text: pesanAkhir });
+
+        console.log(`✅ [WA BAILEYS] Pesan terkirim ke ${finalJid}`);
         return res.json({ success: true, message: 'Pesan WhatsApp berhasil dikirim!' });
     } catch (error) {
-        console.error("Error Kirim WA:", error);
+        console.error("❌ Error Kirim WA:", error);
         res.status(500).json({ success: false, message: `Sistem WA: ${error.message}` });
     }
 });
