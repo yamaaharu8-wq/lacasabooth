@@ -630,6 +630,7 @@
         let settingFlashWorkaround = true; 
         let settingWaktuIdleMilih = 300; 
         let activeCameraMode = 'canon'; 
+        let activeCameraEngine = 'canon';
         let orientasiKamera = 'lanskap';
         let webcamStream = null;
         
@@ -725,7 +726,9 @@
                 const res = await fetch('/api/settings'); const data = await res.json();
                 
                 if (data.global) {
-    let mesinKamera = (data.global && (data.global.cameraEngine || data.global.kameraUtama)) || 'canon';
+   let mesinKamera = (dataSet.global && (dataSet.global.cameraEngine || dataSet.global.kameraUtama)) || 'canon';
+activeCameraEngine = mesinKamera.toLowerCase();
+
 if (mesinKamera.toLowerCase() !== 'canon') {
     activeCameraMode = 'webcam'; // Sony, Fujifilm, Nikon, & Webcam menggunakan Live View UVC + Hot Folder Watcher!
 } else {
@@ -869,13 +872,14 @@ if (mesinKamera.toLowerCase() !== 'canon') {
        function updateTransformKamera() {
             let w = "100vw", h = "100vh";
             if (orientasiKamera === 'potret') {
-                w = "100vh"; h = "100vw"; 
+                w = "100vh"; h = "100vw";
             }
 
-            // PENTING: rotate(90deg) WAJIB ditulis SEBELUM scaleX(-1) agar cermin Canon & Webcam tidak terbalik atas-bawah!
+            // PENTING: CSS dieksekusi dari kanan ke kiri!
+            // rotate(90deg) di kanan (tegak potret dulu), lalu scaleX(-1) di kiri (cermin horizontal layar)
             let transformCSSLive = "translate(-50%, -50%) ";
-            if (orientasiKamera === 'potret') transformCSSLive += "rotate(90deg) ";
             if (isMirror) transformCSSLive += "scaleX(-1) ";
+            if (orientasiKamera === 'potret') transformCSSLive += "rotate(90deg) ";
 
             ['liveView', 'webcam-view'].forEach(id => {
                 const el = document.getElementById(id);
@@ -987,7 +991,8 @@ if (mesinKamera.toLowerCase() !== 'canon') {
             setTimeout(() => { flash.style.opacity = '0'; }, 50); setTimeout(() => { flash.remove(); }, 500);
             teksLoading.style.display = 'block'; 
 
-            if (activeCameraMode === 'webcam') {
+           if (activeCameraMode === 'webcam' && activeCameraEngine !== 'sony' && activeCameraEngine !== 'nikon') {
+             
                 const video = document.getElementById('webcam-view');
                 const canvas = document.getElementById('webcam-canvas');
                 const ctx = canvas.getContext('2d');
@@ -1021,16 +1026,27 @@ if (mesinKamera.toLowerCase() !== 'canon') {
                     body: JSON.stringify({ imageBase64: base64Image, isMirrored: false, liveFramesBase64: webcamFrames }) 
                 });
             } else {
-                await fetch('/capture', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'photobox', mirror: isMirror, lvActive: settingFlashWorkaround, orientation: orientasiKamera }) });
-            }
+    // Canon (EDSDK) DAN Sony/Nikon (digiCamControl Shutter Fisik) masuk ke /capture!
+    await fetch('/capture', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            mode: 'photobox', // sesuaikan: 'newspaper' atau 'photobox'
+            mirror: isMirror,
+            lvActive: settingFlashWorkaround,
+            orientation: isPortrait ? 'orientasiKamera' : 'orientasiKamera', // di photobox.html pakai: orientasiKamera
+            liveFramesBase64: (activeCameraMode === 'webcam') ? webcamFrames : []
+        })
+    });
+}
             
             let fotoBaruDitemukan = false; let waktuTunggu = 0; let namaFotoBaru = ""; let urlFotoBaru = "";
-            while (!fotoBaruDitemukan && waktuTunggu < 10000) {
+            while (!fotoBaruDitemukan && waktuTunggu < 15000) {
                 await new Promise(r => setTimeout(r, 400)); waktuTunggu += 400;
                 try {
                     const resCek = await fetch('/api/photobox-raws'); const dataCek = await resCek.json();
                     if (dataCek.success && dataCek.files.length > 0 && dataCek.files[0].name !== namaFotoSebelumnya) {
-                        namaFotoBaru = dataCek.files[0].name; urlFotoBaru = dataCek.files[0].file; fotoBaruDitemukan = true; 
+                        namaFotoBaru = dataCek.files[0].name; urlFotoBaru = dataCek.files[0].file; fotoBaruDitemukan = true; document.getElementById('webcam-view').style.display = 'none';
                     }
                 } catch (e) { }
             }
@@ -1046,15 +1062,17 @@ if (mesinKamera.toLowerCase() !== 'canon') {
                 gallery.scrollTop = gallery.scrollHeight;
                 
                 const imgHasil = new Image();
-                imgHasil.onload = function() { 
-                    teksLoading.style.display = 'none'; 
-                    document.getElementById('liveView').classList.remove('mirrored');
-                    document.getElementById('liveView').style.filter = "brightness(100%)";
-                    
-                    // Jangan diputar dengan CSS lagi karena gambar fisiknya sudah di-rotate
-                    document.getElementById('liveView').style.transform = "translate(-50%, -50%)";
-                    
-                    document.getElementById('liveView').src = imgHasil.src; 
+                imgHasil.onload = function() {
+                    teksLoading.style.display = 'none';
+                    const lv = document.getElementById('liveView');
+                    lv.classList.remove('mirrored');
+                    lv.style.filter = "brightness(100%)";
+                    lv.style.width = "100vw";
+                    lv.style.height = "100vh";
+                    lv.style.transform = "translate(-50%, -50%)";
+                    lv.style.display = "block";
+                    document.getElementById('webcam-view').style.display = "none";
+                    lv.src = imgHasil.src;
                 };
                 imgHasil.onerror = function() { teksLoading.style.display = 'none'; };
                 imgHasil.src = `${urlFotoBaru}?t=${Date.now()}`;
@@ -1084,12 +1102,22 @@ if (mesinKamera.toLowerCase() !== 'canon') {
         }
 
         function previewFoto(url) {
-            document.getElementById('liveView').style.display = 'none'; document.getElementById('previewImageOverlay').src = url + "?t=" + Date.now();
-            document.getElementById('previewImageOverlay').style.display = 'block'; document.getElementById('btn-tutup-preview').style.display = 'block'; document.querySelector('.pip-video').style.display = 'none'; 
+            document.getElementById('liveView').style.display = 'none';
+            document.getElementById('webcam-view').style.display = 'none';
+            document.getElementById('previewImageOverlay').src = url + "?t=" + Date.now();
+            document.getElementById('previewImageOverlay').style.display = 'block';
+            document.getElementById('btn-tutup-preview').style.display = 'block';
+            document.querySelector('.pip-video').style.display = 'none';
         }
         function tutupPreviewFoto() {
-            document.getElementById('liveView').style.display = 'block'; document.getElementById('previewImageOverlay').style.display = 'none';
-            document.getElementById('btn-tutup-preview').style.display = 'none'; document.querySelector('.pip-video').style.display = 'block';
+            document.getElementById('previewImageOverlay').style.display = 'none';
+            document.getElementById('btn-tutup-preview').style.display = 'none';
+            document.querySelector('.pip-video').style.display = 'block';
+            if (activeCameraMode === 'webcam') {
+                document.getElementById('webcam-view').style.display = 'block';
+            } else {
+                document.getElementById('liveView').style.display = 'block';
+            }
         }
 
         async function akhiriSesiKameraLanjut() {
@@ -2203,8 +2231,8 @@ if (mesinKamera.toLowerCase() !== 'canon') {
                 draggedImg.style.opacity = '1';
                 document.querySelectorAll('.drag-img').forEach(other => other.parentElement.classList.remove('swap-drop-target-highlight'));
                 let dx = e.clientX - startX, dy = e.clientY - startY;
-                let moveX = (typeof isPortrait !== 'undefined' && isPortrait) ? dy : dx;
-                let moveY = (typeof isPortrait !== 'undefined' && isPortrait) ? -dx : dy;
+                let moveX = dx;
+                let moveY = dy;
                 const zoomLvl = window.slotZooms[idx] || 1.0;
                 const sensitivity = 140 / zoomLvl;
                 let newImgX = Math.max(0, Math.min(100, initialX - (moveX / slotRect.width) * sensitivity));
@@ -2493,9 +2521,12 @@ if (mesinKamera.toLowerCase() !== 'canon') {
 
             window.preferredWebcamDeviceId = (window.currentCamSlot === 1) ? (g.webcamDeviceId1 || '') : (g.webcamDeviceId2 || '');
 
-            if (typeof activeCameraMode !== 'undefined') {
-                activeCameraMode = (activeEng.toLowerCase() === 'canon') ? 'canon' : 'webcam';
-            }
+            if (typeof activeCameraEngine !== 'undefined') {
+    activeCameraEngine = activeEng.toLowerCase();
+}
+if (typeof activeCameraMode !== 'undefined') {
+    activeCameraMode = (activeEng.toLowerCase() === 'canon') ? 'canon' : 'webcam';
+}
 
             pasangTombolSwitchKameraRapi(allowLiveSwitch);
         } catch (e) {}
@@ -2532,7 +2563,9 @@ if (mesinKamera.toLowerCase() !== 'canon') {
         if (typeof matikanWebcam === 'function') matikanWebcam();
         if (typeof isLiveViewRunning !== 'undefined') isLiveViewRunning = false;
         if (typeof isLiveViewActive !== 'undefined') isLiveViewActive = false;
-
+        if (typeof activeCameraEngine !== 'undefined') {
+    activeCameraEngine = (engineBaru || 'canon').toLowerCase();
+}
         if ((engineBaru || '').toLowerCase() === 'canon') {
             if (typeof activeCameraMode !== 'undefined') activeCameraMode = 'canon';
             document.getElementById('webcam-view').style.display = 'none';

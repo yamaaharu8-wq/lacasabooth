@@ -587,6 +587,7 @@
         let currentCustomOffsets = {};
         let intervalCekPembayaranExtra = null; 
         let activeCameraMode = 'canon'; 
+        let activeCameraEngine = 'canon';
         let webcamStream = null;
         let qrisBase64Tersemat = "";
         let settingLivePhotoMaster = false;
@@ -675,7 +676,7 @@
         }
 
         async function muatPengaturanDanTemplate() {
-            try {
+              try {
                 await fetch('/api/start-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId: currentSessionId }) });
                 // Tambahkan anti-cache
                 const resSet = await fetch(`/api/settings?t=${Date.now()}`); 
@@ -722,7 +723,9 @@
                     cbGif.checked = settingPhotoGifMaster;
                 }
 
-                let mesinKamera = (dataSet.global && (dataSet.global.cameraEngine || dataSet.global.kameraUtama)) || 'canon';
+               let mesinKamera = (dataSet.global && (dataSet.global.cameraEngine || dataSet.global.kameraUtama)) || 'canon';
+activeCameraEngine = mesinKamera.toLowerCase();
+
 if (mesinKamera.toLowerCase() !== 'canon') {
     activeCameraMode = 'webcam'; // Sony, Fujifilm, Nikon, & Webcam menggunakan Live View UVC + Hot Folder Watcher!
 } else {
@@ -809,10 +812,11 @@ function inisialisasiTabFormat() {
             let h = "100vh";
             if (isPortrait) { w = "100vh"; h = "100vw"; }
             
-            // 1. Live View Kamera tetap diputar karena dia aliran video langsung dari kamera
+            // PENTING: CSS dieksekusi dari kanan ke kiri!
+            // rotate(90deg) di kanan (dijalankan DULU agar tegak), lalu scaleX(-1) di kiri (cermin horizontal layar)
             let transformCSSLive = "translate(-50%, -50%) ";
+            if (isMirror) transformCSSLive += "scaleX(-1) ";
             if (isPortrait) transformCSSLive += "rotate(90deg) ";
-            if (isMirror) transformCSSLive += "scaleX(-1) "; 
 
             ['liveView', 'webcam-view'].forEach(id => {
                 const el = document.getElementById(id);
@@ -823,13 +827,13 @@ function inisialisasiTabFormat() {
                 }
             });
 
-            // 2. PREVIEW FOTO MENTAH TIDAK PERLU DIPUTAR/DICERMIN KARENA SUDAH LURUS DARI BACKEND!
+            // Preview foto mentah sudah tegak & sudah di-mirror dari backend/canvas
             const previewEl = document.getElementById('previewImage');
             if (previewEl) {
                 previewEl.style.position = "absolute"; previewEl.style.top = "50%"; previewEl.style.left = "50%";
                 previewEl.style.width = "100vw"; previewEl.style.height = "100vh"; 
                 previewEl.style.objectFit = "cover";
-                previewEl.style.transform = "translate(-50%, -50%)"; // Normal, sejajar layar
+                previewEl.style.transform = "translate(-50%, -50%)";
             }
 
             document.querySelectorAll('.btn-mirror').forEach(btn => btn.innerText = isMirror ? "🪞 Cermin: ON" : "🪞 Cermin: OFF");
@@ -917,8 +921,10 @@ function inisialisasiTabFormat() {
             if (activeCameraMode === 'webcam') {
                 const video = document.getElementById('webcam-view');
                 const tempCanvas = document.createElement('canvas');
-                tempCanvas.width = 640; 
-                tempCanvas.height = (video.videoHeight / video.videoWidth) * 640; 
+                const vW = video.videoWidth || 1920;
+                const vH = video.videoHeight || 1080;
+                tempCanvas.width = isPortrait ? 480 : 640;
+                tempCanvas.height = isPortrait ? Math.round((vW / vH) * 480) : Math.round((vH / vW) * 640);
                 const tCtx = tempCanvas.getContext('2d');
 
                 recordInterval = setInterval(() => {
@@ -926,12 +932,9 @@ function inisialisasiTabFormat() {
                     tCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
                     tCtx.translate(tempCanvas.width / 2, tempCanvas.height / 2);
                     
-                    if (isMirror) { tCtx.scale(-1, 1); } // Cermin Horizontal
-                    
+                    if (isMirror) { tCtx.scale(-1, 1); } // Cermin horizontal layar
                     if (isPortrait) {
-                        // [PERBAIKAN] Balik arah rotasi jika cermin menyala
-                        const sudutRotasi = isMirror ? -90 : 90;
-                        tCtx.rotate(sudutRotasi * Math.PI / 180);
+                        tCtx.rotate(90 * Math.PI / 180); // SELALU +90°, JANGAN -90°!
                         tCtx.drawImage(video, -tempCanvas.height / 2, -tempCanvas.width / 2, tempCanvas.height, tempCanvas.width);
                     } else {
                         tCtx.drawImage(video, -tempCanvas.width / 2, -tempCanvas.height / 2, tempCanvas.width, tempCanvas.height);
@@ -968,7 +971,7 @@ function inisialisasiTabFormat() {
             teksLoading.innerText = "✨ Tunggu sebentar ya..."; 
             teksLoading.style.display = 'block'; 
             
-            if (activeCameraMode === 'webcam') {
+            if (activeCameraMode === 'webcam' && activeCameraEngine !== 'sony' && activeCameraEngine !== 'nikon') {
                 const video = document.getElementById('webcam-view');
                 const canvas = document.getElementById('webcam-canvas');
                 const ctx = canvas.getContext('2d');
@@ -982,19 +985,16 @@ function inisialisasiTabFormat() {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.translate(canvas.width / 2, canvas.height / 2);
 
-                if (isMirror) { ctx.scale(-1, 1); } // Cermin Horizontal
-
+                if (isMirror) { ctx.scale(-1, 1); } // Cermin horizontal layar
                 if (isPortrait) {
-                    // [PERBAIKAN] Balik arah rotasi jika cermin menyala
-                    const sudutRotasi = isMirror ? -90 : 90;
-                    ctx.rotate(sudutRotasi * Math.PI / 180);
+                    ctx.rotate(90 * Math.PI / 180); // SELALU +90°, JANGAN -90°!
                     ctx.drawImage(video, -canvas.height / 2, -canvas.width / 2, canvas.height, canvas.width);
                 } else {
                     ctx.drawImage(video, -canvas.width / 2, -canvas.height / 2, canvas.width, canvas.height);
                 }
                 ctx.restore();
 
-                const base64Image = canvas.toDataURL('image/jpeg', 0.9);
+                const base64Image = canvas.toDataURL('image/jpeg', 0.92);
 
                 await fetch('/api/upload-webcam', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1005,26 +1005,28 @@ function inisialisasiTabFormat() {
                     }) 
                 });
             } else {
-                await fetch('/capture', { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify({ 
-                        mode: 'collage', 
-                        mirror: isMirror, 
-                        lvActive: settingFlashWorkaround, 
-                        orientation: isPortrait ? 'potret' : 'lanskap' 
-                    }) 
-                });
-            }
+    // Canon (EDSDK) DAN Sony/Nikon (digiCamControl Shutter Fisik) masuk ke /capture!
+    await fetch('/capture', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            mode: 'collage', // sesuaikan: 'newspaper' atau 'photobox'
+            mirror: isMirror,
+            lvActive: settingFlashWorkaround,
+            orientation: isPortrait ? 'potret' : 'lanskap', // di photobox.html pakai: orientasiKamera
+            liveFramesBase64: (activeCameraMode === 'webcam') ? webcamFrames : []
+        })
+    });
+}
 
             let fotoBaruDitemukan = false; let waktuTunggu = 0;
-            while (!fotoBaruDitemukan && waktuTunggu < 8000) {
+            while (!fotoBaruDitemukan && waktuTunggu < 15000) {
                 await new Promise(r => setTimeout(r, 400)); waktuTunggu += 400;
                 try {
                     const resCek = await fetch('/api/photobox-raws'); const dataCek = await resCek.json();
-                    if (dataCek.success && dataCek.files.length > 0 && dataCek.files[0].name !== namaFotoSebelumnya) {
+                    if (dataCek.success && dataCek.files.length > 0 && dataCek.files[0].name !== namaFotoSebelumnya ) {
                         teksLoading.style.display = 'none'; document.getElementById('liveView').style.display = 'none'; document.getElementById('previewImage').src = dataCek.files[0].file + "?t=" + Date.now(); document.getElementById('previewImage').style.display = 'block'; tempFotoMentahBaru = { name: dataCek.files[0].name, file: dataCek.files[0].file }; fotoBaruDitemukan = true; 
-                    }
+                    document.getElementById('webcam-view').style.display = 'none';} 
                 } catch (e) { }
             }
             if (!fotoBaruDitemukan) teksLoading.style.display = 'none'; 
@@ -2174,8 +2176,8 @@ function inisialisasiTabFormat() {
                 draggedImg.style.opacity = '1';
                 document.querySelectorAll('.drag-img').forEach(other => other.parentElement.classList.remove('swap-drop-target-highlight'));
                 let dx = e.clientX - startX, dy = e.clientY - startY;
-                let moveX = (typeof isPortrait !== 'undefined' && isPortrait) ? dy : dx;
-                let moveY = (typeof isPortrait !== 'undefined' && isPortrait) ? -dx : dy;
+                let moveX = dx;
+                let moveY = dy;
                 const zoomLvl = window.slotZooms[idx] || 1.0;
                 const sensitivity = 140 / zoomLvl;
                 let newImgX = Math.max(0, Math.min(100, initialX - (moveX / slotRect.width) * sensitivity));
@@ -2474,10 +2476,12 @@ function inisialisasiTabFormat() {
 
             window.preferredWebcamDeviceId = (window.currentCamSlot === 1) ? (g.webcamDeviceId1 || '') : (g.webcamDeviceId2 || '');
 
-            if (typeof activeCameraMode !== 'undefined') {
-                activeCameraMode = (activeEng.toLowerCase() === 'canon') ? 'canon' : 'webcam';
-            }
-
+            if (typeof activeCameraEngine !== 'undefined') {
+    activeCameraEngine = activeEng.toLowerCase();
+}
+if (typeof activeCameraMode !== 'undefined') {
+    activeCameraMode = (activeEng.toLowerCase() === 'canon') ? 'canon' : 'webcam';
+}
             pasangTombolSwitchKameraRapi(allowLiveSwitch);
         } catch (e) {}
     }
@@ -2513,7 +2517,9 @@ function inisialisasiTabFormat() {
         if (typeof matikanWebcam === 'function') matikanWebcam();
         if (typeof isLiveViewRunning !== 'undefined') isLiveViewRunning = false;
         if (typeof isLiveViewActive !== 'undefined') isLiveViewActive = false;
-
+        if (typeof activeCameraEngine !== 'undefined') {
+    activeCameraEngine = (engineBaru || 'canon').toLowerCase();
+}
         if ((engineBaru || '').toLowerCase() === 'canon') {
             if (typeof activeCameraMode !== 'undefined') activeCameraMode = 'canon';
             document.getElementById('webcam-view').style.display = 'none';

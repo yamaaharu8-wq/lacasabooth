@@ -285,47 +285,6 @@ let activeEvent = null;
 
 let activeSessionId = 'DEFAULT_SESSION';
 
-// =======================================================
-// FUNGSI PENCARI LOKASI BROWSER OTOMATIS (SUPPORT 64-BIT & 32-BIT DI .EXE)
-// =======================================================
-function getBrowserPath() {
-    const paths = [
-        'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-        'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-        path.join(os.homedir(), 'AppData', 'Local', 'Google', 'Chrome', 'Application', 'chrome.exe'),
-        'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',       // ✅ Edge 64-bit (Wajib untuk Windows 10/11 Modern!)
-        'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe', // Edge 32-bit
-        path.join(os.homedir(), 'AppData', 'Local', 'Microsoft', 'Edge', 'Application', 'msedge.exe')
-    ];
-
-    for (let p of paths) {
-        if (fs.existsSync(p)) {
-            console.log(`🌐 [WA BROWSER] Menggunakan browser: ${p}`);
-            return p;
-        }
-    }
-    console.log("⚠️ Peringatan: Chrome/Edge tidak ditemukan di lokasi standar.");
-    return undefined;
-}
-
-// Fungsi pembersih proses browser zombie yang mengunci folder wa_session di versi .exe
-function bersihkanKunciSesiWa() {
-    return new Promise((resolve) => {
-        // Matikan hanya proses chrome/msedge headless yang memakai folder wa_session kita
-        const cmd = `powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { ($_.Name -eq 'chrome.exe' -or $_.Name -eq 'msedge.exe') -and $_.CommandLine -match 'wa_session' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"`;
-        exec(cmd, () => {
-            try {
-                const lockFiles = ['SingletonLock', 'SingletonCookie', 'SingletonSocket', 'lockfile'];
-                const botDir = path.join(userDataPath, 'wa_session', 'session-lacasabooth-bot');
-                lockFiles.forEach(lf => {
-                    const p = path.join(botDir, lf);
-                    if (fs.existsSync(p)) fs.unlinkSync(p);
-                });
-            } catch (e) {}
-            setTimeout(resolve, 500);
-        });
-    });
-}
 
 // =======================================================
 // 2. 🤖 SISTEM WHATSAPP BOT LOKAL (BAILEYS - TANPA CHROME)
@@ -339,6 +298,7 @@ let waBotQrImage = '';
 let isWaInitializing = false;
 let isManualWaLogout = false;
 let waReconnectTimer = null;
+let waUnknownRetryCount = 0;
 
 function matikanBotWaSafely() {
     isManualWaLogout = true;
@@ -392,6 +352,7 @@ async function nyalakanMesinWa() {
                 console.log('📲 [WA BAILEYS] QR Code baru tersedia! Silakan scan di Dashboard.');
                 waBotStatus = 'QR_READY';
                 waBotQr = qr;
+                waUnknownRetryCount = 0;
                 try {
                     waBotQrImage = await waQrGenerator.toDataURL(qr, {
                         errorCorrectionLevel: 'M',
@@ -466,8 +427,8 @@ expressApp.post('/api/wa-logout', async (req, res) => {
     waBotStatus = 'STARTING';
     waBotQr = '';
     waBotQrImage = '';
-    if (waReconnectTimer) { clearTimeout(waReconnectTimer); waReconnectTimer = null; let waUnknownRetryCount = 0; }
-
+    if (waReconnectTimer) { clearTimeout(waReconnectTimer); waReconnectTimer = null; }
+waUnknownRetryCount = 0;
     try {
         if (waClient) {
             await waClient.logout().catch(() => {});
@@ -1595,36 +1556,132 @@ expressApp.post('/api/switch-camera', async (req, res) => {
         res.status(500).json({ success: false, message: err.message });
     }
 });
+// =======================================================
+// 📷 MESIN SHUTTER FISIK SONY & NIKON (DIGICAMCONTROL CLI)
+// =======================================================
+const dccCmdPath = path.join(__dirname, 'sdk', 'dcc', 'CameraControlCmd.exe').replace('app.asar', 'app.asar.unpacked');
+
+function jepretViaDigiCamControl(isPotret, isMirror, liveFramesBase64 = []) {
+    return new Promise((resolve, reject) => {
+        if (!fs.existsSync(dccCmdPath)) {
+            return reject(new Error("File sdk/dcc/CameraControlCmd.exe tidak ditemukan!"));
+        }
+
+        const rawTempPath = path.join(tempDir, `dcc_raw_${Date.now()}.jpg`);
+        const newFileName = `foto_${9999999999999 - Date.now()}_mentah.jpg`;
+        const sessionDir = path.join(uploadDir, activeSessionId);
+        if (!fs.existsSync(sessionDir)) fs.mkdirSync(sessionDir, { recursive: true });
+
+        const finalFilePath = path.join(sessionDir, newFileName);
+        const finalTmpPath = finalFilePath + '.tmp';
+
+        // Simpan frame Live Photo dari UVC jika ada
+        if (Array.isArray(liveFramesBase64) && liveFramesBase64.length > 0) {
+            if (!global.liveFramesByPhoto) global.liveFramesByPhoto = {};
+            global.liveFramesByPhoto[newFileName] = {
+                buffer: liveFramesBase64.map(b64 => Buffer.from(b64.replace(/^data:image\/\w+;base64,/, ""), 'base64')),
+                isMirrored: false,
+                isWebcam: true
+            };
+        }
+
+        // Gunakan /capture (universal Sony & Nikon). Jika ingin tanpa jeda autofokus, bisa ganti ke /capturenoaf
+        const cmd = `"${dccCmdPath}" /capture /filename "${rawTempPath}"`;
+        console.log(`📸 [DCC] Menekan shutter fisik Sony/Nikon...`);
+
+        exec(cmd, { timeout: 15000 }, async (error, stdout, stderr) => {
+            if (error) {
+                console.error("❌ [DCC ERROR]:", stderr || error.message);
+                return reject(new Error(stderr || error.message));
+            }
+
+            // Tunggu hingga file hasil download dari kamera selesai ditulis di disk (> 2KB)
+            let siap = false;
+            for (let t = 0; t < 20; t++) {
+                if (fs.existsSync(rawTempPath) && fs.statSync(rawTempPath).size > 2048) {
+                    siap = true;
+                    break;
+                }
+                await new Promise(r => setTimeout(r, 250));
+            }
+
+            if (!siap) {
+                return reject(new Error("Kamera Sony/Nikon tidak mengirim file foto. Cek kabel USB & mode PC Remote."));
+            }
+
+            try {
+                // 1. Auto-orient sesuai EXIF kamera terlebih dahulu
+                let buf = await sharp(rawTempPath).rotate().toBuffer();
+                const meta = await sharp(buf).metadata();
+
+                // 2. Jika mode Potret aktif tapi gambar masih lanskap (sensor auto-rotate kamera OFF), putar 90°
+                if (isPotret && meta.width > meta.height) {
+                    buf = await sharp(buf).rotate(90).toBuffer();
+                }
+
+                // 3. Cerminkan horizontal setelah gambar tegak
+                if (isMirror) {
+                    buf = await sharp(buf).flop().toBuffer();
+                }
+
+                // 4. Atomic Write (.tmp -> rename) agar Preview Retake tidak pernah gambar rusak
+                await sharp(buf).jpeg({ quality: 92 }).toFile(finalTmpPath);
+                fs.renameSync(finalTmpPath, finalFilePath);
+                if (fs.existsSync(rawTempPath)) try { fs.unlinkSync(rawTempPath); } catch (_) {}
+
+                console.log(`✅ [DCC] Foto Sony/Nikon masuk: ${newFileName}`);
+                io.emit('foto-baru', { namaFile: newFileName });
+                resolve(newFileName);
+            } catch (procErr) {
+                reject(procErr);
+            }
+        });
+    });
+}
 
 expressApp.post('/capture', async (req, res) => {
-    const { mirror, lvActive, mode } = req.body;
-    global.lastCaptureMode = mode ? mode.toLowerCase() : 'wedding'; 
-    if (mirror !== undefined) global.currentMirrorStatus = mirror;
-    
-    // [HUBUNGKAN KE DASHBOARD] Cek apakah Live Photo aktif
-    let isLivePhotoOn = false;
-    try {
-        const dbSet = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
-        if (dbSet.global && (dbSet.global.livePhotoEnabled === true || dbSet.global.livePhotoEnabled === "true")) {
-    isLivePhotoOn = true;
-}
-    } catch(e) {}
+    const { mirror, lvActive, mode, orientation, liveFramesBase64 } = req.body;
+    global.lastCaptureMode = mode ? mode.toLowerCase() : 'wedding';
+    if (mirror !== undefined) global.currentMirrorStatus = (mirror === true || mirror === 'true');
 
-    // Kunci rekaman HANYA jika fitur Live Photo diaktifkan di Dashboard
-    if (isLivePhotoOn) {
-        global.lastCapturedLiveFrames = global.liveViewFrames ? [...global.liveViewFrames] : [];
-    } else {
-        global.lastCapturedLiveFrames = null; // Kosongkan agar RAM tidak berat (Mini PC aman!)
+    const dbSet = safeReadJson(settingsPath, {});
+    const isDual = dbSet.global?.dualCameraEnabled === true;
+    const slotAktif = parseInt(dbSet.global?.activeCameraSlot) || 1;
+    const activeEngine = (isDual && slotAktif === 2
+        ? (dbSet.global?.cameraEngine2 || 'webcam')
+        : (dbSet.global?.cameraEngine || 'canon')
+    ).toLowerCase();
+
+    let orientasiFinal = orientation;
+    if (!orientasiFinal) {
+        orientasiFinal = (dbSet.global?.cameraOrientation === 'portrait') ? 'potret' : 'lanskap';
+    }
+    global.currentOrientation = orientasiFinal;
+
+    // 1. JALUR SONY & NIKON VIA DIGICAMCONTROL (SHUTTER FISIK USB)
+    if (activeEngine === 'sony' || activeEngine === 'nikon') {
+        const isPotret = (orientasiFinal === 'potret' || orientasiFinal === 'portrait');
+        const isMirror = (global.currentMirrorStatus === true);
+        res.status(200).json({ success: true, engine: activeEngine });
+
+        jepretViaDigiCamControl(isPotret, isMirror, liveFramesBase64).catch(err => {
+            console.error(`❌ [CAPTURE ${activeEngine.toUpperCase()}] Gagal:`, err.message);
+        });
+        return;
     }
 
-    res.status(200).json({ success: true });
+    // 2. JALUR CANON VIA EDSDK (BAWAAN)
+    const isLivePhotoOn = (dbSet.global?.livePhotoEnabled === true || dbSet.global?.livePhotoEnabled === "true");
+    global.lastCapturedLiveFrames = isLivePhotoOn && global.liveViewFrames ? [...global.liveViewFrames] : null;
+
+    res.status(200).json({ success: true, engine: 'canon' });
     if (lvActive) {
-        stopLiveView(); 
-        await new Promise(r => setTimeout(r, 600)); 
+        stopLiveView();
+        await new Promise(r => setTimeout(r, 600));
     }
 
     if (activeCamera) {
-        console.log(`[API] 📸 JEPRET! (Mode: ${global.lastCaptureMode})`);
+        console.log(`[API] 📸 JEPRET CANON! (Mode: ${global.lastCaptureMode})`);
         EdsSendCommand(activeCamera, kEdsCameraCommand_TakePicture, 0);
     }
 });
@@ -1647,22 +1704,24 @@ expressApp.post('/api/upload-webcam', async (req, res) => {
                 Buffer.from(b64.replace(/^data:image\/\w+;base64,/, ""), 'base64')
             );
             global.liveFramesByPhoto[newFileName] = {
-                buffer: framesBuffer,
-                isMirrored: isMirrored
-            };
+    buffer: framesBuffer,
+    isMirrored: isMirrored,
+    isWebcam: true
+};
         }
 
         const sessionDir = path.join(uploadDir, activeSessionId);
         if (!fs.existsSync(sessionDir)) fs.mkdirSync(sessionDir, { recursive: true });
         const finalFilePath = path.join(sessionDir, newFileName);
-        
-        // TUNGGU SAMPAI FILE BENAR-BENAR SELESAI DITULIS KE DISK SEBELUM MEMBALAS KE FRONTEND!
+        const finalTmpPath = finalFilePath + '.tmp';
         if (isMirrored) {
             const flippedBuf = await sharp(buffer).flop().jpeg({ quality: 92 }).toBuffer();
-            fs.writeFileSync(finalFilePath, flippedBuf);
+            fs.writeFileSync(finalTmpPath, flippedBuf);
+            fs.renameSync(finalTmpPath, finalFilePath);
             console.log(`✅ FOTO WEBCAM (MIRRORED) MASUK: ${newFileName}`);
         } else {
-            fs.writeFileSync(finalFilePath, buffer);
+            fs.writeFileSync(finalTmpPath, buffer);
+            fs.renameSync(finalTmpPath, finalFilePath);
             console.log(`✅ FOTO WEBCAM MASUK: ${newFileName}`);
         }
 
@@ -1694,10 +1753,10 @@ watcher.on('add', (filePath) => {
         const finalFilePath = path.join(sessionDir, newFileName);
 
         try {
-            // Salin file dari Hot Folder ke folder Sesi Aktif
-            fs.copyFileSync(filePath, finalFilePath);
-            // Hapus file asli di hot folder agar tidak menumpuk
-            fs.unlinkSync(filePath); 
+            const finalTmpPath = finalFilePath + '.tmp';
+            fs.copyFileSync(filePath, finalTmpPath);
+            fs.renameSync(finalTmpPath, finalFilePath);
+            fs.unlinkSync(filePath);
             
             console.log(`📸 [HOT FOLDER] Shutter Fisik Ditekan! Foto masuk: ${newFileName}`);
             
@@ -1761,15 +1820,32 @@ const callbackPenarikFoto = koffi.register((inEvent, inRef, inContext) => {
             });
         };
 
-        if (global.currentMirrorStatus === true) {
-            sharp(tempFilePath).flop().toBuffer().then(buf => {
-                fs.writeFileSync(finalFilePath, buf);
-                if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
-                console.log(`✅ FOTO BERHASIL DI-MIRROR: ${newFileName}`);
-                notifyUI();
-            }).catch(err => {
-                console.error("❌ Gagal melakukan mirror:", err);
-            });
+       const isPotret = (global.currentOrientation === 'potret' || global.currentOrientation === 'portrait');
+        const isMirror = (global.currentMirrorStatus === true);
+        const finalTmpPath = finalFilePath + '.tmp';
+
+        if (isPotret || isMirror) {
+            (async () => {
+                try {
+                    let imgBuffer = fs.readFileSync(tempFilePath);
+                    if (isPotret) {
+                        imgBuffer = await sharp(imgBuffer).rotate(90).toBuffer();
+                    }
+                    if (isMirror) {
+                        imgBuffer = await sharp(imgBuffer).flop().toBuffer();
+                    }
+                    // Tulis dulu ke .tmp sampai 100% utuh, baru rename ke .jpg agar tidak terbaca separuh!
+                    await sharp(imgBuffer).jpeg({ quality: 92 }).toFile(finalTmpPath);
+                    fs.renameSync(finalTmpPath, finalFilePath);
+                    if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
+                    console.log(`✅ FOTO CANON SIAP (Potret: ${isPotret}, Mirror: ${isMirror}): ${newFileName}`);
+                    notifyUI();
+                } catch (err) {
+                    console.error("❌ Gagal memproses orientasi/mirror Canon:", err);
+                    try { fs.renameSync(tempFilePath, finalFilePath); } catch (_) {}
+                    notifyUI();
+                }
+            })();
         } else {
             fs.renameSync(tempFilePath, finalFilePath);
             console.log(`✅ FOTO MASUK NORMAL: ${newFileName}`);
@@ -1787,10 +1863,16 @@ expressApp.get('/api/photobox-raws', (req, res) => {
         const sessionDir = path.join(uploadDir, activeSessionId);
         if (!fs.existsSync(sessionDir)) return res.json({ success: true, files: [] });
 
-        const files = fs.readdirSync(sessionDir).filter(f => f.endsWith('_mentah.jpg'))
-            .map(f => ({ name: f, file: `/uploads/${activeSessionId}/${f}`, mtime: fs.statSync(path.join(sessionDir, f)).mtime.getTime() }))
-            .sort((a, b) => b.mtime - a.mtime).slice(0, 25); 
-            
+        const files = fs.readdirSync(sessionDir)
+            .filter(f => f.endsWith('_mentah.jpg'))
+            .map(f => {
+                const stat = fs.statSync(path.join(sessionDir, f));
+                return { name: f, file: `/uploads/${activeSessionId}/${f}`, mtime: stat.mtime.getTime(), size: stat.size };
+            })
+            .filter(item => item.size > 2048) // Abaikan file kosong/belum selesai ditulis
+            .sort((a, b) => b.mtime - a.mtime)
+            .slice(0, 25);
+
         res.json({ success: true, files: files });
     } catch (err) { res.json({ success: false, message: err.message }); }
 });
@@ -2241,20 +2323,21 @@ const lockedSessionId = req.body.sessionId || activeSessionId;
         try {
             const settings = safeReadJson(settingsPath, {});
             if (settings.global) {
-                if (settings.global.cloudStorage !== undefined) isOnlineMode = settings.global.cloudStorage;
-                driveFolderMode = settings.global.driveFolderMode || "per_session";
-                if (settings.global.driveParentFolderId) parentFolderId = settings.global.driveParentFolderId.trim();
-                if (settings.global.driveMixedFolderId) mixedFolderId = settings.global.driveMixedFolderId.trim();
-                
-                const dashLive = (settings.global.livePhotoEnabled === true || settings.global.livePhotoEnabled === "true");
-                const dashGif = (settings.global.photoGifEnabled === true || settings.global.photoGifEnabled === "true");
-                
-                isLivePhotoOn = dashLive && (req.body.livePhoto !== false);
-                isPhotoGifOn = dashGif && (req.body.photoGif !== false);
-            }
-            if (settings.global.uploadRawPhotos !== undefined) {
-    uploadRawPhotos = (settings.global.uploadRawPhotos === true || settings.global.uploadRawPhotos === "true");
-}
+             if (settings.global.cloudStorage !== undefined) isOnlineMode = settings.global.cloudStorage;
+             driveFolderMode = settings.global.driveFolderMode || "per_session";
+             if (settings.global.driveParentFolderId) parentFolderId = settings.global.driveParentFolderId.trim();
+             if (settings.global.driveMixedFolderId) mixedFolderId = settings.global.driveMixedFolderId.trim();
+
+             const dashLive = (settings.global.livePhotoEnabled === true || settings.global.livePhotoEnabled === "true");
+             const dashGif = (settings.global.photoGifEnabled === true || settings.global.photoGifEnabled === "true");
+
+             isLivePhotoOn = dashLive && (req.body.livePhoto !== false);
+             isPhotoGifOn = dashGif && (req.body.photoGif !== false);
+
+             if (settings.global.uploadRawPhotos !== undefined) {
+                 uploadRawPhotos = (settings.global.uploadRawPhotos === true || settings.global.uploadRawPhotos === "true");
+             }
+         }
         } catch (e) {}
 
         let urlLivePhoto = isLivePhotoOn ? 'processing' : null;
@@ -2377,8 +2460,10 @@ const lockedSessionId = req.body.sessionId || activeSessionId;
                         const sx = Math.round(coord.x * sf);
                         const sy = Math.round(coord.y * sf);
 
-                        const mirrorFilter = (isMirrored && !isFallback) ? 'hflip,' : '';
-                        const rotFilter = statusRotasiFoto[i] ? 'transpose=1,' : '';
+                        const isWebcamFrames = frameData && frameData.isWebcam === true;
+const needsLvRot = (req.body.orientation === 'potret' && !isWebcamFrames && !isFallback);
+const rotFilter = needsLvRot ? 'transpose=1,' : '';
+const mirrorFilter = (isMirrored && !isWebcamFrames && !isFallback) ? 'hflip,' : '';
 
                         let offX = 50, offY = 50;
                         if (req.body.customOffsets && req.body.customOffsets[i]) {
@@ -2394,7 +2479,7 @@ const lockedSessionId = req.body.sessionId || activeSessionId;
                         const cx = `(in_w-${sw})*(${offX}/100)`;
                         const cy = `(in_h-${sh})*(${offY}/100)`;
 
-                        filterComplex += `[${i+1}:v]${mirrorFilter}${rotFilter}scale=${sw}:${sh}:force_original_aspect_ratio=increase,crop=${sw}:${sh}:${cx}:${cy}[v${i+1}];`;
+                        filterComplex += `[${i+1}:v]${rotFilter}${mirrorFilter}scale=${sw}:${sh}:force_original_aspect_ratio=increase,crop=${sw}:${sh}:${cx}:${cy}[v${i+1}];`;
                         overlayChain += `[bg${i}][v${i+1}]overlay=x=${sx}:y=${sy}[bg${i+1}];`;
                     } 
 
@@ -2479,7 +2564,7 @@ const lockedSessionId = req.body.sessionId || activeSessionId;
                         `${reverseOrderKey}_${tglSingkat}_${jamSingkat}-${detikSingkat}_3_ANIMASI.gif`
                     );
                 }
-                const allRawFiles = fs.readdirSync(sessionDir).filter(f => f.endsWith('_mentah.jpg'));
+
                 if (uploadRawPhotos) {
                  const allRawFiles = fs.readdirSync(sessionDir).filter(f => f.endsWith('_mentah.jpg'));
                  for (let idxRaw = 0; idxRaw < allRawFiles.length; idxRaw++) {
@@ -2907,6 +2992,17 @@ expressApp.get('/api/rescan-camera', async (req, res) => {
             }, 900);
         } else if (currentEngine === 'webcam') {
             res.json({ success: true, message: "✅ Mode Webcam / Capture Card (UVC) aktif & siap digunakan!" });
+        } else if (currentEngine === 'sony' || currentEngine === 'nikon') {
+            if (!fs.existsSync(dccCmdPath)) {
+                return res.json({ success: false, message: "⚠️ File sdk/dcc/CameraControlCmd.exe belum terpasang di folder aplikasi!" });
+            }
+            exec(`"${dccCmdPath}" /list cameras`, { timeout: 6000 }, (err, stdout) => {
+                if (!err && stdout && stdout.trim().length > 0 && !stdout.toLowerCase().includes('no camera')) {
+                    res.json({ success: true, message: `✅ Kamera ${currentEngine.toUpperCase()} terdeteksi via digiCamControl!\n${stdout.trim()}` });
+                } else {
+                    res.json({ success: false, message: `⚠️ Kamera ${currentEngine.toUpperCase()} belum terdeteksi USB. Pastikan kamera menyala & mode USB di PC Remote (Sony).` });
+                }
+            });
         } else {
             const isConnected = await cekKameraUsbUniversal(currentEngine);
             if (isConnected) {
@@ -3020,42 +3116,6 @@ expressApp.get('/api/saas/check-status/:orderId', async (req, res) => {
     }
 });
 
-expressApp.get('/api/saas/check-status/:orderId', async (req, res) => {
-    try {
-        const { orderId } = req.params;
-        const dokuBaseUrl = SAAS_DOKU_IS_PROD ? 'https://api.doku.com' : 'https://api-sandbox.doku.com';
-        const cleanClientId = SAAS_DOKU_CLIENT_ID.replace('SB-', '');
-
-        const timestamp = new Date().toISOString().slice(0, 19) + 'Z';
-        const requestId = 'chk-saas-' + Date.now();
-        const targetPath = `/orders/v1/status/${orderId}`;
-
-        const sigComponent = `Client-Id:${cleanClientId}\nRequest-Id:${requestId}\nRequest-Timestamp:${timestamp}\nRequest-Target:${targetPath}`;
-        const signatureDoku = 'HMACSHA256=' + crypto.createHmac('sha256', SAAS_DOKU_SECRET_KEY).update(sigComponent).digest('base64');
-
-        const dokuRes = await fetch(dokuBaseUrl + targetPath, {
-            method: 'GET',
-            headers: {
-                'Client-Id': cleanClientId,
-                'Request-Id': requestId,
-                'Request-Timestamp': timestamp,
-                'Signature': signatureDoku
-            }
-        });
-
-        const dokuData = await dokuRes.json();
-        const trxStatus = (dokuData?.transaction?.status || dokuData?.order?.status || '').toString().toUpperCase();
-        const isSuccess = (trxStatus === 'SUCCESS' || trxStatus === 'PAID' || trxStatus === 'SETTLEMENT');
-
-        if (dokuRes.ok && isSuccess) {
-            return res.json({ success: true, status: 'PAID' });
-        }
-        return res.json({ success: true, status: 'PENDING', debug: dokuData.transaction?.status || 'WAITING' });
-    } catch (error) {
-        console.error("Error Check Status DOKU:", error);
-        return res.json({ success: false, status: 'ERROR' });
-    }
-});
 
 const qrcodeImg = require('qrcode'); 
 const midtransClient = require('midtrans-client');

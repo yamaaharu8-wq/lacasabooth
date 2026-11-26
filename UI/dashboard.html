@@ -574,15 +574,12 @@
                     </div>
 
                     <div class="form-group">
-                        <label>Orientasi Tampilan Kamera</label>
-                        <select id="sys-cameraOrientation" onchange="cekPeringatanPotret(this.value, true)">
-                            <option value="landscape">Lanskap (Normal - Horizontal)</option>
-                            <option value="portrait">Potret (Miring 90° - Vertikal)</option>
-                        </select>
-                        <div id="warning-portrait" style="display: none; color: #ef4444; font-size: 0.85rem; font-weight: 600; margin-top: 8px; background: #fee2e2; padding: 8px; border-radius: 6px; border: 1px solid #fca5a5;">
-                            ⚠️ <b>Perhatian:</b> Mode Potret dipilih. Fitur Cermin (Mirror) telah dimatikan otomatis (OFF) agar hasil tidak terbalik.
-                        </div>
-                    </div>
+                     <label>Orientasi Tampilan Kamera</label>
+                     <select id="sys-cameraOrientation">
+                         <option value="landscape">Lanskap (Normal - Horizontal)</option>
+                         <option value="portrait">Potret (Miring 90° - Vertikal)</option>
+                     </select>
+                 </div>
 
                     <div class="form-group">
                         <label>Efek Cermin (Mirror) Layar Kamera</label>
@@ -1721,27 +1718,7 @@ function toggleDualPrinterUI() {
             if(id === 'tab-analytic') loadAnalyticData();
             if(id === 'tab-voucher') loadVouchersData();
         }
-        // === FUNGSI PERINGATAN MODE POTRET ===
-        function cekPeringatanPotret(nilai, isManualChange = false) {
-            const warningBox = document.getElementById('warning-portrait');
-            const mirrorSelect = document.getElementById('sys-mirrorCamera');
-            
-            if (nilai === 'portrait') {
-                // Tampilkan kotak merah peringatan
-                if (warningBox) warningBox.style.display = 'block';
-                
-                // Jika user yang mengklik ganti (bukan saat awal load), munculkan pop-up & matikan cermin
-                if (isManualChange) {
-                    alert("⚠️ Mode Potret Diaktifkan!\n\nSistem otomatis mengubah efek cermin (Mirror) menjadi OFF agar hasil foto tidak terbalik.");
-                    if (mirrorSelect) {
-                        mirrorSelect.value = "false"; // Otomatis ubah cermin jadi OFF
-                    }
-                }
-            } else {
-                // Sembunyikan peringatan jika kembali ke lanskap
-                if (warningBox) warningBox.style.display = 'none';
-            }
-        }
+        
         // --- LOGIKA KAMERA PRO (STEPPER & LIVE VIEW) ---
         let dashLvInterval = null;
         let isDashLvOn = false;
@@ -1913,10 +1890,9 @@ document.getElementById('sys-canonAv').value = data.global?.canonAv || "auto";
                 }
 
                 if (document.getElementById('sys-cameraOrientation')) {
-                    const orientasi = data.global?.cameraOrientation || "landscape";
-                    document.getElementById('sys-cameraOrientation').value = orientasi;
-                    cekPeringatanPotret(orientasi, false);
-                }
+                 const orientasi = data.global?.cameraOrientation || "landscape";
+                 document.getElementById('sys-cameraOrientation').value = orientasi;
+             }
                 if (document.getElementById('sys-mirrorCamera')) {
                     document.getElementById('sys-mirrorCamera').value = data.global?.mirrorCamera ? "true" : "false";
                 }
