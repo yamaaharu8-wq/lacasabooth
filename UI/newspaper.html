@@ -684,6 +684,15 @@
                 }
             }
         });
+        let isCaptureFailed = false;
+socket.on('capture-error', (data) => {
+    isCaptureFailed = true;
+    const teksLoading = document.getElementById('loadingTeks');
+    const btn = document.getElementById('btn-jepret-manual');
+    if (teksLoading) teksLoading.style.display = 'none';
+    if (btn) btn.disabled = false;
+    alert("❌ " + (data.message || "Kamera gagal menjepret via USB."));
+});
 
         function formatWaktu(detik) { let m = Math.floor(detik / 60); let s = detik % 60; return (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s); }
         
@@ -1066,30 +1075,41 @@ if (mesinKamera.toLowerCase() !== 'canon') {
     });
 }
             let fotoBaruDitemukan = false; let waktuTunggu = 0; let namaFotoBaru = "";
-            while (!fotoBaruDitemukan && waktuTunggu < 15000) {
-                await new Promise(r => setTimeout(r, 400)); waktuTunggu += 400;
-                try {
-                    const resCek = await fetch('/api/photobox-raws'); const dataCek = await resCek.json();
-                    if (dataCek.success && dataCek.files.length > 0 && dataCek.files[0].name !== namaFotoSebelumnya) { namaFotoBaru = dataCek.files[0].name; fotoBaruDitemukan = true; document.getElementById('webcam-view').style.display = 'none'; }
-                } catch (e) { }
-            }
+while (!fotoBaruDitemukan && !isCaptureFailed && waktuTunggu < 15000) {
+    await new Promise(r => setTimeout(r, 400)); waktuTunggu += 400;
+    try {
+        const resCek = await fetch('/api/photobox-raws'); const dataCek = await resCek.json();
+        if (dataCek.success && dataCek.files.length > 0 && dataCek.files[0].name !== namaFotoSebelumnya) {
+            namaFotoBaru = dataCek.files[0].name;
+            fotoBaruDitemukan = true;
+            document.getElementById('webcam-view').style.display = 'none';
+        }
+    } catch (e) { }
+}
 
-            teksLoading.style.display = 'none';
-            if (fotoBaruDitemukan) {
-                tempFotoMentahBaru = { name: namaFotoBaru, file: `/uploads/${currentSessionId}/${namaFotoBaru}` };
-                document.getElementById('liveView').style.display = 'none'; 
-                document.getElementById('previewImage').src = tempFotoMentahBaru.file + "?t=" + Date.now(); 
-                document.getElementById('previewImage').style.display = 'block';
-                
-                // File JPG sudah lurus, TIDAK PERLU ROTASI CSS!
-                let imgStyle = "width: 100%; height: 100%; object-fit: cover;";
-                document.getElementById(`slot-${indexFotoSaatIni}`).innerHTML = `<img src="${tempFotoMentahBaru.file}" style="${imgStyle}"><div class="overlay-review">Lihat/Retake</div>`;
-            }
+teksLoading.style.display = 'none';
+if (!fotoBaruDitemukan) {
+    btn.disabled = false;
+    if (!isCaptureFailed) {
+        alert("⚠️ Kamera tidak merespon. Cek kabel USB lalu coba jepret lagi.");
+    }
+    lanjutKeLiveViewManual();
+    return;
+}
 
-            document.getElementById('teks-retake-judul').innerText = `Bagaimana hasilnya?`; 
-            updateUIRetakeInfo();
+tempFotoMentahBaru = { name: namaFotoBaru, file: `/uploads/${currentSessionId}/${namaFotoBaru}` };
+document.getElementById('liveView').style.display = 'none';
+document.getElementById('previewImage').src = tempFotoMentahBaru.file + "?t=" + Date.now();
+document.getElementById('previewImage').style.display = 'block';
 
-            btn.disabled = false; document.getElementById('mode-retake-manual').style.display = 'flex';
+let imgStyle = "width: 100%; height: 100%; object-fit: cover;";
+document.getElementById(`slot-${indexFotoSaatIni}`).innerHTML = `<img src="${tempFotoMentahBaru.file}" style="${imgStyle}"><div class="overlay-review">Lihat/Retake</div>`;
+
+document.getElementById('teks-retake-judul').innerText = `Bagaimana hasilnya?`;
+updateUIRetakeInfo();
+
+btn.disabled = false;
+document.getElementById('mode-retake-manual').style.display = 'flex';
         }
 
         function updateUIRetakeInfo() {
@@ -2511,6 +2531,9 @@ if (mesinKamera.toLowerCase() !== 'canon') {
             if (typeof activeCameraEngine !== 'undefined') {
     activeCameraEngine = activeEng.toLowerCase();
 }
+if (typeof activeCameraEngine !== 'undefined') {
+    activeCameraEngine = activeEng.toLowerCase(); // di terapkanPerpindahanStreamKamera: (engineBaru || 'canon').toLowerCase()
+}
 if (typeof activeCameraMode !== 'undefined') {
     activeCameraMode = (activeEng.toLowerCase() === 'canon') ? 'canon' : 'webcam';
 }
@@ -2571,6 +2594,9 @@ if (typeof activeCameraMode !== 'undefined') {
         if (typeof terapkanVisualKamera === 'function') terapkanVisualKamera();
         if (typeof updateTransformKamera === 'function') updateTransformKamera();
     }
+    if (typeof activeCameraEngine !== 'undefined') {
+    activeCameraEngine = activeEng.toLowerCase(); // di terapkanPerpindahanStreamKamera: (engineBaru || 'canon').toLowerCase()
+}
 
     if (typeof socket !== 'undefined') {
         socket.on('camera-switched', (data) => {

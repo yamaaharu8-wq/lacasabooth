@@ -1560,12 +1560,17 @@ expressApp.post('/api/switch-camera', async (req, res) => {
 // 📷 MESIN SHUTTER FISIK SONY & NIKON (DIGICAMCONTROL CLI)
 // =======================================================
 const dccCmdPath = path.join(__dirname, 'sdk', 'dcc', 'CameraControlCmd.exe').replace('app.asar', 'app.asar.unpacked');
+let isDccBusy = false;
 
 function jepretViaDigiCamControl(isPotret, isMirror, liveFramesBase64 = []) {
     return new Promise((resolve, reject) => {
         if (!fs.existsSync(dccCmdPath)) {
             return reject(new Error("File sdk/dcc/CameraControlCmd.exe tidak ditemukan!"));
         }
+        if (isDccBusy) {
+            return reject(new Error("Kamera masih memproses jepretan sebelumnya, tunggu sebentar."));
+        }
+        isDccBusy = true;
 
         const rawTempPath = path.join(tempDir, `dcc_raw_${Date.now()}.jpg`);
         const newFileName = `foto_${9999999999999 - Date.now()}_mentah.jpg`;
@@ -1585,19 +1590,30 @@ function jepretViaDigiCamControl(isPotret, isMirror, liveFramesBase64 = []) {
             };
         }
 
-        // Gunakan /capture (universal Sony & Nikon). Jika ingin tanpa jeda autofokus, bisa ganti ke /capturenoaf
-        const cmd = `"${dccCmdPath}" /capture /filename "${rawTempPath}"`;
+        // WAJIB: /filename ditaruh SEBELUM /capture agar foto masuk ke rawTempPath!
+        const cmd = `"${dccCmdPath}" /filename "${rawTempPath}" /capture`;
         console.log(`📸 [DCC] Menekan shutter fisik Sony/Nikon...`);
 
-        exec(cmd, { timeout: 15000 }, async (error, stdout, stderr) => {
+        exec(cmd, { timeout: 20000, cwd: path.dirname(dccCmdPath) }, async (error, stdout, stderr) => {
+            const outText = (stdout || "").trim();
+            const outLower = outText.toLowerCase();
+
             if (error) {
+                isDccBusy = false;
                 console.error("❌ [DCC ERROR]:", stderr || error.message);
                 return reject(new Error(stderr || error.message));
             }
 
+            // Deteksi cepat jika kamera tidak terbaca (karena DCC tetap keluar dengan exit code 0)
+            if (outLower.includes('no connected device') || outLower.includes('no camera')) {
+                isDccBusy = false;
+                console.error("❌ [DCC] Kamera tidak terdeteksi:", outText);
+                return reject(new Error("Kamera Sony/Nikon tidak terdeteksi di USB. Pastikan kabel USB Data tersambung & mode USB di PC Remote."));
+            }
+
             // Tunggu hingga file hasil download dari kamera selesai ditulis di disk (> 2KB)
             let siap = false;
-            for (let t = 0; t < 20; t++) {
+            for (let t = 0; t < 24; t++) {
                 if (fs.existsSync(rawTempPath) && fs.statSync(rawTempPath).size > 2048) {
                     siap = true;
                     break;
@@ -1606,7 +1622,9 @@ function jepretViaDigiCamControl(isPotret, isMirror, liveFramesBase64 = []) {
             }
 
             if (!siap) {
-                return reject(new Error("Kamera Sony/Nikon tidak mengirim file foto. Cek kabel USB & mode PC Remote."));
+                isDccBusy = false;
+                console.error("❌ [DCC] File tidak ditemukan di:", rawTempPath, "| Log DCC:", outText);
+                return reject(new Error("Kamera tidak mengirim file JPEG. Pastikan kualitas foto di kamera disetel ke JPEG (bukan RAW-only)."));
             }
 
             try {
@@ -1629,10 +1647,12 @@ function jepretViaDigiCamControl(isPotret, isMirror, liveFramesBase64 = []) {
                 fs.renameSync(finalTmpPath, finalFilePath);
                 if (fs.existsSync(rawTempPath)) try { fs.unlinkSync(rawTempPath); } catch (_) {}
 
+                isDccBusy = false;
                 console.log(`✅ [DCC] Foto Sony/Nikon masuk: ${newFileName}`);
                 io.emit('foto-baru', { namaFile: newFileName });
                 resolve(newFileName);
             } catch (procErr) {
+                isDccBusy = false;
                 reject(procErr);
             }
         });
@@ -1658,7 +1678,6 @@ expressApp.post('/capture', async (req, res) => {
     }
     global.currentOrientation = orientasiFinal;
 
-    // 1. JALUR SONY & NIKON VIA DIGICAMCONTROL (SHUTTER FISIK USB)
     if (activeEngine === 'sony' || activeEngine === 'nikon') {
         const isPotret = (orientasiFinal === 'potret' || orientasiFinal === 'portrait');
         const isMirror = (global.currentMirrorStatus === true);
@@ -1666,10 +1685,13 @@ expressApp.post('/capture', async (req, res) => {
 
         jepretViaDigiCamControl(isPotret, isMirror, liveFramesBase64).catch(err => {
             console.error(`❌ [CAPTURE ${activeEngine.toUpperCase()}] Gagal:`, err.message);
+            io.emit('capture-error', {
+                engine: activeEngine,
+                message: `Kamera ${activeEngine.toUpperCase()} gagal menjepret via USB. Cek kabel USB & mode PC Remote, atau gunakan mode Webcam/Capture Card.`
+            });
         });
         return;
     }
-
     // 2. JALUR CANON VIA EDSDK (BAWAAN)
     const isLivePhotoOn = (dbSet.global?.livePhotoEnabled === true || dbSet.global?.livePhotoEnabled === "true");
     global.lastCapturedLiveFrames = isLivePhotoOn && global.liveViewFrames ? [...global.liveViewFrames] : null;
@@ -2996,14 +3018,18 @@ expressApp.get('/api/rescan-camera', async (req, res) => {
             if (!fs.existsSync(dccCmdPath)) {
                 return res.json({ success: false, message: "⚠️ File sdk/dcc/CameraControlCmd.exe belum terpasang di folder aplikasi!" });
             }
-            exec(`"${dccCmdPath}" /list cameras`, { timeout: 6000 }, (err, stdout) => {
-                if (!err && stdout && stdout.trim().length > 0 && !stdout.toLowerCase().includes('no camera')) {
-                    res.json({ success: true, message: `✅ Kamera ${currentEngine.toUpperCase()} terdeteksi via digiCamControl!\n${stdout.trim()}` });
+            exec(`"${dccCmdPath}" /list cameras`, { timeout: 10000, cwd: path.dirname(dccCmdPath) }, (err, stdout) => {
+                const out = (stdout || "").trim();
+                const outLower = out.toLowerCase();
+                const isNotFound = !out || outLower.includes('no camera') || outLower.includes('no connected device') || outLower.includes('exiting');
+
+                if (!err && !isNotFound) {
+                    res.json({ success: true, message: `✅ Kamera ${currentEngine.toUpperCase()} terdeteksi via digiCamControl!\n${out}` });
                 } else {
-                    res.json({ success: false, message: `⚠️ Kamera ${currentEngine.toUpperCase()} belum terdeteksi USB. Pastikan kamera menyala & mode USB di PC Remote (Sony).` });
+                    res.json({ success: false, message: `⚠️ Kamera ${currentEngine.toUpperCase()} tidak terdeteksi di USB.\nPastikan kabel USB Data tersambung & menu USB kamera di mode PC Remote.\n(Atau ganti ke mode Webcam/Capture Card jika hanya pakai HDMI Capture).` });
                 }
             });
-        } else {
+        }else {
             const isConnected = await cekKameraUsbUniversal(currentEngine);
             if (isConnected) {
                 res.json({ success: true, message: `✅ Berhasil! Kamera ${detectedCameraModelName || currentEngine.toUpperCase()} terdeteksi & siap digunakan.` });

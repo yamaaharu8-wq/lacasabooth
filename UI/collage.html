@@ -637,6 +637,12 @@
                 }
             }
         });
+        let isCaptureFailed = false;
+        socket.on('capture-error', (data) => {
+            isCaptureFailed = true;
+            document.getElementById('loadingTeks').style.display = 'none';
+            alert("❌ " + (data.message || "Kamera gagal menjepret via USB."));
+        });
         // --- [BARU] PENANGKAP SINYAL JIKA FFMPEG GAGAL / CRASH ---
         socket.on('gif-failed', (data) => {
             if (data.sessionId === currentSessionId) {
@@ -1020,24 +1026,35 @@ function inisialisasiTabFormat() {
 }
 
             let fotoBaruDitemukan = false; let waktuTunggu = 0;
-            while (!fotoBaruDitemukan && waktuTunggu < 15000) {
+            while (!fotoBaruDitemukan && !isCaptureFailed && waktuTunggu < 15000) {
                 await new Promise(r => setTimeout(r, 400)); waktuTunggu += 400;
                 try {
                     const resCek = await fetch('/api/photobox-raws'); const dataCek = await resCek.json();
-                    if (dataCek.success && dataCek.files.length > 0 && dataCek.files[0].name !== namaFotoSebelumnya ) {
-                        teksLoading.style.display = 'none'; document.getElementById('liveView').style.display = 'none'; document.getElementById('previewImage').src = dataCek.files[0].file + "?t=" + Date.now(); document.getElementById('previewImage').style.display = 'block'; tempFotoMentahBaru = { name: dataCek.files[0].name, file: dataCek.files[0].file }; fotoBaruDitemukan = true; 
-                    document.getElementById('webcam-view').style.display = 'none';} 
+                    if (dataCek.success && dataCek.files.length > 0 && dataCek.files[0].name !== namaFotoSebelumnya) {
+                        teksLoading.style.display = 'none';
+                        document.getElementById('liveView').style.display = 'none';
+                        document.getElementById('webcam-view').style.display = 'none';
+                        document.getElementById('previewImage').src = dataCek.files[0].file + "?t=" + Date.now();
+                        document.getElementById('previewImage').style.display = 'block';
+                        tempFotoMentahBaru = { name: dataCek.files[0].name, file: dataCek.files[0].file };
+                        fotoBaruDitemukan = true;
+                    }
                 } catch (e) { }
             }
-            if (!fotoBaruDitemukan) teksLoading.style.display = 'none'; 
-            if (fotoBaruDitemukan) {
-                // Tidak perlu CSS rotate lagi!
-                let imgStyle = "width: 100%; height: 100%; object-fit: cover;";
-                document.getElementById(`slot-${indexFotoSaatIni}`).innerHTML = `<img src="${tempFotoMentahBaru.file}" style="${imgStyle}"><div class="overlay-review">Lihat/Retake</div>`;
+
+            if (!fotoBaruDitemukan) {
+                teksLoading.style.display = 'none';
+                if (!isCaptureFailed) {
+                    alert("⚠️ Kamera tidak merespon. Cek kabel USB lalu coba jepret lagi.");
+                }
+                lanjutKeLiveView(); // Kembalikan ke tombol jepret, JANGAN buka panel Retake kosong
+                return;
             }
-            // --- BARIS INI YANG KEMUNGKINAN TERHAPUS SEBELUMNYA ---
-            document.getElementById('teks-retake-judul').innerText = `Bagaimana hasilnya?`; 
-            updateUIRetakeInfo(); 
+
+            let imgStyle = "width: 100%; height: 100%; object-fit: cover;";
+            document.getElementById(`slot-${indexFotoSaatIni}`).innerHTML = `<img src="${tempFotoMentahBaru.file}" style="${imgStyle}"><div class="overlay-review">Lihat/Retake</div>`;
+            document.getElementById('teks-retake-judul').innerText = `Bagaimana hasilnya?`;
+            updateUIRetakeInfo();
             document.getElementById('mode-retake').style.display = 'flex';
 
         }

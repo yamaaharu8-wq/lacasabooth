@@ -705,6 +705,13 @@
                 }
             }
         });
+        socket.on('capture-error', (data) => {
+            const teksLoading = document.getElementById('loadingTeks');
+            const btn = document.getElementById('btn-jepret');
+            if (teksLoading) teksLoading.style.display = 'none';
+            if (btn) btn.disabled = false;
+            alert("❌ " + (data.message || "Kamera gagal menjepret via USB."));
+        });
         // FUNGSI CUSTOM WAKTU
         let nilaiCustomWaktu = "";
         function bukaModalCustomWaktu() {
@@ -725,15 +732,11 @@
             try {
                 const res = await fetch('/api/settings'); const data = await res.json();
                 
-                if (data.global) {
-   let mesinKamera = (dataSet.global && (dataSet.global.cameraEngine || dataSet.global.kameraUtama)) || 'canon';
-activeCameraEngine = mesinKamera.toLowerCase();
-
-if (mesinKamera.toLowerCase() !== 'canon') {
-    activeCameraMode = 'webcam'; // Sony, Fujifilm, Nikon, & Webcam menggunakan Live View UVC + Hot Folder Watcher!
-} else {
-    activeCameraMode = 'canon';
-}}
+               if (data.global) {
+                    let mesinKamera = (data.global.cameraEngine || data.global.kameraUtama) || 'canon';
+                    activeCameraEngine = mesinKamera.toLowerCase();
+                    activeCameraMode = (activeCameraEngine === 'canon') ? 'canon' : 'webcam';
+                }
                 if (data.global?.flashWorkaround !== undefined) settingFlashWorkaround = data.global.flashWorkaround;
                 if (data.global?.liveViewBrightness) settingKecerahanLV = data.global.liveViewBrightness;
                 
@@ -1025,20 +1028,20 @@ if (mesinKamera.toLowerCase() !== 'canon') {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ imageBase64: base64Image, isMirrored: false, liveFramesBase64: webcamFrames }) 
                 });
-            } else {
-    // Canon (EDSDK) DAN Sony/Nikon (digiCamControl Shutter Fisik) masuk ke /capture!
-    await fetch('/capture', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            mode: 'photobox', // sesuaikan: 'newspaper' atau 'photobox'
-            mirror: isMirror,
-            lvActive: settingFlashWorkaround,
-            orientation: isPortrait ? 'orientasiKamera' : 'orientasiKamera', // di photobox.html pakai: orientasiKamera
-            liveFramesBase64: (activeCameraMode === 'webcam') ? webcamFrames : []
-        })
-    });
-}
+           } else {
+                // Canon (EDSDK) DAN Sony/Nikon (digiCamControl Shutter Fisik) masuk ke /capture!
+                await fetch('/capture', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        mode: 'photobox',
+                        mirror: isMirror,
+                        lvActive: settingFlashWorkaround,
+                        orientation: orientasiKamera,
+                        liveFramesBase64: (activeCameraMode === 'webcam') ? webcamFrames : []
+                    })
+                });
+            }
             
             let fotoBaruDitemukan = false; let waktuTunggu = 0; let namaFotoBaru = ""; let urlFotoBaru = "";
             while (!fotoBaruDitemukan && waktuTunggu < 15000) {
