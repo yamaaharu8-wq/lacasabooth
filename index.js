@@ -749,6 +749,7 @@ autoUpdater.on('update-downloaded', () => {
         try { if (isEdsdkInitialized) EdsTerminateSDK(); } catch (e) {}
        matikanBotWaSafely();
         try { if (cfTunnelProcess) cfTunnelProcess.kill(); } catch (e) {}
+        exec('taskkill /f /im CameraControl.exe', () => {});
         try { server.close(); } catch (e) {}
 
         // Parameter (isSilent = false, isForceRunAfter = true) memastikan installer menutup proses lama 100% sebelum menimpa app.asar
@@ -762,6 +763,7 @@ const matikanSistem = async () => {
     matikanBotWaSafely();
     if (cfTunnelProcess) cfTunnelProcess.kill();
     exec('taskkill /f /im cloudflared.exe', () => {});
+    exec('taskkill /f /im CameraControl.exe', () => {});
     electronApp.quit();
 };
 
@@ -1102,6 +1104,14 @@ expressApp.post('/api/settings', (req, res) => {
         }
 
         atomicWriteJson(settingsPath, newSettings);
+        const eng1 = (newSettings.global?.cameraEngine || 'canon').toLowerCase();
+     const eng2 = (newSettings.global?.cameraEngine2 || '').toLowerCase();
+     const pakaiDcc = (eng1 === 'sony' || eng1 === 'nikon') || (newSettings.global?.dualCameraEnabled && (eng2 === 'sony' || eng2 === 'nikon'));
+     if (!pakaiDcc) {
+         matikanDccDaemon();
+     } else {
+         pastikanDccDaemonAktif();
+     }
         res.json({ success: true, message: "Pengaturan berhasil disimpan dengan aman!" });
     } catch (err) { 
         console.error("Gagal simpan setting:", err);
@@ -1557,14 +1567,98 @@ expressApp.post('/api/switch-camera', async (req, res) => {
     }
 });
 // =======================================================
-// 📷 MESIN SHUTTER FISIK SONY & NIKON (DIGICAMCONTROL CLI)
+// 📷 MESIN SHUTTER FISIK SONY & NIKON (DIGICAMCONTROL DAEMON + REMOTE CLI)
 // =======================================================
-const dccCmdPath = path.join(__dirname, 'sdk', 'dcc', 'CameraControlCmd.exe').replace('app.asar', 'app.asar.unpacked');
+const dccDir = path.join(__dirname, 'sdk', 'dcc').replace('app.asar', 'app.asar.unpacked');
+const dccCmdPath = path.join(dccDir, 'CameraControlCmd.exe');
+const dccRemoteCmdPath = path.join(dccDir, 'CameraControlRemoteCmd.exe');
+const dccGuiPath = path.join(dccDir, 'CameraControl.exe');
+
 let isDccBusy = false;
+let dccStartupPromise = null;
+let dccCameraConnected = false;
+let dccDetectedModel = "";
+
+function bersihkanOutputDcc(rawStdout) {
+    return (rawStdout || "")
+        .replace(/^:;response:/i, "")
+        .replace(/^:;message:/i, "")
+        .trim();
+}
+
+function jalankanDccRemote(argStr, timeoutMs = 8000) {
+    return new Promise((resolve) => {
+        if (!fs.existsSync(dccRemoteCmdPath)) {
+            return resolve({ ok: false, raw: "", clean: "" });
+        }
+        exec(`"${dccRemoteCmdPath}" ${argStr}`, { timeout: timeoutMs, cwd: dccDir }, (err, stdout, stderr) => {
+            const raw = (stdout || "").trim();
+            const clean = bersihkanOutputDcc(raw);
+            const low = (raw + " " + (stderr || "")).toLowerCase();
+            const hasPipeErr = Boolean(err) || low.includes('unable to connect') || low.includes('pipe') || low.includes('timed out');
+            resolve({ ok: !hasPipeErr, raw, clean, stderr: (stderr || "").trim() });
+        });
+    });
+}
+
+function matikanDccDaemon() {
+    dccCameraConnected = false;
+    dccDetectedModel = "";
+    return new Promise((resolve) => {
+        exec('taskkill /f /im CameraControl.exe', () => setTimeout(resolve, 400));
+    });
+}
+
+function pastikanDccDaemonAktif() {
+    if (dccStartupPromise) return dccStartupPromise;
+
+    dccStartupPromise = new Promise((resolve) => {
+        if (!fs.existsSync(dccGuiPath) || !fs.existsSync(dccRemoteCmdPath)) {
+            dccStartupPromise = null;
+            return resolve(false);
+        }
+
+        const tungguSiap = async (percobaan = 0) => {
+            if (percobaan > 15) {
+                dccStartupPromise = null;
+                return resolve(false);
+            }
+            const ping = await jalankanDccRemote('/c list cameras', 2500);
+            if (ping.ok && ping.raw.length > 0 && !ping.raw.toLowerCase().includes('error')) {
+                dccStartupPromise = null;
+                return resolve(true);
+            }
+            setTimeout(() => tungguSiap(percobaan + 1), 1000);
+        };
+
+        exec('tasklist /FI "IMAGENAME eq CameraControl.exe"', (err, stdout) => {
+            if (!err && stdout && stdout.toLowerCase().includes('cameracontrol.exe')) {
+                return tungguSiap(0);
+            }
+            console.log("🚀 [DCC] Menjalankan CameraControl.exe (Minimized)...");
+            const psCmd = `Start-Process -FilePath '${dccGuiPath}' -WorkingDirectory '${dccDir}' -WindowStyle Minimized`;
+            exec(`powershell -NoProfile -Command "${psCmd}"`, () => {
+                setTimeout(() => tungguSiap(0), 3000);
+            });
+        });
+    });
+
+    return dccStartupPromise;
+}
+
+// Jalankan otomatis saat startup HANYA jika engine aktif di settings.json adalah Sony atau Nikon
+try {
+    const initCfg = safeReadJson(settingsPath, {});
+    const eng1 = (initCfg?.global?.cameraEngine || 'canon').toLowerCase();
+    const eng2 = (initCfg?.global?.cameraEngine2 || '').toLowerCase();
+    if (eng1 === 'sony' || eng1 === 'nikon' || (initCfg?.global?.dualCameraEnabled && (eng2 === 'sony' || eng2 === 'nikon'))) {
+        pastikanDccDaemonAktif();
+    }
+} catch (e) {}
 
 function jepretViaDigiCamControl(isPotret, isMirror, liveFramesBase64 = []) {
-    return new Promise((resolve, reject) => {
-        if (!fs.existsSync(dccCmdPath)) {
+    return new Promise(async (resolve, reject) => {
+        if (!fs.existsSync(dccCmdPath) && !fs.existsSync(dccRemoteCmdPath)) {
             return reject(new Error("File sdk/dcc/CameraControlCmd.exe tidak ditemukan!"));
         }
         if (isDccBusy) {
@@ -1580,7 +1674,6 @@ function jepretViaDigiCamControl(isPotret, isMirror, liveFramesBase64 = []) {
         const finalFilePath = path.join(sessionDir, newFileName);
         const finalTmpPath = finalFilePath + '.tmp';
 
-        // Simpan frame Live Photo dari UVC jika ada
         if (Array.isArray(liveFramesBase64) && liveFramesBase64.length > 0) {
             if (!global.liveFramesByPhoto) global.liveFramesByPhoto = {};
             global.liveFramesByPhoto[newFileName] = {
@@ -1590,11 +1683,23 @@ function jepretViaDigiCamControl(isPotret, isMirror, liveFramesBase64 = []) {
             };
         }
 
-        // WAJIB: /filename ditaruh SEBELUM /capture agar foto masuk ke rawTempPath!
-        const cmd = `"${dccCmdPath}" /filename "${rawTempPath}" /capture`;
-        console.log(`📸 [DCC] Menekan shutter fisik Sony/Nikon...`);
+        const daemonReady = await pastikanDccDaemonAktif();
+        const useRemote = daemonReady && fs.existsSync(dccRemoteCmdPath);
 
-        exec(cmd, { timeout: 20000, cwd: path.dirname(dccCmdPath) }, async (error, stdout, stderr) => {
+        // Catat file terakhir sebelum jepret (sebagai fallback jika DCC simpan ke folder Pictures)
+        let prevLastCaptured = "";
+        if (useRemote) {
+            const beforeRes = await jalankanDccRemote('/c get lastcaptured', 2500);
+            prevLastCaptured = beforeRes.clean;
+        }
+
+        const cmd = useRemote
+            ? `"${dccRemoteCmdPath}" /c capture "${rawTempPath}"`
+            : `"${dccCmdPath}" /filename "${rawTempPath}" /capture`;
+
+        console.log(`📸 [DCC ${useRemote ? 'REMOTE' : 'CLI'}] Menekan shutter fisik Sony/Nikon...`);
+
+        exec(cmd, { timeout: 20000, cwd: dccDir }, async (error, stdout, stderr) => {
             const outText = (stdout || "").trim();
             const outLower = outText.toLowerCase();
 
@@ -1604,49 +1709,68 @@ function jepretViaDigiCamControl(isPotret, isMirror, liveFramesBase64 = []) {
                 return reject(new Error(stderr || error.message));
             }
 
-            // Deteksi cepat jika kamera tidak terbaca (karena DCC tetap keluar dengan exit code 0)
-            if (outLower.includes('no connected device') || outLower.includes('no camera')) {
+            if (outLower.includes('no connected device') || outLower.includes('no camera') || outLower.includes('unable to connect')) {
                 isDccBusy = false;
+                dccCameraConnected = false;
                 console.error("❌ [DCC] Kamera tidak terdeteksi:", outText);
-                return reject(new Error("Kamera Sony/Nikon tidak terdeteksi di USB. Pastikan kabel USB Data tersambung & mode USB di PC Remote."));
+                return reject(new Error("Kamera Sony/Nikon tidak terdeteksi di USB. Pastikan kabel Micro-USB Data tersambung & mode PC Remote."));
             }
 
-            // Tunggu hingga file hasil download dari kamera selesai ditulis di disk (> 2KB)
-            let siap = false;
-            for (let t = 0; t < 24; t++) {
+            // Cari file hasil jepretan: cek rawTempPath dulu, lalu fallback cek lastcaptured dari DCC
+            let sourcePhotoPath = null;
+            let isFromTempPath = false;
+
+            for (let t = 0; t < 28; t++) {
+                // Prioritas 1: File langsung masuk ke rawTempPath
                 if (fs.existsSync(rawTempPath) && fs.statSync(rawTempPath).size > 2048) {
-                    siap = true;
+                    sourcePhotoPath = rawTempPath;
+                    isFromTempPath = true;
                     break;
+                }
+
+                // Prioritas 2 (Fallback setelah 1 detik): Cek apakah DCC menyimpan ke folder session default-nya
+                if (useRemote && t >= 4 && t % 2 === 0) {
+                    const lastRes = await jalankanDccRemote('/c get lastcaptured', 2000);
+                    const candidate = lastRes.clean.replace(/^"|"$/g, "");
+                    if (candidate && candidate !== prevLastCaptured && candidate !== "-" && candidate !== "?" && fs.existsSync(candidate)) {
+                        const ext = path.extname(candidate).toLowerCase();
+                        if ((ext === '.jpg' || ext === '.jpeg') && fs.statSync(candidate).size > 2048) {
+                            sourcePhotoPath = candidate;
+                            break;
+                        }
+                    }
                 }
                 await new Promise(r => setTimeout(r, 250));
             }
 
-            if (!siap) {
+            if (!sourcePhotoPath) {
                 isDccBusy = false;
-                console.error("❌ [DCC] File tidak ditemukan di:", rawTempPath, "| Log DCC:", outText);
-                return reject(new Error("Kamera tidak mengirim file JPEG. Pastikan kualitas foto di kamera disetel ke JPEG (bukan RAW-only)."));
+                console.error("❌ [DCC] File tidak ditemukan. Log DCC:", outText);
+                return reject(new Error("Kamera menjepret tapi file JPEG tidak diterima. Pastikan File Format di kamera Sony disetel ke JPEG (bukan RAW-only)."));
             }
 
             try {
-                // 1. Auto-orient sesuai EXIF kamera terlebih dahulu
-                let buf = await sharp(rawTempPath).rotate().toBuffer();
+                // Tunggu 150ms agar penulisan file oleh DCC benar-benar tuntas
+                await new Promise(r => setTimeout(r, 150));
+
+                let buf = await sharp(sourcePhotoPath).rotate().toBuffer();
                 const meta = await sharp(buf).metadata();
 
-                // 2. Jika mode Potret aktif tapi gambar masih lanskap (sensor auto-rotate kamera OFF), putar 90°
                 if (isPotret && meta.width > meta.height) {
                     buf = await sharp(buf).rotate(90).toBuffer();
                 }
-
-                // 3. Cerminkan horizontal setelah gambar tegak
                 if (isMirror) {
                     buf = await sharp(buf).flop().toBuffer();
                 }
 
-                // 4. Atomic Write (.tmp -> rename) agar Preview Retake tidak pernah gambar rusak
                 await sharp(buf).jpeg({ quality: 92 }).toFile(finalTmpPath);
                 fs.renameSync(finalTmpPath, finalFilePath);
-                if (fs.existsSync(rawTempPath)) try { fs.unlinkSync(rawTempPath); } catch (_) {}
 
+                if (isFromTempPath && fs.existsSync(rawTempPath)) {
+                    try { fs.unlinkSync(rawTempPath); } catch (_) {}
+                }
+
+                dccCameraConnected = true;
                 isDccBusy = false;
                 console.log(`✅ [DCC] Foto Sony/Nikon masuk: ${newFileName}`);
                 io.emit('foto-baru', { namaFile: newFileName });
@@ -1684,12 +1808,12 @@ expressApp.post('/capture', async (req, res) => {
         res.status(200).json({ success: true, engine: activeEngine });
 
         jepretViaDigiCamControl(isPotret, isMirror, liveFramesBase64).catch(err => {
-            console.error(`❌ [CAPTURE ${activeEngine.toUpperCase()}] Gagal:`, err.message);
-            io.emit('capture-error', {
-                engine: activeEngine,
-                message: `Kamera ${activeEngine.toUpperCase()} gagal menjepret via USB. Cek kabel USB & mode PC Remote, atau gunakan mode Webcam/Capture Card.`
-            });
-        });
+         console.error(`❌ [CAPTURE ${activeEngine.toUpperCase()}] Gagal:`, err.message);
+         io.emit('capture-error', {
+             engine: activeEngine,
+             message: err.message || `Kamera ${activeEngine.toUpperCase()} gagal menjepret via USB.`
+         });
+     });
         return;
     }
     // 2. JALUR CANON VIA EDSDK (BAWAAN)
@@ -2948,12 +3072,14 @@ expressApp.get('/api/sys-status', async (req, res) => {
         const currentEngine = cfg?.global?.cameraEngine || 'canon';
         let isCamConnected = false;
 
-        if (currentEngine === 'canon') {
-            isCamConnected = (typeof activeCamera !== 'undefined' && activeCamera !== null);
-            if (!isCamConnected) isCamConnected = await cekKameraUsbUniversal('canon');
-        } else {
-            isCamConnected = await cekKameraUsbUniversal(currentEngine);
-        }
+       if (currentEngine === 'canon') {
+         isCamConnected = (typeof activeCamera !== 'undefined' && activeCamera !== null);
+         if (!isCamConnected) isCamConnected = await cekKameraUsbUniversal('canon');
+     } else if (currentEngine === 'sony' || currentEngine === 'nikon') {
+         isCamConnected = dccCameraConnected || await cekKameraUsbUniversal(currentEngine);
+     } else {
+         isCamConnected = await cekKameraUsbUniversal(currentEngine);
+     }
         
         let sessionsToday = 0;
         let history = {};
@@ -2996,9 +3122,10 @@ expressApp.get('/api/rescan-camera', async (req, res) => {
         const currentEngine = (cfg?.global?.cameraEngine || 'canon').toLowerCase();
         console.log(`[SISTEM] Meminta deteksi ulang kamera (Mode: ${currentEngine.toUpperCase()})...`);
 
-        if (currentEngine === 'canon') {
-            activeCamera = null; 
-            hubungkanKamera(true);
+       if (currentEngine === 'canon') {
+         await matikanDccDaemon();
+         activeCamera = null;
+         hubungkanKamera(true);
             
             setTimeout(async () => {
                 if (activeCamera !== null) {
@@ -3014,22 +3141,31 @@ expressApp.get('/api/rescan-camera', async (req, res) => {
             }, 900);
         } else if (currentEngine === 'webcam') {
             res.json({ success: true, message: "✅ Mode Webcam / Capture Card (UVC) aktif & siap digunakan!" });
-        } else if (currentEngine === 'sony' || currentEngine === 'nikon') {
-            if (!fs.existsSync(dccCmdPath)) {
-                return res.json({ success: false, message: "⚠️ File sdk/dcc/CameraControlCmd.exe belum terpasang di folder aplikasi!" });
-            }
-            exec(`"${dccCmdPath}" /list cameras`, { timeout: 10000, cwd: path.dirname(dccCmdPath) }, (err, stdout) => {
-                const out = (stdout || "").trim();
-                const outLower = out.toLowerCase();
-                const isNotFound = !out || outLower.includes('no camera') || outLower.includes('no connected device') || outLower.includes('exiting');
+       } else if (currentEngine === 'sony' || currentEngine === 'nikon') {
+         if (!fs.existsSync(dccGuiPath)) {
+             return res.json({ success: false, message: "⚠️ File sdk/dcc/CameraControl.exe belum terpasang di folder aplikasi!" });
+         }
+         const ready = await pastikanDccDaemonAktif();
+         if (!ready) {
+             dccCameraConnected = false;
+             return res.json({ success: false, message: "⚠️ Mesin digiCamControl gagal merespon. Coba klik Scan Ulang sekali lagi." });
+         }
 
-                if (!err && !isNotFound) {
-                    res.json({ success: true, message: `✅ Kamera ${currentEngine.toUpperCase()} terdeteksi via digiCamControl!\n${out}` });
-                } else {
-                    res.json({ success: false, message: `⚠️ Kamera ${currentEngine.toUpperCase()} tidak terdeteksi di USB.\nPastikan kabel USB Data tersambung & menu USB kamera di mode PC Remote.\n(Atau ganti ke mode Webcam/Capture Card jika hanya pakai HDMI Capture).` });
-                }
-            });
-        }else {
+         const listRes = await jalankanDccRemote('/c list cameras', 10000);
+         const cleanOut = listRes.clean;
+         const lowOut = listRes.raw.toLowerCase();
+         const isNotFound = !listRes.ok || !cleanOut || cleanOut === '[]' || cleanOut === 'null' || cleanOut === ':' || cleanOut.length < 3
+             || lowOut.includes('no camera') || lowOut.includes('no connected device') || lowOut.includes('error');
+
+         if (!isNotFound) {
+             dccCameraConnected = true;
+             dccDetectedModel = `${currentEngine.toUpperCase()} (${cleanOut})`;
+             res.json({ success: true, message: `✅ Kamera ${currentEngine.toUpperCase()} terhubung & siap jepret!\nID: ${cleanOut}` });
+         } else {
+             dccCameraConnected = false;
+             res.json({ success: false, message: `⚠️ Kamera ${currentEngine.toUpperCase()} belum terbaca. Pastikan kabel Micro-USB Data tercolok & USB Connection = PC Remote.` });
+         }
+     }else {
             const isConnected = await cekKameraUsbUniversal(currentEngine);
             if (isConnected) {
                 res.json({ success: true, message: `✅ Berhasil! Kamera ${detectedCameraModelName || currentEngine.toUpperCase()} terdeteksi & siap digunakan.` });
